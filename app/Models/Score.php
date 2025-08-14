@@ -1,0 +1,18 @@
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+
+class Score extends Model
+{
+    use HasFactory;
+    //
+    protected $fillable = [
+        'archer_id','event_id','round_id',
+        'total_score','x_count','ten_count','arrow_count',
+        'stdev','scored_at'
+    ];
+    protected $casts = ['scored_at' => 'datetime'];
+}
