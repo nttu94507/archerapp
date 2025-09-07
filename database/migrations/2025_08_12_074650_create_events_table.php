@@ -15,9 +15,19 @@ return new class extends Migration
             $table->id();
             $table->string('name');
             $table->date('date')->index();
-            $table->enum('mode', ['indoor','outdoor'])->index();
+            $table->enum('mode', ['indoor', 'outdoor'])->index();
             $table->boolean('verified')->default(true)->index();
-            $table->string('level')->nullable(); // local/regional/national...
+            $table->string('level')->nullable();         // local / regional / national...
+            $table->string('organizer');                 // 主辦單位
+
+            $table->dateTime('reg_start')->nullable();   // 開始報名時間
+            $table->dateTime('reg_end')->nullable();     // 截止報名時間
+
+            $table->string('venue')->nullable();         // 場地名稱
+            $table->string('map_link')->nullable();      // Google 地圖連結
+            $table->decimal('lat', 10, 7)->nullable();   // 緯度
+            $table->decimal('lng', 10, 7)->nullable();   // 經度
+
             $table->timestamps();
         });
     }

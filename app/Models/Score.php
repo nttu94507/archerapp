@@ -12,7 +12,21 @@ class Score extends Model
     protected $fillable = [
         'archer_id','event_id','round_id',
         'total_score','x_count','ten_count','arrow_count',
-        'stdev','scored_at'
+        'stdev','scored_at','arrows'
     ];
-    protected $casts = ['scored_at' => 'datetime'];
+
+    protected $casts = [
+        'arrows'   => 'array',
+        'scored_at'=> 'datetime',
+    ];
+
+    public function archer(){
+        return $this->belongsTo(Archer::class);
+    }
+    public function event(){
+        return $this->belongsTo(Event::class);
+    }
+    public function round(){
+        return $this->belongsTo(Round::class);
+    }
 }

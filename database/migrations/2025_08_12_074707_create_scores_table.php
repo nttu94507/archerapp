@@ -20,6 +20,8 @@ return new class extends Migration
             $table->unsignedSmallInteger('x_count')->default(0);
             $table->unsignedSmallInteger('ten_count')->default(0);
             $table->unsignedSmallInteger('arrow_count');
+            $table->json('arrows')->nullable(); // 平/分趟都可
+            $table->unique(['event_id','round_id','archer_id']); // 同一賽事+回合+射手 只一筆
             $table->decimal('stdev', 6, 3)->default(0); // 單場每箭分數標準差（可先隨機）
             $table->timestamp('scored_at')->index();
             $table->timestamps();
