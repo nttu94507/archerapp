@@ -48,4 +48,14 @@ class User extends Authenticatable
             'password' => 'hashed',
         ];
     }
+
+    public function profile()
+    {
+        return $this->hasOne(UserProfile::class);
+    }
+
+    public function hasCompletedProfile(): bool
+    {
+        return !is_null($this->profile_completed_at);
+    }
 }

@@ -12,6 +12,11 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         //
+        $middleware->alias([
+            'auth' => \App\Http\Middleware\Authenticate::class,
+//            'verified' => \App\Http\Middleware\EnsureEmailIsVerified::class,
+            'profile.completed' => \App\Http\Middleware\EnsureProfileIsComplete::class,
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //
