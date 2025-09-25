@@ -5,7 +5,18 @@
     <meta charset="UTF-8">
     <title>@yield('title', 'Archery Leaderboard')</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    @vite(['resources/css/app.css', 'resources/js/app.js'])
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        // 可選：自訂主題/色票/斷點
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: { brand: '#4f46e5' }
+                }
+            }
+        }
+    </script>
+{{--    @vite(['resources/css/app.css', 'resources/js/app.js'])--}}
 </head>
 <body class="bg-gray-100 text-gray-900">
 
