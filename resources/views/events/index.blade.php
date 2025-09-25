@@ -145,7 +145,9 @@
                         <th class="px-3 py-2 text-left hidden md:table-cell">{!! sortLink('organizer','主辦') !!}</th>
                         <th class="px-3 py-2 text-left hidden lg:table-cell">報名</th>
                         <th class="px-3 py-2 text-left hidden xl:table-cell">場地</th>
-                        <th class="px-3 py-2 text-right">操作</th>
+                        <th class="px-3 py-2 text-left hidden xl:table-cell">報名狀態</th>
+                        <th class="px-3 py-2 text-left hidden xl:table-cell">操作</th>
+{{--                        <th class="px-3 py-2 text-right"></th>--}}
                     </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-100 text-sm">
@@ -172,8 +174,8 @@
                                         {{ $event->mode==='indoor'?'室內':'室外' }}
                                     </span>
                                     <span class="inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium
-                                        {{ $event->verified ? 'bg-green-50 text-green-700' : 'bg-amber-50 text-amber-700' }}">
-                                        {{ $event->verified ? '已驗證' : '未驗證' }}
+                                        {{ $event->status == "pending" ? 'bg-amber-50 text-amber-700':'bg-green-50 text-green-700' }}">
+                                        {{ $event->status == "pending" ? '未驗證' : '已驗證' }}
                                     </span>
                                     @if($event->level)
                                         <span class="inline-flex items-center rounded-full bg-gray-100 px-1.5 py-0.5 text-[10px] font-medium text-gray-700">
@@ -226,58 +228,84 @@
                                 @endif
                             </td>
 
+                            {{-- 報名狀態（與表頭對應） --}}
+                            <td class="px-3 py-2 align-top hidden xl:table-cell">
+                                @php
+                                    $now = now();
+                                    $regStartAt = $event->reg_start ? \Illuminate\Support\Carbon::parse($event->reg_start) : null;
+                                    $regEndAt   = $event->reg_end ? \Illuminate\Support\Carbon::parse($event->reg_end) : null;
 
-{{--                             操作（僅一顆報名按鈕，依時段變化）--}}
-                            <td class="px-3 py-2 align-top">
+                                    $isBefore  = $regStartAt && $now->lt($regStartAt);
+                                    $isBetween = $regStartAt && $regEndAt && $now->between($regStartAt, $regEndAt);
+                                    $isAfter   = $regEndAt && $now->gt($regEndAt);
+
+                                    $regStatus = null;
+                                    if ($regStartAt && $regEndAt) {
+                                        $regStatus = $isBefore ? '尚未開始' : ($isBetween ? '報名中' : '已截止');
+                                    }
+
+                                    $badgeClass = match($regStatus) {
+                                        '報名中'   => 'bg-indigo-50 text-indigo-700',
+                                        '尚未開始' => 'bg-gray-100 text-gray-700',
+                                        '已截止'   => 'bg-gray-100 text-gray-500',
+                                        default    => 'bg-gray-100 text-gray-500'
+                                    };
+                                @endphp
+
                                 @if($regStatus)
-                                    @php
-                                        $badgeClass = match($regStatus) {
-                                            '報名中' => 'bg-indigo-50 text-indigo-700',
-                                            '尚未開始' => 'bg-gray-100 text-gray-700',
-                                            default => 'bg-gray-100 text-gray-500'
-                                        };
-                                    @endphp
                                     <span class="inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium {{ $badgeClass }}">
-                                                {{ $regStatus }}
-                                            </span>
+            {{ $regStatus }}
+        </span>
+                                    @if($isBefore && $regStartAt)
+                                        <span class="ml-2 text-[10px] text-gray-500">開始：{{ $regStartAt->format('m/d H:i') }}</span>
+                                    @endif
+                                    @if($isBetween && $regEndAt)
+                                        <span class="ml-2 text-[10px] text-gray-500">截止：{{ $regEndAt->format('m/d H:i') }}</span>
+                                    @endif
+                                @else
+                                    <span class="text-gray-400 text-xs">—</span>
                                 @endif
-{{--                                @php--}}
-{{--                                    $now = now();--}}
-{{--                                    $start = $event->reg_start ? \Illuminate\Support\Carbon::parse($event->reg_start) : null;--}}
-{{--                                    $end   = $event->reg_end   ? \Illuminate\Support\Carbon::parse($event->reg_end)   : null;--}}
+                            </td>
 
-{{--                                    $hasWindow     = $start && $end;--}}
-{{--                                    $isNotStarted  = $hasWindow && $now->lt($start);--}}
-{{--                                    $isOpen        = $hasWindow && $now->between($start, $end);--}}
-{{--                                    $isClosed      = $hasWindow && $now->gt($end);--}}
-{{--                                @endphp--}}
+                            {{-- 操作（報名按鈕：僅在報名期間內可點擊，其餘顯示灰階狀態按鈕） --}}
+                            <td class="px-3 py-2 align-top hidden xl:table-cell">
+                                @php
+                                    // 判斷是否為本賽事的 active staff（快改版：每列會查一次 DB；資料量大請用下方 B）
+                                    $canManage = auth()->check() && \App\Models\EventStaff::query()
+                                        ->where('event_id', $event->id)
+                                        ->where('user_id', auth()->id())
+                                        ->where('status', 'active')
+                                        ->exists();
 
-{{--                                <div class="flex justify-end">--}}
-{{--                                    @if($isOpen)--}}
-{{--                                        <a href="{{ route('events.register', $event) }}"--}}
-{{--                                           class="inline-flex items-center rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-indigo-500">--}}
-{{--                                            報名--}}
-{{--                                        </a>--}}
-{{--                                    @elseif($isNotStarted)--}}
-{{--                                        <button type="button" disabled--}}
-{{--                                                title="報名開始：{{ $start->format('Y/m/d H:i') }}"--}}
-{{--                                                class="inline-flex items-center rounded-lg bg-gray-100 px-3 py-1.5 text-xs font-medium text-gray-400 cursor-not-allowed">--}}
-{{--                                            尚未開始--}}
-{{--                                        </button>--}}
-{{--                                    @elseif($isClosed)--}}
-{{--                                        <button type="button" disabled--}}
-{{--                                                title="報名截止：{{ $end->format('Y/m/d H:i') }}"--}}
-{{--                                                class="inline-flex items-center rounded-lg bg-gray-100 px-3 py-1.5 text-xs font-medium text-gray-400 cursor-not-allowed">--}}
-{{--                                            已截止--}}
-{{--                                        </button>--}}
-{{--                                    @else--}}
-{{--                                        <button type="button" disabled--}}
-{{--                                                class="inline-flex items-center rounded-lg bg-gray-100 px-3 py-1.5 text-xs font-medium text-gray-400 cursor-not-allowed"--}}
-{{--                                                title="未設定報名期間">--}}
-{{--                                            未設定--}}
-{{--                                        </button>--}}
-{{--                                    @endif--}}
-{{--                                </div>--}}
+                                    /** 決定報名連結（外部 > 內部路由） */
+                                    $registerUrl = $event->reg_link
+                                        ?? (\Illuminate\Support\Facades\Route::has('events.register') ? route('events.register', $event) : null);
+                                @endphp
+
+                                @if($canManage)
+                                    <a href="{{ route('events.groups.index', $event) }}"
+                                       class="inline-flex items-center justify-center rounded-xl bg-emerald-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-emerald-500">
+                                        管理
+                                    </a>
+                                @elseif($isBetween && $registerUrl)
+                                    <a href="{{ $registerUrl }}" target="_blank" rel="noopener"
+                                       class="inline-flex items-center justify-center rounded-xl bg-indigo-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-indigo-500">
+                                        前往報名
+                                    </a>
+                                @elseif($isBefore)
+                                    <button type="button" disabled
+                                            title="報名開始：{{ $regStartAt?->format('m/d H:i') }}"
+                                            class="inline-flex items-center justify-center rounded-xl px-3 py-1.5 text-xs font-medium bg-gray-100 text-gray-500 cursor-not-allowed">
+                                        尚未開始
+                                    </button>
+                                @elseif($isAfter)
+                                    <button type="button" disabled
+                                            class="inline-flex items-center justify-center rounded-xl px-3 py-1.5 text-xs font-medium bg-gray-100 text-gray-400 cursor-not-allowed">
+                                        已截止
+                                    </button>
+                                @else
+                                    <span class="text-gray-400 text-xs">—</span>
+                                @endif
                             </td>
                         </tr>
                     @empty

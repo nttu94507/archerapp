@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Event;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class EventController extends Controller
 {
@@ -50,6 +51,7 @@ class EventController extends Controller
      */
     public function store(Request $request)
     {
+        $user = $request->user();
         // 驗證輸入
         $validated = $request->validate([
             'name'       => 'required|string|max:120',
@@ -66,12 +68,28 @@ class EventController extends Controller
             'lng'        => 'nullable|numeric|between:-180,180',
         ]);
 
-        // 新增資料
-        Event::create($validated);
+        // 正規化 checkbox（未勾不會送值）
+        $validated['verified'] = $request->boolean('verified');
 
-        // 回應 (依需求，可回 JSON 或 redirect)
-        return redirect()->route('events.index')
-            ->with('success', '賽事新增成功');
+        $event = DB::transaction(function () use ($validated, $user) {
+            $event = Event::create($validated);
+
+            // 這裡假設你已在 Event 模型有：public function staff(){ return $this->hasMany(EventStaff::class); }
+            $event->staff()->create([
+                'user_id'     => $user->id,
+                'role'        => 'owner',
+                'status'      => 'active',
+                'invited_by'  => $user->id,     // 可選
+                'invited_at'  => now(),         // 可選（留痕）
+                'accepted_at' => now(),
+            ]);
+
+            return $event;
+        });
+
+        return redirect()
+            ->route('events.groups.create', $event)
+            ->with('success', '賽事已建立，接著新增組別');
     }
 
     /**

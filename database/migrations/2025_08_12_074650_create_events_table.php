@@ -28,6 +28,14 @@ return new class extends Migration
             $table->decimal('lat', 10, 7)->nullable();   // 緯度
             $table->decimal('lng', 10, 7)->nullable();   // 經度
 
+            $table->enum('status', ['draft','pending','approved','rejected','archived'])->default('pending')->index();
+//            $table->foreignId('submitted_by')->constrained('users');
+//            $table->foreignId('reviewed_by')->nullable()->constrained('users');
+//            $table->timestamp('reviewed_at')->nullable();
+//            $table->text('reject_reason')->nullable();
+            $table->timestamp('published_at')->nullable();
+
+
             $table->timestamps();
         });
     }

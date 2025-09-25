@@ -31,5 +31,6 @@ Route::middleware(['auth','profile.completed'])->group(function () {
     //Route::get('/rounds/{round}', fn(\App\Models\Round $round) => $round);
     Route::get('/event/register/{id}', [EventController::class, 'register'])->name('events.register');
     Route::resource('events', EventController::class);
+    Route::resource('events.groups', \App\Http\Controllers\EventGroupController::class)->except(['show']);
 
 });

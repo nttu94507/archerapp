@@ -15,4 +15,13 @@ class Event extends Model
         'venue', 'map_link', 'lat', 'lng',
     ];
     protected $casts = ['verified' => 'boolean', 'date' => 'date'];
+
+    // app/Models/Event.php
+    public function groups() {
+        return $this->hasMany(EventGroup::class);
+    }
+
+    public function staff() {
+        return $this->hasMany(EventStaff::class);
+    }
 }
