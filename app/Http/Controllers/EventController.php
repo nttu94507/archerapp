@@ -37,7 +37,7 @@ class EventController extends Controller
         }
 
         // 排序
-        $sort = $request->get('sort', 'date');
+        $sort = $request->get('sort', 'start_date');
         $dir  = $request->get('dir', 'desc');
         $query->orderBy($sort, $dir);
 
@@ -55,7 +55,8 @@ class EventController extends Controller
         // 驗證輸入
         $validated = $request->validate([
             'name'       => 'required|string|max:120',
-            'date'       => 'required|date',
+            'start_date' => 'required|date',
+            'end_date'   => 'nullable|date|after_or_equal:start_date',
             'mode'       => 'required|in:indoor,outdoor',
             'verified'   => 'boolean',
             'level'      => 'nullable|string|max:50',
@@ -67,7 +68,6 @@ class EventController extends Controller
             'lat'        => 'nullable|numeric|between:-90,90',
             'lng'        => 'nullable|numeric|between:-180,180',
         ]);
-
         // 正規化 checkbox（未勾不會送值）
         $validated['verified'] = $request->boolean('verified');
 
@@ -107,6 +107,10 @@ class EventController extends Controller
     public function edit(Event $event)
     {
         return view('events.edit', compact('event'));
+    }
+
+    public function joinevent(Request $request, Event $event){
+
     }
 
     //

@@ -18,6 +18,7 @@
     </script>
 {{--    @vite(['resources/css/app.css', 'resources/js/app.js'])--}}
 </head>
+<div id="modal-root"></div>
 <body class="bg-gray-100 text-gray-900">
 
 <header class="bg-white border-b">

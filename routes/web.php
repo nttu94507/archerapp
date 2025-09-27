@@ -6,6 +6,7 @@ use App\Http\Controllers\LeaderBoardController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\ProfileCompletionController;
 use App\Http\Controllers\LoginController;
+use App\Http\Controllers\EventRegistrationController;
 
 // open page
 Route::get('/', [LeaderBoardController::class, 'index'])->name('leaderboards.index');
@@ -26,11 +27,12 @@ Route::middleware('auth')->group(function () {
 
 //選手專區
 Route::middleware(['auth','profile.completed'])->group(function () {
-    //Route::get('/scores/create',[ScoreController::class,'create'])->name('scores.create');
-    //Route::post('/scores/upsert', [ScoreController::class, 'upsert']);
-    //Route::get('/rounds/{round}', fn(\App\Models\Round $round) => $round);
-    Route::get('/event/register/{id}', [EventController::class, 'register'])->name('events.register');
     Route::resource('events', EventController::class);
     Route::resource('events.groups', \App\Http\Controllers\EventGroupController::class)->except(['show']);
 
 });
+
+//快速報名
+Route::post('events/{event}/groups/{group}/quick-register', [EventRegistrationController::class, 'quickRegister'])
+    ->middleware('auth')
+    ->name('events.quick_register');

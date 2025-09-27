@@ -18,16 +18,6 @@
             </a>
         </div>
 
-{{--        --}}{{-- Top Pagination (compact on mobile) --}}
-{{--        <div class="mb-3 flex items-center justify-end">--}}
-{{--            <div class="hidden sm:block">--}}
-{{--                {{ $events->withQueryString()->onEachSide(1)->links() }}--}}
-{{--            </div>--}}
-{{--            <div class="sm:hidden">--}}
-{{--                {{ $events->withQueryString()->onEachSide(0)->links() }}--}}
-{{--            </div>--}}
-{{--        </div>--}}
-
         {{-- Flash Messages --}}
         @if(session('success'))
             <div class="mb-4 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">
@@ -41,7 +31,8 @@
         @endif
 
         {{-- Filters (collapsible) --}}
-        <details class="mb-4 rounded-2xl border border-gray-200 bg-white shadow-sm" {{ request()->hasAny(['q','mode','verified','date_from','date_to']) ? 'open' : '' }}>
+        <details
+            class="mb-4 rounded-2xl border border-gray-200 bg-white shadow-sm" {{ request()->hasAny(['q','mode','verified','date_from','date_to']) ? 'open' : '' }}>
             <summary class="flex cursor-pointer items-center justify-between px-4 py-3">
                 <div class="text-sm font-medium text-gray-800">篩選條件</div>
                 <span class="text-xs text-gray-500">點擊展開/收合</span>
@@ -53,12 +44,13 @@
                     if(request('q')) $chips[] = '關鍵字：'.e(request('q'));
                     if(request('mode')) $chips[] = '類型：'.(request('mode')==='indoor'?'室內':'室外');
                     if(request()->filled('verified')) $chips[] = '驗證：'.(request('verified')==='1'?'是':'否');
-                    if(request('date_from') || request('date_to')) $chips[] = '日期：'.(request('date_from') ?: '—').' ~ '.(request('date_to') ?: '—');
+                    if(request('date_from') || request('date_to')) $chips[] = '期間：'.(request('date_from') ?: '—').' ~ '.(request('date_to') ?: '—');
                 @endphp
                 @if($chips)
                     <div class="mb-3 flex flex-wrap gap-2">
                         @foreach($chips as $c)
-                            <span class="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-1 text-xs text-gray-700">{{ $c }}</span>
+                            <span
+                                class="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-1 text-xs text-gray-700">{{ $c }}</span>
                         @endforeach
                         <a href="{{ route('events.index') }}" class="text-xs text-indigo-600 hover:underline">清除</a>
                     </div>
@@ -122,11 +114,13 @@
         {{-- Table Card --}}
         <div class="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden">
             @php
-                $sort = request('sort','date');
+                // 預設用 start_date 排序
+                $sort = request('sort','start_date');
                 $dir  = request('dir','desc');
                 $dirToggle = $dir === 'asc' ? 'desc' : 'asc';
                 function sortLink($field, $label) {
-                    $isActive = request('sort','date') === $field;
+                    $current = request('sort','start_date');
+                    $isActive = $current === $field;
                     $dir = request('dir','desc');
                     $dirToggle = $dir === 'asc' ? 'desc' : 'asc';
                     $params = array_merge(request()->query(), ['sort' => $field, 'dir' => $isActive ? $dirToggle : 'asc']);
@@ -140,45 +134,60 @@
                 <table class="min-w-full divide-y divide-gray-200">
                     <thead class="bg-gray-50 text-[11px] uppercase text-gray-500 sticky top-0 z-10">
                     <tr>
-                        <th class="px-3 py-2 text-left whitespace-nowrap">{!! sortLink('date','日期') !!}</th>
+                        <th class="px-3 py-2 text-left whitespace-nowrap">{!! sortLink('start_date','期間') !!}</th>
                         <th class="px-3 py-2 text-left">賽事</th>
                         <th class="px-3 py-2 text-left hidden md:table-cell">{!! sortLink('organizer','主辦') !!}</th>
-                        <th class="px-3 py-2 text-left hidden lg:table-cell">報名</th>
+                        {{-- 移除原「報名」日期欄 --}}
                         <th class="px-3 py-2 text-left hidden xl:table-cell">場地</th>
                         <th class="px-3 py-2 text-left hidden xl:table-cell">報名狀態</th>
                         <th class="px-3 py-2 text-left hidden xl:table-cell">操作</th>
-{{--                        <th class="px-3 py-2 text-right"></th>--}}
                     </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-100 text-sm">
                     @forelse($events as $event)
                         @php
-                            $date = \Illuminate\Support\Carbon::parse($event->date)->format('Y-m-d');
-                            $regStart = $event->reg_start ? \Illuminate\Support\Carbon::parse($event->reg_start)->format('m/d H:i') : null;
-                            $regEnd = $event->reg_end ? \Illuminate\Support\Carbon::parse($event->reg_end)->format('m/d H:i') : null;
+                            $start = $event->start_date ? \Illuminate\Support\Carbon::parse($event->start_date) : null;
+                            $end   = $event->end_date   ? \Illuminate\Support\Carbon::parse($event->end_date)   : null;
+                            $dateRangeText = ($start && $end)
+                                ? ($start->equalTo($end) ? $start->format('Y-m-d') : $start->format('Y-m-d').' ~ '.$end->format('Y-m-d'))
+                                : '—';
+
+                            // 報名狀態只留在這欄判斷
                             $now = now();
+                            $regStartAt = $event->reg_start ? \Illuminate\Support\Carbon::parse($event->reg_start) : null;
+                            $regEndAt   = $event->reg_end ? \Illuminate\Support\Carbon::parse($event->reg_end) : null;
+
+                            $isBefore  = $regStartAt && $now->lt($regStartAt);
+                            $isBetween = $regStartAt && $regEndAt && $now->between($regStartAt, $regEndAt);
+                            $isAfter   = $regEndAt && $now->gt($regEndAt);
+
                             $regStatus = null;
-                            if ($event->reg_start && $event->reg_end) {
-                                if ($now->lt($event->reg_start)) $regStatus = '尚未開始';
-                                elseif ($now->between($event->reg_start, $event->reg_end)) $regStatus = '報名中';
-                                else $regStatus = '已截止';
+                            if ($regStartAt && $regEndAt) {
+                                $regStatus = $isBefore ? '尚未開始' : ($isBetween ? '報名中' : '已截止');
                             }
+                            $badgeClass = match($regStatus) {
+                                '報名中'   => 'bg-indigo-50 text-indigo-700',
+                                '尚未開始' => 'bg-gray-100 text-gray-700',
+                                '已截止'   => 'bg-gray-100 text-gray-500',
+                                default    => 'bg-gray-100 text-gray-500'
+                            };
                         @endphp
                         <tr class="hover:bg-gray-50/60">
-                            {{-- 日期 + 模式/驗證/等級 小徽章 --}}
+                            {{-- 期間 + 模式/驗證/等級 小徽章 --}}
                             <td class="px-3 py-2 align-top whitespace-nowrap">
-                                <div class="font-medium text-gray-900">{{ $date }}</div>
+                                <div class="font-medium text-gray-900">{{ $dateRangeText }}</div>
                                 <div class="mt-1 flex flex-wrap gap-1">
                                     <span class="inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium
                                         {{ $event->mode==='indoor' ? 'bg-blue-50 text-blue-700' : 'bg-emerald-50 text-emerald-700' }}">
                                         {{ $event->mode==='indoor'?'室內':'室外' }}
                                     </span>
                                     <span class="inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium
-                                        {{ $event->status == "pending" ? 'bg-amber-50 text-amber-700':'bg-green-50 text-green-700' }}">
-                                        {{ $event->status == "pending" ? '未驗證' : '已驗證' }}
+                                        {{ $event->verified ? 'bg-green-50 text-green-700' : 'bg-amber-50 text-amber-700' }}">
+                                        {{ $event->verified ? '已驗證' : '未驗證' }}
                                     </span>
                                     @if($event->level)
-                                        <span class="inline-flex items-center rounded-full bg-gray-100 px-1.5 py-0.5 text-[10px] font-medium text-gray-700">
+                                        <span
+                                            class="inline-flex items-center rounded-full bg-gray-100 px-1.5 py-0.5 text-[10px] font-medium text-gray-700">
                                             {{ strtoupper($event->level) }}
                                         </span>
                                     @endif
@@ -187,37 +196,31 @@
 
                             {{-- 賽事名稱（兩行限制） --}}
                             <td class="px-3 py-2 align-top">
-                                <a href="{{ route('events.show', $event) }}" class="text-indigo-600 hover:underline line-clamp-2">
+                                <a href="{{ route('events.show', $event) }}"
+                                   class="text-indigo-600 hover:underline line-clamp-2">
                                     {{ $event->name }}
                                 </a>
                             </td>
 
                             {{-- 主辦（隱藏於小螢幕） --}}
                             <td class="px-3 py-2 align-top hidden md:table-cell">
-                                <div class="truncate max-w-[16rem]" title="{{ $event->organizer }}">{{ $event->organizer }}</div>
-                            </td>
-
-                            {{-- 報名期間（隱藏於中螢幕以下） --}}
-                            <td class="px-3 py-2 align-top hidden lg:table-cell">
-                                @if($regStart || $regEnd)
-                                    <div class="flex items-center gap-2">
-                                        <span class="text-gray-700 text-xs">{{ $regStart ?? '—' }} ~ {{ $regEnd ?? '—' }}</span>
-                                    </div>
-                                @else
-                                    <span class="text-gray-400 text-xs">未設定</span>
-                                @endif
+                                <div class="truncate max-w-[16rem]"
+                                     title="{{ $event->organizer }}">{{ $event->organizer }}</div>
                             </td>
 
                             {{-- 場地（隱藏於較小螢幕） --}}
                             <td class="px-3 py-2 align-top hidden xl:table-cell">
                                 @if($event->venue || $event->map_link)
                                     <div class="flex items-center gap-2">
-                                        <span class="text-gray-900 truncate max-w-[14rem]">{{ $event->venue ?? '—' }}</span>
+                                        <span
+                                            class="text-gray-900 truncate max-w-[14rem]">{{ $event->venue ?? '—' }}</span>
                                         @if($event->map_link)
                                             <a href="{{ $event->map_link }}" target="_blank" rel="noopener"
                                                class="text-indigo-600 hover:text-indigo-800" title="在 Google 地圖開啟">
-                                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
-                                                    <path d="M14 3h7v7h-2V6.414l-9.293 9.293-1.414-1.414L17.586 5H14V3Z"/>
+                                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4"
+                                                     viewBox="0 0 24 24" fill="currentColor">
+                                                    <path
+                                                        d="M14 3h7v7h-2V6.414l-9.293 9.293-1.414-1.414L17.586 5H14V3Z"/>
                                                     <path d="M5 5h6v2H7v10h10v-4h2v6H5V5Z"/>
                                                 </svg>
                                             </a>
@@ -228,92 +231,82 @@
                                 @endif
                             </td>
 
-                            {{-- 報名狀態（與表頭對應） --}}
+                            {{-- 報名狀態（僅顯示狀態，不列日期） --}}
                             <td class="px-3 py-2 align-top hidden xl:table-cell">
-                                @php
-                                    $now = now();
-                                    $regStartAt = $event->reg_start ? \Illuminate\Support\Carbon::parse($event->reg_start) : null;
-                                    $regEndAt   = $event->reg_end ? \Illuminate\Support\Carbon::parse($event->reg_end) : null;
-
-                                    $isBefore  = $regStartAt && $now->lt($regStartAt);
-                                    $isBetween = $regStartAt && $regEndAt && $now->between($regStartAt, $regEndAt);
-                                    $isAfter   = $regEndAt && $now->gt($regEndAt);
-
-                                    $regStatus = null;
-                                    if ($regStartAt && $regEndAt) {
-                                        $regStatus = $isBefore ? '尚未開始' : ($isBetween ? '報名中' : '已截止');
-                                    }
-
-                                    $badgeClass = match($regStatus) {
-                                        '報名中'   => 'bg-indigo-50 text-indigo-700',
-                                        '尚未開始' => 'bg-gray-100 text-gray-700',
-                                        '已截止'   => 'bg-gray-100 text-gray-500',
-                                        default    => 'bg-gray-100 text-gray-500'
-                                    };
-                                @endphp
-
                                 @if($regStatus)
-                                    <span class="inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium {{ $badgeClass }}">
-            {{ $regStatus }}
-        </span>
-                                    @if($isBefore && $regStartAt)
-                                        <span class="ml-2 text-[10px] text-gray-500">開始：{{ $regStartAt->format('m/d H:i') }}</span>
-                                    @endif
-                                    @if($isBetween && $regEndAt)
-                                        <span class="ml-2 text-[10px] text-gray-500">截止：{{ $regEndAt->format('m/d H:i') }}</span>
-                                    @endif
+                                    <span
+                                        class="inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium {{ $badgeClass }}">
+                                        {{ $regStatus }}
+                                    </span>
                                 @else
                                     <span class="text-gray-400 text-xs">—</span>
                                 @endif
                             </td>
 
-                            {{-- 操作（報名按鈕：僅在報名期間內可點擊，其餘顯示灰階狀態按鈕） --}}
+                            {{-- 操作 --}}
+                            {{-- 操作欄（替換原本報名按鈕區塊） --}}
                             <td class="px-3 py-2 align-top hidden xl:table-cell">
                                 @php
-                                    // 判斷是否為本賽事的 active staff（快改版：每列會查一次 DB；資料量大請用下方 B）
-                                    $canManage = auth()->check() && \App\Models\EventStaff::query()
-                                        ->where('event_id', $event->id)
-                                        ->where('user_id', auth()->id())
-                                        ->where('status', 'active')
-                                        ->exists();
-
-                                    /** 決定報名連結（外部 > 內部路由） */
-                                    $registerUrl = $event->reg_link
-                                        ?? (\Illuminate\Support\Facades\Route::has('events.register') ? route('events.register', $event) : null);
+                                    // 建議在 Controller 預先 eager load：Event::with(['groups' => fn($q) => $q->orderBy('name')])
+                                    $groups = $event->groups ?? collect(); // 若有 with('groups') 就不會 N+1
                                 @endphp
 
+                                @if($groups->isNotEmpty())
+                                    <details class="inline-block">
+                                        <summary
+                                            class="inline-flex cursor-pointer items-center rounded-xl bg-indigo-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-indigo-500">
+                                            報名
+                                            <svg class="ml-1 h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
+                                                <path fill-rule="evenodd"
+                                                      d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.24a.75.75 0 01-1.06 0L5.21 8.29a.75.75 0 01.02-1.08z"
+                                                      clip-rule="evenodd"/>
+                                            </svg>
+                                        </summary>
+                                        <div class="mt-2 w-56 rounded-xl border bg-white py-1 shadow-lg">
+                                            @foreach($groups->take(6) as $g)
+                                                <form method="POST" action="{{ route('events.quick_register', [$event, $g]) }}">
+                                                    @csrf
+                                                    <button type="submit"
+                                                            class="w-full text-left block px-3 py-1.5 text-xs hover:bg-gray-50">
+                                                        {{ $g->name }}
+                                                    </button>
+                                                </form>
+                                            @endforeach
+                                            @if($groups->count() > 6)
+                                                <a href="{{ route('events.show', $event) }}"
+                                                   class="block px-3 py-1.5 text-xs text-indigo-600 hover:bg-indigo-50">
+                                                    查看全部組別…
+                                                </a>
+                                            @endif
+                                        </div>
+                                    </details>
+                                @else
+                                    <span class="text-gray-400 text-xs">無組別</span>
+                                @endif
+
+                                {{-- 若身分可管理仍保留管理鈕 --}}
+                                @php
+                                    $canManage = auth()->check() && \App\Models\EventStaff::where([
+                                      'event_id' => $event->id,
+                                      'user_id' => auth()->id(),
+                                      'status' => 'active',
+                                    ])->exists();
+                                @endphp
                                 @if($canManage)
                                     <a href="{{ route('events.groups.index', $event) }}"
-                                       class="inline-flex items-center justify-center rounded-xl bg-emerald-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-emerald-500">
+                                       class="ml-2 inline-flex items-center rounded-xl bg-emerald-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-emerald-500">
                                         管理
                                     </a>
-                                @elseif($isBetween && $registerUrl)
-                                    <a href="{{ $registerUrl }}" target="_blank" rel="noopener"
-                                       class="inline-flex items-center justify-center rounded-xl bg-indigo-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-indigo-500">
-                                        前往報名
-                                    </a>
-                                @elseif($isBefore)
-                                    <button type="button" disabled
-                                            title="報名開始：{{ $regStartAt?->format('m/d H:i') }}"
-                                            class="inline-flex items-center justify-center rounded-xl px-3 py-1.5 text-xs font-medium bg-gray-100 text-gray-500 cursor-not-allowed">
-                                        尚未開始
-                                    </button>
-                                @elseif($isAfter)
-                                    <button type="button" disabled
-                                            class="inline-flex items-center justify-center rounded-xl px-3 py-1.5 text-xs font-medium bg-gray-100 text-gray-400 cursor-not-allowed">
-                                        已截止
-                                    </button>
-                                @else
-                                    <span class="text-gray-400 text-xs">—</span>
                                 @endif
                             </td>
                         </tr>
                     @empty
                         <tr>
                             <td colspan="6" class="px-4 py-12">
-                                <div class="flex flex-col items-center justify-center text-center">
+                                <div class="flex flex-col items-center justify-center text中心">
                                     <div class="mb-3 rounded-2xl bg-gray-100 p-3">
-                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-gray-400" viewBox="0 0 24 24" fill="currentColor">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-gray-400"
+                                             viewBox="0 0 24 24" fill="currentColor">
                                             <path d="M3 5a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v2H3V5Z"/>
                                             <path d="M3 9h18v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V9Zm4 2v6h10v-6H7Z"/>
                                         </svg>
@@ -321,7 +314,7 @@
                                     <p class="text-gray-900 font-medium">目前沒有符合條件的賽事</p>
                                     <p class="text-gray-500 text-sm mt-1">試著調整篩選條件，或建立一個新賽事。</p>
                                     <a href="{{ route('events.create') }}"
-                                       class="mt-4 inline-flex items-center justify-center rounded-xl bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-500">
+                                       class="mt-4 inline-flex items-center justify-center rounded-xl bg-indigo-600 px-4 py-2 text-sm font-medium text白 hover:bg-indigo-500">
                                         新增賽事
                                     </a>
                                 </div>
