@@ -20,5 +20,13 @@ class EventGroup extends Model
         return $this->belongsTo(Event::class);
     }
 
+    public function registrations()
+    {
+        // 如果外鍵是 event_group_id
+        return $this->hasMany(EventRegistration::class, 'event_group_id', 'id');
+
+        // 若你的外鍵其實叫 group_id，請改成：
+        // return $this->hasMany(Registration::class, 'group_id', 'id');
+    }
 
 }

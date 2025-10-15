@@ -3,7 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Models\Event;
+use App\Models\EventStaff;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
 class EventController extends Controller
@@ -109,8 +111,61 @@ class EventController extends Controller
         return view('events.edit', compact('event'));
     }
 
-    public function joinevent(Request $request, Event $event){
+    public function show(Request $request ,Event $event)
+    {
+        $event->load([
+            'groups' => function ($q) {
+                $q->orderBy('name')
+                    // 帶出「有效報名數量」（例如：registered / checked_in 視為占名額）
+                    ->withCount(['registrations as registered_count' => function ($r) {
+                        $r->whereIn('status', ['registered','checked_in']);
+                    }]);
+            },
+        ]);
 
+        $now        = now();
+        $regStartAt = $event->reg_start ? \Illuminate\Support\Carbon::parse($event->reg_start) : null;
+        $regEndAt   = $event->reg_end   ? \Illuminate\Support\Carbon::parse($event->reg_end)   : null;
+
+        $isBefore  = $regStartAt && $now->lt($regStartAt);
+        $isBetween = $regStartAt && $regEndAt && $now->between($regStartAt, $regEndAt);
+        $isAfter   = $regEndAt && $now->gt($regEndAt);
+
+        $regStatus = null;
+        if ($regStartAt && $regEndAt) {
+            $regStatus = $isBefore ? '尚未開始' : ($isBetween ? '報名中' : '已截止');
+        }
+
+        // 目前登入者已經報名哪些 group（有效狀態）
+        $myGroupIds = [];
+        if (auth()->check()) {
+            $myGroupIds = \App\Models\EventRegistration::query()
+                ->where('event_id', $event->id)
+                ->where('user_id', auth()->id())
+                ->whereIn('status', ['registered','checked_in'])
+                ->pluck('event_group_id')
+                ->all();
+        }
+
+        // 是否為本賽事工作人員
+        $canManage = auth()->check() && \App\Models\EventStaff::query()
+                ->where('event_id', $event->id)
+                ->where('user_id', auth()->id())
+                ->where('status', 'active')
+                ->exists();
+
+        return view('events.show', [
+            'event'      => $event,
+            'groups'     => $event->groups,
+            'regStartAt' => $regStartAt,
+            'regEndAt'   => $regEndAt,
+            'isBefore'   => $isBefore,
+            'isBetween'  => $isBetween,
+            'isAfter'    => $isAfter,
+            'regStatus'  => $regStatus,
+            'canManage'  => $canManage,
+            'myGroupIds' => $myGroupIds,
+        ]);
     }
 
     //

@@ -164,6 +164,7 @@
                             $regStatus = null;
                             if ($regStartAt && $regEndAt) {
                                 $regStatus = $isBefore ? '尚未開始' : ($isBetween ? '報名中' : '已截止');
+
                             }
                             $badgeClass = match($regStatus) {
                                 '報名中'   => 'bg-indigo-50 text-indigo-700',
@@ -247,49 +248,26 @@
                             {{-- 操作欄（替換原本報名按鈕區塊） --}}
                             <td class="px-3 py-2 align-top hidden xl:table-cell">
                                 @php
-                                    // 建議在 Controller 預先 eager load：Event::with(['groups' => fn($q) => $q->orderBy('name')])
-                                    $groups = $event->groups ?? collect(); // 若有 with('groups') 就不會 N+1
+                                    // $isBefore / $isBetween / $isAfter 已在同一 <tr> 的上方 @php 算好，可直接使用
+                                    // 若你的賽事詳情頁有組別區塊，建議加上 #groups 錨點讓使用者直達
+                                    $groupsPageUrl = route('events.show', $event) . '#groups';
                                 @endphp
 
-                                @if($groups->isNotEmpty())
-                                    <details class="inline-block">
-                                        <summary
-                                            class="inline-flex cursor-pointer items-center rounded-xl bg-indigo-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-indigo-500">
-                                            報名
-                                            <svg class="ml-1 h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
-                                                <path fill-rule="evenodd"
-                                                      d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.24a.75.75 0 01-1.06 0L5.21 8.29a.75.75 0 01.02-1.08z"
-                                                      clip-rule="evenodd"/>
-                                            </svg>
-                                        </summary>
-                                        <div class="mt-2 w-56 rounded-xl border bg-white py-1 shadow-lg">
-                                            @foreach($groups->take(6) as $g)
-                                                <form method="POST" action="{{ route('events.quick_register', [$event, $g]) }}">
-                                                    @csrf
-                                                    <button type="submit"
-                                                            class="w-full text-left block px-3 py-1.5 text-xs hover:bg-gray-50">
-                                                        {{ $g->name }}
-                                                    </button>
-                                                </form>
-                                            @endforeach
-                                            @if($groups->count() > 6)
-                                                <a href="{{ route('events.show', $event) }}"
-                                                   class="block px-3 py-1.5 text-xs text-indigo-600 hover:bg-indigo-50">
-                                                    查看全部組別…
-                                                </a>
-                                            @endif
-                                        </div>
-                                    </details>
+                                @if($isBetween)
+                                    <a href="{{ route('events.show', $event) }}#groups"
+                                       class="inline-flex items-center rounded-xl bg-indigo-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-indigo-500">
+                                        我要報名
+                                    </a>
                                 @else
-                                    <span class="text-gray-400 text-xs">無組別</span>
+                                    <span class="text-gray-300 text-xs">—</span>
                                 @endif
 
-                                {{-- 若身分可管理仍保留管理鈕 --}}
+                                {{-- 管理權限者仍可看到「管理」按鈕（不受報名期間限制） --}}
                                 @php
                                     $canManage = auth()->check() && \App\Models\EventStaff::where([
-                                      'event_id' => $event->id,
-                                      'user_id' => auth()->id(),
-                                      'status' => 'active',
+                                        'event_id' => $event->id,
+                                        'user_id'  => auth()->id(),
+                                        'status'   => 'active',
                                     ])->exists();
                                 @endphp
                                 @if($canManage)
@@ -315,7 +293,7 @@
                                     <p class="text-gray-500 text-sm mt-1">試著調整篩選條件，或建立一個新賽事。</p>
                                     <a href="{{ route('events.create') }}"
                                        class="mt-4 inline-flex items-center justify-center rounded-xl bg-indigo-600 px-4 py-2 text-sm font-medium text白 hover:bg-indigo-500">
-                                        新增賽事
+                                        我要辦賽事
                                     </a>
                                 </div>
                             </td>

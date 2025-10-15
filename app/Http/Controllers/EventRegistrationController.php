@@ -15,61 +15,60 @@ class EventRegistrationController extends Controller
     //
     public function quickRegister(Event $event,EventGroup $group, Request $request)
     {
-        // 組別必須屬於該活動
-//        dd($group->event_id);
-        abort_unless($group->event_id === $event->id, 404);
-//        dd(123);
         $user = $request->user();
-        if (!$user->name || !$user->email) {
-            // 若個資未齊，導去完整報名頁（或個資頁）
-            return redirect()->route('events.list')
-                ->with('error', '請先補齊個人資料再報名。');
+
+        // 檢查 group 是否屬於該 event
+        if ($group->event_id !== $event->id) {
+            return back()->with('error', '組別不屬於此賽事。');
         }
 
-        // 報名期間（優先組別，無則吃活動級）
-        [$start, $end] = [
-            $group->reg_start ?: $event->reg_start,
-            $group->reg_end   ?: $event->reg_end,
-        ];
-//        dd(1231);
+        // 檢查報名期間
         $now = now();
-        if ($start && $now->lt($start)) return back()->with('error', '報名尚未開始');
-        if ($end   && $now->gt($end))   return back()->with('error', '報名已截止');
+        $start = $event->reg_start ? Carbon::parse($event->reg_start) : null;
+        $end   = $event->reg_end   ? Carbon::parse($event->reg_end)   : null;
 
-        // 名額（已報名/已報到才佔名額）
-        if (!is_null($group->quota)) {
-            $current = \App\Models\EventRegistration::where('event_group_id', $group->id)
-                ->whereIn('status', ['registered','checked_in'])->count();
-            if ($current >= $group->quota) {
-                return back()->with('error', '本組名額已滿');
-            }
+        if (!($start && $end && $now->between($start, $end))) {
+            return back()->with('error', '目前非報名期間。');
         }
 
-        // 防重複（同 event+group+email）
-        $exists = \App\Models\EventRegistration::where([
-            'event_id' => $event->id,
+        // 檢查是否已報名（有效狀態）
+        $exists = EventRegistration::query()
+            ->where('event_id', $event->id)
+            ->where('event_group_id', $group->id)
+            ->where('user_id', $user->id)
+            ->whereIn('status', ['registered','checked_in'])
+            ->exists();
+
+        if ($exists) {
+            return back()->with('error', '您已報名此組別。');
+        }
+
+        // 檢查名額（如果有設定 capacity）
+        $group->loadCount(['registrations as registered_count' => function ($q) {
+            $q->whereIn('status', ['registered','checked_in']);
+        }]);
+
+//        dd($group);
+
+        if (!is_null($group->quota) && $group->registered_count >= $group->quota) {
+            return back()->with('error', '此組別名額已滿。');
+        }
+
+        // 建立報名
+        $result = EventRegistration::create([
+            'event_id'       => $event->id,
             'event_group_id' => $group->id,
-            'email' => $user->email,
-        ])->whereIn('status', ['registered','checked_in'])->exists();
-        if ($exists) return back()->with('error', '你已報名此組別');
+            'user_id'        => $user->id,
+            'name'           => $user->name,
+            'email'          => $user->email,
+            'status'         => 'registered',
+        ]);
 
-        // 建立報名（使用者資料直接帶入）
-        \DB::transaction(function () use ($event, $group, $user) {
-            \App\Models\EventRegistration::create([
-                'event_id'       => $event->id,
-                'event_group_id' => $group->id,
-                'user_id'        => $user->id,
-                'name'           => $user->name,
-                'email'          => $user->email,
-                'phone'          => $user->phone ?? null, // 若有此欄位
-                'team_name'      => null,
-                'status'         => 'registered',
-                'paid'           => false,
-            ]);
-        });
+        if ($result) {
+            EventGroup::where('id',$group->id)->decrement('quota', 1);
+        }
 
-        return redirect()->route('events.list', $event)
-            ->with('success', '已為你報名「'.$group->name.'」。');
+        return redirect()->route('events.show', $event)->with('success', '報名成功！');
     }
 
     public function register(Event $event, Request $request)
