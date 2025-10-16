@@ -41,7 +41,7 @@
                             {{ $g->bow_type ?: '—' }} / {{ $g->gender }} / {{ $g->age_class ?: '—' }}
                         </td>
                         <td class="px-3 py-2 hidden lg:table-cell">{{ $g->distance ?: '—' }}</td>
-                        <td class="px-3 py-2 hidden lg:table-cell">{{ $g->quota ?: '—' }}</td>
+                        <td class="px-3 py-2 hidden lg:table-cell">{{ $g->quota ?: '0' }}</td>
                         <td class="px-3 py-2 hidden xl:table-cell">{{ $g->fee ? number_format($g->fee) : '—' }}</td>
                         <td class="px-3 py-2">
                             <div class="flex gap-2">
