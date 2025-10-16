@@ -23,7 +23,7 @@ class Authenticate extends BaseAuthenticate
     {
         if (! $request->expectsJson()) {
             // 直接丟去 Google OAuth（請先建立對應路由）
-            return route('leaderboards.index');
+            return route('login.options');
             // 若你想先到自家 /login 再點 Google，可以改成：
             // return route('login');
         }
