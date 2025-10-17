@@ -234,7 +234,7 @@
 
 
 {{-- ===== 名詞解釋：右下角說明按鈕＋Modal ===== --}}
-<<div id="glossary-modal" class="fixed inset-0 z-[9998] hidden" role="dialog" aria-modal="true" aria-labelledby="glossary-title">
+<div id="glossary-modal" class="fixed inset-0 z-[9998] hidden" role="dialog" aria-modal="true" aria-labelledby="glossary-title">
         {{-- 遮罩 --}}
         <div class="absolute inset-0 bg-black/40" data-glossary-close></div>
 

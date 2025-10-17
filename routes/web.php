@@ -9,7 +9,8 @@ use App\Http\Controllers\LoginController;
 use App\Http\Controllers\EventRegistrationController;
 
 // open page
-Route::get('/', [LeaderBoardController::class, 'index'])->name('leaderboards.index');
+Route::view('/', 'dashboard.index')->name('dashboard.index');
+Route::get('/leaderboard', [LeaderBoardController::class, 'index'])->name('leaderboards.index');
 Route::get('/login/options', [\App\Http\Controllers\LoginController::class, 'options'])->name('login.options');
 
 //google 登入相關
