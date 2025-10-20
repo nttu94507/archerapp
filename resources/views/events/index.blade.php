@@ -152,7 +152,6 @@
                                 ? ($start->equalTo($end) ? $start->format('Y-m-d') : $start->format('Y-m-d').' ~ '.$end->format('Y-m-d'))
                                 : '—';
 
-                            // 報名狀態只留在這欄判斷
                             $now = now();
                             $regStartAt = $event->reg_start ? \Illuminate\Support\Carbon::parse($event->reg_start) : null;
                             $regEndAt   = $event->reg_end ? \Illuminate\Support\Carbon::parse($event->reg_end) : null;
@@ -164,7 +163,6 @@
                             $regStatus = null;
                             if ($regStartAt && $regEndAt) {
                                 $regStatus = $isBefore ? '尚未開始' : ($isBetween ? '報名中' : '已截止');
-
                             }
                             $badgeClass = match($regStatus) {
                                 '報名中'   => 'bg-indigo-50 text-indigo-700',
@@ -172,10 +170,22 @@
                                 '已截止'   => 'bg-gray-100 text-gray-500',
                                 default    => 'bg-gray-100 text-gray-500'
                             };
+
+                            // ✅ 提前計算管理權限（供手機點擊導頁用）
+                            $canManage = auth()->check() && \App\Models\EventStaff::where([
+                                'event_id' => $event->id,
+                                'user_id'  => auth()->id(),
+                                'status'   => 'active',
+                            ])->exists();
+
+                            // ✅ 手機點整列要導向的目標（有權限 → 管理；否則 → 組別報名）
+                            $mobileUrl = $canManage
+                                ? route('events.groups.index', $event)      // 管理頁
+                                : route('events.show', $event) . '#groups'; // 公開的組別報名區
                         @endphp
 
                         <tr class="hover:bg-gray-50/60 md:hover:bg-gray-50/60 cursor-pointer md:cursor-default"
-                            data-mobile-link="{{ route('events.groups.index', $event) }}"
+                            data-mobile-link="{{ $mobileUrl }}"
                             role="link" tabindex="0">
                             {{-- 賽事名稱（兩行限制） --}}
                             <td class="px-3 py-2 align-top">
