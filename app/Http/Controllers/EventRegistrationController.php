@@ -48,14 +48,12 @@ class EventRegistrationController extends Controller
             $q->whereIn('status', ['registered','checked_in']);
         }]);
 
-//        dd($group);
-
         if (!is_null($group->quota) && $group->registered_count >= $group->quota) {
             return back()->with('error', '此組別名額已滿。');
         }
 
         // 建立報名
-        $result = EventRegistration::create([
+        EventRegistration::create([
             'event_id'       => $event->id,
             'event_group_id' => $group->id,
             'user_id'        => $user->id,
@@ -64,74 +62,70 @@ class EventRegistrationController extends Controller
             'status'         => 'registered',
         ]);
 
-        if ($result) {
-            EventGroup::where('id',$group->id)->decrement('quota', 1);
-        }
-
         return redirect()->route('events.show', $event)->with('success', '報名成功！');
     }
 
-    public function register(Event $event, Request $request)
-    {
-        $validated = $request->validate([
-            'event_group_id' => ['required', Rule::exists('event_groups','id')->where('event_id',$event->id)],
-            'name'  => ['required','string','max:120'],
-            'email' => ['required','email','max:255'],
-            'phone' => ['nullable','string','max:50'],
-            'team_name' => ['nullable','string','max:120'],
-        ]);
-
-        $group = EventGroup::where('event_id', $event->id)->findOrFail($validated['event_group_id']);
-
-        // 報名期間檢查（優先組別）
-        [$regStart, $regEnd] = $this->resolveRegWindow($event, $group);
-        $now = now();
-        if ($regStart && $now->lt($regStart)) {
-            return back()->withInput()->with('error', '報名尚未開始（開始：'.$regStart->format('m/d H:i').'）');
-        }
-        if ($regEnd && $now->gt($regEnd)) {
-            return back()->withInput()->with('error', '報名已截止（截止：'.$regEnd->format('m/d H:i').'）');
-        }
-
-        // 名額檢查（只算 registered/checked_in）
-        if (!is_null($group->quota)) {
-            $current = EventRegistration::where('event_group_id', $group->id)
-                ->whereIn('status', ['registered','checked_in'])
-                ->count();
-            if ($current >= $group->quota) {
-                return back()->withInput()->with('error', '本組名額已滿');
-            }
-        }
-
-        // 防重複（同 event + group + email）
-        $exists = EventRegistration::where('event_id', $event->id)
-            ->where('event_group_id', $group->id)
-            ->where('email', $validated['email'])
-            ->whereIn('status', ['registered','checked_in']) // 已報名或已報到視為佔位
-            ->exists();
-        if ($exists) {
-            return back()->withInput()->with('error', '此 Email 已報名該組別，請勿重複報名');
-        }
-
-        // 建立報名
-        DB::transaction(function () use ($event, $group, $validated, $request) {
-            EventRegistration::create([
-                'event_id'       => $event->id,
-                'event_group_id' => $group->id,
-                'user_id'        => optional($request->user())->id,
-                'name'           => $validated['name'],
-                'email'          => $validated['email'],
-                'phone'          => $validated['phone'] ?? null,
-                'team_name'      => $validated['team_name'] ?? null,
-                'status'         => 'registered', // 改用你的列舉
-                'paid'           => false,
-            ]);
-        });
-
-        return redirect()
-            ->route('events.show', $event)
-            ->with('success', '報名成功！我們已收到你的資料（組別：'.$group->name.'）。');
-    }
+//    public function register(Event $event, Request $request)
+//    {
+//        $validated = $request->validate([
+//            'event_group_id' => ['required', Rule::exists('event_groups','id')->where('event_id',$event->id)],
+//            'name'  => ['required','string','max:120'],
+//            'email' => ['required','email','max:255'],
+//            'phone' => ['nullable','string','max:50'],
+//            'team_name' => ['nullable','string','max:120'],
+//        ]);
+//
+//        $group = EventGroup::where('event_id', $event->id)->findOrFail($validated['event_group_id']);
+//
+//        // 報名期間檢查（優先組別）
+//        [$regStart, $regEnd] = $this->resolveRegWindow($event, $group);
+//        $now = now();
+//        if ($regStart && $now->lt($regStart)) {
+//            return back()->withInput()->with('error', '報名尚未開始（開始：'.$regStart->format('m/d H:i').'）');
+//        }
+//        if ($regEnd && $now->gt($regEnd)) {
+//            return back()->withInput()->with('error', '報名已截止（截止：'.$regEnd->format('m/d H:i').'）');
+//        }
+//
+//        // 名額檢查（只算 registered/checked_in）
+//        if (!is_null($group->quota)) {
+//            $current = EventRegistration::where('event_group_id', $group->id)
+//                ->whereIn('status', ['registered','checked_in'])
+//                ->count();
+//            if ($current >= $group->quota) {
+//                return back()->withInput()->with('error', '本組名額已滿');
+//            }
+//        }
+//
+//        // 防重複（同 event + group + email）
+//        $exists = EventRegistration::where('event_id', $event->id)
+//            ->where('event_group_id', $group->id)
+//            ->where('email', $validated['email'])
+//            ->whereIn('status', ['registered','checked_in']) // 已報名或已報到視為佔位
+//            ->exists();
+//        if ($exists) {
+//            return back()->withInput()->with('error', '此 Email 已報名該組別，請勿重複報名');
+//        }
+//
+//        // 建立報名
+//        DB::transaction(function () use ($event, $group, $validated, $request) {
+//            EventRegistration::create([
+//                'event_id'       => $event->id,
+//                'event_group_id' => $group->id,
+//                'user_id'        => optional($request->user())->id,
+//                'name'           => $validated['name'],
+//                'email'          => $validated['email'],
+//                'phone'          => $validated['phone'] ?? null,
+//                'team_name'      => $validated['team_name'] ?? null,
+//                'status'         => 'registered', // 改用你的列舉
+//                'paid'           => false,
+//            ]);
+//        });
+//
+//        return redirect()
+//            ->route('events.show', $event)
+//            ->with('success', '報名成功！我們已收到你的資料（組別：'.$group->name.'）。');
+//    }
 
     private function resolveRegWindow(Event $event, EventGroup $group): array
     {

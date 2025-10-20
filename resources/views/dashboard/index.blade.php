@@ -64,7 +64,13 @@
         {{-- Page Header --}}
         <div class="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
             <div>
-                <h1 class="text-2xl font-semibold tracking-tight">歡迎回來，{{ auth()->user()->name }}</h1>
+                <h1 class="text-2xl font-semibold tracking-tight">
+                    @auth
+                        歡迎回來，{{ auth()->user()->name ?? '夥伴' }}
+                    @else
+                        嗨嗨！神射手
+                    @endauth
+                </h1>
 {{--                <p class="text-sm text-gray-500"><span class="font-medium"></span>。以下為你的練習概況。</p>--}}
             </div>
             <div class="flex gap-2">

@@ -18,4 +18,8 @@ class EventRegistration extends Model
         'paid'         => 'boolean',
         'withdrawn_at' => 'datetime',
     ];
+
+    public function event_group(){
+        return $this->belongsTo(EventGroup::class, 'event_group_id');
+    }
 }

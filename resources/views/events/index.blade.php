@@ -134,9 +134,9 @@
                 <table class="min-w-full divide-y divide-gray-200">
                     <thead class="bg-gray-50 text-[11px] uppercase text-gray-500 sticky top-0 z-10">
                     <tr>
-                        <th class="px-3 py-2 text-left whitespace-nowrap">{!! sortLink('start_date','期間') !!}</th>
                         <th class="px-3 py-2 text-left">賽事</th>
-                        <th class="px-3 py-2 text-left hidden md:table-cell">{!! sortLink('organizer','主辦') !!}</th>
+                        <th class="px-3 py-2 text-left whitespace-nowrap">{!! sortLink('start_date','期間') !!}</th>
+                        <th class="px-3 py-2 text-left md:table-cell">{!! sortLink('organizer','主辦') !!}</th>
                         {{-- 移除原「報名」日期欄 --}}
                         <th class="px-3 py-2 text-left hidden xl:table-cell">場地</th>
                         <th class="px-3 py-2 text-left hidden xl:table-cell">報名狀態</th>
@@ -173,7 +173,16 @@
                                 default    => 'bg-gray-100 text-gray-500'
                             };
                         @endphp
-                        <tr class="hover:bg-gray-50/60">
+
+                        <tr class="hover:bg-gray-50/60 md:hover:bg-gray-50/60 cursor-pointer md:cursor-default"
+                            data-mobile-link="{{ route('events.groups.index', $event) }}"
+                            role="link" tabindex="0">
+                            {{-- 賽事名稱（兩行限制） --}}
+                            <td class="px-3 py-2 align-top">
+                                <a href="{{ route('events.show', $event) }}" class="text-indigo-600 hover:underline line-clamp-2 md:pointer-events-auto pointer-events-none">
+                                    {{ $event->name }}
+                                </a>
+                            </td>
                             {{-- 期間 + 模式/驗證/等級 小徽章 --}}
                             <td class="px-3 py-2 align-top whitespace-nowrap">
                                 <div class="font-medium text-gray-900">{{ $dateRangeText }}</div>
@@ -195,16 +204,10 @@
                                 </div>
                             </td>
 
-                            {{-- 賽事名稱（兩行限制） --}}
-                            <td class="px-3 py-2 align-top">
-                                <a href="{{ route('events.show', $event) }}"
-                                   class="text-indigo-600 hover:underline line-clamp-2">
-                                    {{ $event->name }}
-                                </a>
-                            </td>
+
 
                             {{-- 主辦（隱藏於小螢幕） --}}
-                            <td class="px-3 py-2 align-top hidden md:table-cell">
+                            <td class="px-3 py-2 align-top md:table-cell">
                                 <div class="truncate max-w-[16rem]"
                                      title="{{ $event->organizer }}">{{ $event->organizer }}</div>
                             </td>
@@ -317,4 +320,34 @@
             </div>
         </div>
     </div>
+
+        <script>
+            document.addEventListener('DOMContentLoaded', function () {
+                const isMobile = () => window.matchMedia('(max-width: 767.98px)').matches;
+
+                // 只在手機寬度啟用整列點擊導頁
+                document.querySelectorAll('tr[data-mobile-link]').forEach(function (row) {
+                    const go = () => { if (isMobile()) window.location.href = row.dataset.mobileLink; };
+
+                    row.addEventListener('click', function (e) {
+                        if (!isMobile()) return;
+
+                        // 若點到 row 裡的 button / link，就尊重原本行為
+                        const tag = e.target.tagName.toLowerCase();
+                        if (tag === 'a' || tag === 'button' || e.target.closest('a,button,[role="button"]')) return;
+
+                        go();
+                    });
+
+                    // 鍵盤可用性（Enter / Space）
+                    row.addEventListener('keydown', function (e) {
+                        if (!isMobile()) return;
+                        if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            go();
+                        }
+                    });
+                });
+            });
+        </script>
 @endsection

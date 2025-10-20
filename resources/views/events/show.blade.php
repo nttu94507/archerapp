@@ -54,6 +54,7 @@
                         <li class="py-3 flex items-center justify-between">
                             <div class="min-w-0">
                                 <div class="font-medium text-gray-900 truncate">{{ $g->name }}</div>
+                                <div class="text-sm text-gray-700">{{$g->bow_type}} / {{$g->gender}} / {{$g->distance}} / {{$g->age_class}} </div>
                                 <div class="mt-1 text-xs text-gray-500">
                                     已報名：{{ $registered }}
                                 </div>

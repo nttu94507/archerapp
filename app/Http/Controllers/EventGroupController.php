@@ -13,8 +13,16 @@ class EventGroupController extends Controller
     public function index(Event $event)
     {
         return view('event-groups.index', [
-            'event'  => $event,
-            'groups' => $event->groups()->latest()->paginate(20),
+            'event'       => $event,
+            'groupsAll'   => $event->groups()
+                ->withCount('registrations')          // => $group->registrations_count
+                ->latest()
+                ->paginate(20, ['*'], 'allPage'),
+            'groupsEvent' => $event->groups()
+//                ->registrations()
+                ->withCount('registrations')
+                ->latest()
+                ->paginate(20, ['*'], 'eventPage'),
         ]);
     }
 
@@ -78,6 +86,7 @@ class EventGroupController extends Controller
     public function destroy(Event $event, EventGroup $group)
     {
         $group->delete();
+        $group->registrations()->delete();
         return back()->with('success', '已刪除組別');
     }
 }

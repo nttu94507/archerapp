@@ -7,7 +7,7 @@
         <div class="mb-4 flex items-start justify-between">
             <div>
                 <h1 class="text-2xl font-bold">組別管理 — {{ $event->name }}</h1>
-                <p class="text-sm text-gray-500 mt-1">共 {{ $groups->total() }} 個組別</p>
+                <p class="text-sm text-gray-500 mt-1">共 {{ $groupsAll->total() }} 個組別</p>
             </div>
             <a href="{{ route('events.groups.create', $event) }}"
                class="rounded-xl bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-500">
@@ -33,16 +33,31 @@
                     <th class="px-3 py-2 text-left">操作</th>
                 </tr>
                 </thead>
+
                 <tbody class="divide-y divide-gray-100 text-sm">
-                @forelse($groups as $g)
+                @forelse ($groupsAll as $g)
                     <tr>
-                        <td class="px-3 py-2">{{ $g->name }}</td>
+                        <td class="px-3 py-2 font-medium">{{ $g->name }}/{{$g->bow_type}}</td>
+
                         <td class="px-3 py-2 hidden md:table-cell">
-                            {{ $g->bow_type ?: '—' }} / {{ $g->gender }} / {{ $g->age_class ?: '—' }}
+                            {{ $g->bow_type ?: '—' }} /
+                            {{ $g->gender ?: '—' }} /
+                            {{ $g->age_class ?: '—' }}
                         </td>
-                        <td class="px-3 py-2 hidden lg:table-cell">{{ $g->distance ?: '—' }}</td>
-                        <td class="px-3 py-2 hidden lg:table-cell">{{ $g->quota ?: '0' }}</td>
-                        <td class="px-3 py-2 hidden xl:table-cell">{{ $g->fee ? number_format($g->fee) : '—' }}</td>
+
+                        <td class="px-3 py-2 hidden lg:table-cell">
+                            {{ $g->distance ?: '—' }}
+                        </td>
+
+                        <td class="px-3 py-2 hidden lg:table-cell">
+                            {{-- 已報名 / 名額上限 --}}
+                            {{ $g->registrations_count ?? 0 }} / {{ $g->quota}}
+                        </td>
+
+                        <td class="px-3 py-2 hidden xl:table-cell">
+                            {{ $g->fee ? number_format($g->fee) : '—' }}
+                        </td>
+
                         <td class="px-3 py-2">
                             <div class="flex gap-2">
                                 <a href="{{ route('events.groups.edit', [$event, $g]) }}" class="text-indigo-600 hover:underline">編輯</a>
@@ -55,12 +70,18 @@
                         </td>
                     </tr>
                 @empty
-                    <tr><td class="px-3 py-6 text-center text-gray-500" colspan="7">尚無組別</td></tr>
+                    <tr>
+                        <td class="px-3 py-6 text-center text-gray-500" colspan="6">尚無組別</td>
+                    </tr>
                 @endforelse
                 </tbody>
             </table>
+
+            {{-- 分頁 --}}
+            {{ $groupsAll->withQueryString()->links() }}
+
         </div>
 
-        <div class="mt-4">{{ $groups->links() }}</div>
+{{--        <div class="mt-4">{{ $groupsAll->links() }}</div>--}}
     </div>
 @endsection
