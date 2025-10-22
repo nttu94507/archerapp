@@ -522,7 +522,7 @@
                         window.matchMedia('(max-width: 1023.98px)').matches;
 
                     let bound = false;
-                    let isOpen = true; // 目前是否展開
+                    let isOpen = (localStorage.getItem('numpad_open') ?? '1') === '1'; // ← 新：讀取記憶 // 目前是否展開
 
                     // 讓頁面底部留空，避免鍵盤遮住內容
                     function applyBottomInset() {
@@ -534,12 +534,14 @@
 
                     function openPad() {
                         isOpen = true;
+                        localStorage.setItem('numpad_open','1');
                         numpad.classList.remove('translate-y-full', 'pointer-events-none');
                         reopenBtn?.classList.add('hidden');
                         applyBottomInset();
                     }
                     function closePad() {
-                        isOpen = false;
+                        isOpen = false
+                        localStorage.setItem('numpad_open','0');
                         numpad.classList.add('translate-y-full', 'pointer-events-none');
                         reopenBtn?.classList.remove('hidden');
                         applyBottomInset();
@@ -603,11 +605,22 @@
                     }
 
                     function refresh(){
-                        if (isMobilePad()){
+                        const mobile = isMobilePad();
+
+                        if (mobile){
                             numpad.classList.remove('hidden');
                             bind();
-                            // 初次進來預設展開；若想記住上次狀態可以用 localStorage
-                            openPad();
+
+                            // 依現有狀態呈現，**不**改變 isOpen
+                            if (isOpen){
+                                numpad.classList.remove('translate-y-full','pointer-events-none');
+                                reopenBtn?.classList.add('hidden');
+                                applyBottomInset();
+                            } else {
+                                numpad.classList.add('translate-y-full','pointer-events-none');
+                                reopenBtn?.classList.remove('hidden');
+                                document.body.style.paddingBottom = '';
+                            }
                         } else {
                             numpad.classList.add('hidden');
                             reopenBtn?.classList.add('hidden');
@@ -618,9 +631,9 @@
 
                     // 初始 & 之後視窗改變
                     refresh();
+                    // 視窗變動（含行動瀏覽器地址列伸縮）只重算樣式，不改 isOpen
                     window.addEventListener('resize', () => {
                         refresh();
-                        // 展開狀態下，鍵盤高度可能改變（旋轉/螢幕寬度）
                         if (isOpen && isMobilePad()) applyBottomInset();
                     });
 
