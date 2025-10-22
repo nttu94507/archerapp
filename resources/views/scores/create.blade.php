@@ -9,13 +9,7 @@
         <div class="mb-4 flex items-start justify-between gap-4">
             <div>
                 <h1 class="text-2xl font-bold tracking-tight text-gray-900">訓練計分</h1>
-                <p class="text-sm text-gray-500 mt-1">選好設定後立即產生表格；支援鍵盤快速輸入（0–11、M）、自動跳格、點任一格續打。</p>
-            </div>
-            <div class="flex items-center gap-2">
-                <button id="reset-grid" type="button"
-                        class="inline-flex items-center justify-center rounded-xl border px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
-                    重置
-                </button>
+                <p class="text-sm text-gray-500 mt-1">選好設定後立即產生表格；支援鍵盤快速輸入（0–10、X、M）、自動跳格、點任一格續打。</p>
             </div>
         </div>
 
@@ -121,10 +115,10 @@
                 </table>
             </div>
 
-            <div class="p-4 border-t border-gray-100 flex flex-col sm:flex-row sm:items-center gap-2 sm:justify-between">
-                <div class="text-sm text-gray-600">快捷鍵：<span class="font-mono">0–9（可連按成 10/11）</span>、<span class="font-mono">M</span>=Miss、<span class="font-mono">Enter/Space</span>=下一格、<span class="font-mono">Backspace</span>=清除、方向鍵移動。</div>
-                <div class="text-sm">總分：<span id="total" class="font-semibold">0</span></div>
-            </div>
+{{--            <div class="p-4 border-t border-gray-100 flex flex-col sm:flex-row sm:items-center gap-2 sm:justify-between">--}}
+{{--                <div class="text-sm text-gray-600">快捷鍵：<span class="font-mono">0–9（可連按成 10/11）</span>、<span class="font-mono">M</span>=Miss、<span class="font-mono">Enter/Space</span>=下一格、<span class="font-mono">Backspace</span>=清除、方向鍵移動。</div>--}}
+{{--                <div class="text-sm">總分：<span id="total" class="font-semibold">0</span></div>--}}
+{{--            </div>--}}
 
             <div class="p-4 border-t border-gray-100 flex flex-wrap items-center gap-2">
                 <form id="export-form" method="POST" action="{{ route('score.store') }}" class="flex items-center gap-2">
