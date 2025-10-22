@@ -33,6 +33,10 @@ Route::middleware(['auth','profile.completed'])->group(function () {
 
 });
 
+Route::middleware(['auth'])->group(function () {
+    Route::resource('score', \App\Http\Controllers\ScoreController::class);
+});
+
 //快速報名
 Route::get('events/{event}', [EventController::class, 'show'])->name('events.show');
 Route::post('events/{event}/groups/{group}/quick-register', [EventRegistrationController::class, 'quickRegister'])
