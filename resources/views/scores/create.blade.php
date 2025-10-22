@@ -4,7 +4,7 @@
 @section('title','ArrowTrack | 訓練計分')
 
 @section('content')
-    <div class="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 py-8">
+    <div class="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 py-8 pb-40 lg:pb-0">
         {{-- Page Header --}}
         <div class="mb-4 flex items-start justify-between gap-4">
             <div>
@@ -146,10 +146,23 @@
             lg:hidden  {{-- >=1024px 隱藏 --}}
             [padding-bottom:env(safe-area-inset-bottom)]">
 
-        {{-- 拖拉/標題列（行動裝置抓握用） --}}
-        <div class="sm:hidden flex items-center justify-center py-2">
-            <div class="h-1.5 w-10 rounded-full bg-gray-300"></div>
+        {{-- 行動裝置抓握列 + 收合按鈕 --}}
+        <div class="sm:hidden flex items-center justify-between px-3 py-2">
+            <div class="flex-1 flex items-center justify-center">
+                <div class="h-1.5 w-10 rounded-full bg-gray-300"></div>
+            </div>
+            <button id="numpad-collapse"
+                    type="button"
+                    class="ml-3 rounded-lg border px-2 py-1 text-xs text-gray-600 hover:bg-gray-50"
+                    aria-label="收合鍵盤"
+                    title="收合鍵盤">
+                收合
+            </button>
         </div>
+{{--        --}}{{-- 拖拉/標題列（行動裝置抓握用） --}}
+{{--        <div class="sm:hidden flex items-center justify-center py-2">--}}
+{{--            <div class="h-1.5 w-10 rounded-full bg-gray-300"></div>--}}
+{{--        </div>--}}
 
         <div class="px-3 py-2 sm:p-4">
             {{-- 第一列：7 8 9 ⌫ --}}
@@ -186,12 +199,30 @@
 
             {{-- 功能列：清除／收起（可選） --}}
             <div class="mt-3 flex items-center justify-between">
-                <button type="button" data-key="CLR" class="rounded-xl border px-3 py-2 text-sm text-gray-700 hover:bg-gray-50">清除此格</button>
-                {{-- 若想收合可加一顆切換鈕；預設不做收合 --}}
+{{--                <button type="button" data-key="CLR" class="rounded-xl border px-3 py-2 text-sm text-gray-700 hover:bg-gray-50">清除此格</button>--}}
+{{--                --}}{{-- 若想收合可加一顆切換鈕；預設不做收合 --}}
             </div>
         </div>
     </div>
     </div>
+    {{-- 重新展開的浮動按鈕（只在鍵盤收合時出現） --}}
+    <button id="numpad-reopen"
+            type="button"
+            class="fixed bottom-4 right-4 z-40 rounded-full bg-indigo-600 text-white shadow-lg px-4 py-3 text-sm lg:hidden hidden
+               hover:bg-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-300"
+            aria-label="展開鍵盤"
+            title="展開鍵盤">
+        <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <!-- 外框 -->
+            <rect x="2.75" y="5.75" width="18.5" height="12.5" rx="2"></rect>
+            <!-- 上排幾顆鍵 -->
+            <path d="M6 10h2m2 0h2m2 0h2"></path>
+            <!-- 空白鍵 -->
+            <path d="M7 14h10"></path>
+        </svg>
+        <span class="sr-only">展開鍵盤</span>
+    </button>
 
 
     {{-- 簡易樣式（沿用 Tailwind） --}}
@@ -482,20 +513,42 @@
                 // === Numpad（僅手機/平板） ===
                 (function attachNumpadMobileOnly(){
                     const numpad = document.getElementById('numpad');
+                    const reopenBtn = document.getElementById('numpad-reopen');
+                    const collapseBtn = document.getElementById('numpad-collapse');
                     if (!numpad) return;
 
                     const isMobilePad = () =>
-                        window.matchMedia('(pointer: coarse)').matches ||   // 觸控裝置（多數手機/平板）
-                        window.matchMedia('(max-width: 1023.98px)').matches; // 視窗寬度 < 1024
+                        window.matchMedia('(pointer: coarse)').matches ||
+                        window.matchMedia('(max-width: 1023.98px)').matches;
 
-                    // 依據條件顯示/隱藏 & 綁/解綁事件
                     let bound = false;
+                    let isOpen = true; // 目前是否展開
+
+                    // 讓頁面底部留空，避免鍵盤遮住內容
+                    function applyBottomInset() {
+                        if (!isOpen) { document.body.style.paddingBottom = ''; return; }
+                        // 取鍵盤高度 + 裝置安全區
+                        const h = numpad.getBoundingClientRect().height;
+                        document.body.style.paddingBottom = `${Math.ceil(h)}px`;
+                    }
+
+                    function openPad() {
+                        isOpen = true;
+                        numpad.classList.remove('translate-y-full', 'pointer-events-none');
+                        reopenBtn?.classList.add('hidden');
+                        applyBottomInset();
+                    }
+                    function closePad() {
+                        isOpen = false;
+                        numpad.classList.add('translate-y-full', 'pointer-events-none');
+                        reopenBtn?.classList.remove('hidden');
+                        applyBottomInset();
+                    }
 
                     function flash(btn){
                         btn.classList.add('ring-2','ring-indigo-200');
                         setTimeout(()=>btn.classList.remove('ring-2','ring-indigo-200'),120);
                     }
-
                     function pressKey(key){
                         switch(key){
                             case 'BKSP': clearCell(); break;
@@ -503,7 +556,8 @@
                             case 'NEXT': moveNext(); break;
                             case 'M':    commitScore(0, true); break;
                             case 'CLR':  clearCell(); break;
-                            case 'x' : commitScore(10,false,true); break;
+                            case 'x':
+                            case 'X':    commitScore(10, false, true); break; // 你已加的 X=10 顯示 X
                             case '0': case '1': case '2': case '3': case '4':
                             case '5': case '6': case '7': case '8': case '9':
                             case '10': case '11':
@@ -534,6 +588,8 @@
                         numpad.addEventListener('click', onClick);
                         numpad.addEventListener('touchstart', onTouchStart, {passive:true});
                         numpad.addEventListener('touchend', onTouchEnd, {passive:true});
+                        reopenBtn?.addEventListener('click', openPad);
+                        collapseBtn?.addEventListener('click', closePad);
                         bound = true;
                     }
                     function unbind(){
@@ -541,6 +597,8 @@
                         numpad.removeEventListener('click', onClick);
                         numpad.removeEventListener('touchstart', onTouchStart);
                         numpad.removeEventListener('touchend', onTouchEnd);
+                        reopenBtn?.removeEventListener('click', openPad);
+                        collapseBtn?.removeEventListener('click', closePad);
                         bound = false;
                     }
 
@@ -548,15 +606,28 @@
                         if (isMobilePad()){
                             numpad.classList.remove('hidden');
                             bind();
+                            // 初次進來預設展開；若想記住上次狀態可以用 localStorage
+                            openPad();
                         } else {
                             numpad.classList.add('hidden');
+                            reopenBtn?.classList.add('hidden');
                             unbind();
+                            document.body.style.paddingBottom = '';
                         }
                     }
 
-                    // 初次判斷 & 之後視窗變動也更新
+                    // 初始 & 之後視窗改變
                     refresh();
-                    window.addEventListener('resize', refresh);
+                    window.addEventListener('resize', () => {
+                        refresh();
+                        // 展開狀態下，鍵盤高度可能改變（旋轉/螢幕寬度）
+                        if (isOpen && isMobilePad()) applyBottomInset();
+                    });
+
+                    // 如果內容滾動到最底，展開時也更新一次底部間距
+                    window.addEventListener('scroll', () => {
+                        if (isOpen && isMobilePad()) applyBottomInset();
+                    }, { passive: true });
                 })();
                 // 點任一 cell 開始連打
                 document.addEventListener('click', (e) => {
