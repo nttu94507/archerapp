@@ -114,7 +114,7 @@
 
         <nav class="p-3 space-y-1 text-sm">
             {{-- 主要導覽 --}}
-            <a href="{{ route('events.index') }}" class="flex items-center gap-2 rounded-lg px-3 py-2 hover:bg-gray-50 {{ request()->routeIs('events.*') ? 'font-semibold text-gray-900' : 'text-gray-700' }}">
+            <a href="{{ route('score.index') }}" class="flex items-center gap-2 rounded-lg px-3 py-2 hover:bg-gray-50 {{ request()->routeIs('events.*') ? 'font-semibold text-gray-900' : 'text-gray-700' }}">
                 訓練
             </a>
             <a href="{{ route('leaderboards.index') }}" class="flex items-center gap-2 rounded-lg px-3 py-2 hover:bg-gray-50 {{ request()->routeIs('leaderboards.*') ? 'font-semibold text-gray-900' : 'text-gray-700' }}">
