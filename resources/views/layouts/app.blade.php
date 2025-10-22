@@ -34,6 +34,10 @@
         <nav class="hidden md:flex items-center gap-6 text-sm font-medium">
             <a href="{{ route('leaderboards.index') }}"
                class="px-2 py-1 rounded-lg hover:bg-gray-100 {{ request()->routeIs('leaderboards.*') ? 'text-gray-900' : 'text-gray-600' }}">
+                訓練
+            </a>
+            <a href="{{ route('leaderboards.index') }}"
+               class="px-2 py-1 rounded-lg hover:bg-gray-100 {{ request()->routeIs('leaderboards.*') ? 'text-gray-900' : 'text-gray-600' }}">
                 排行榜
             </a>
             <a href="{{ route('events.index') }}"

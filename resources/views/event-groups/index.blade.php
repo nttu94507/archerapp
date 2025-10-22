@@ -36,8 +36,8 @@
 
                 <tbody class="divide-y divide-gray-100 text-sm">
                 @forelse ($groupsAll as $g)
-                    <tr>
-                        <td class="px-3 py-2 font-medium">{{ $g->name }}/{{$g->bow_type}}</td>
+                    <tr >
+                        <td class="px-3 py-2 font-medium">{{ $g->name }}</td>
 
                         <td class="px-3 py-2 hidden md:table-cell">
                             {{ $g->bow_type ?: '—' }} /
