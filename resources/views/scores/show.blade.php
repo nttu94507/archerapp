@@ -8,7 +8,7 @@
         {{-- Page Header --}}
         <div class="mb-6 flex items-start justify-between gap-4">
             <div>
-                <h1 class="text-2xl font-bold tracking-tight text-gray-900">訓練紀錄</h1>
+                <h1 class="text-2xl font-bold tracking-tight text-gray-900">訓練分析</h1>
                 <p class="text-sm text-gray-500 mt-1">檢視此場訓練的每趟每箭成績、合計與累計。</p>
             </div>
 {{--            <div class="flex items-center gap-2">--}}

@@ -4,6 +4,25 @@
 @section('title','ArrowTrack | 訓練計分')
 
 @section('content')
+    @php
+        $defaults = [
+            'bow_type'       => request('bow_type', 'recurve'),
+            'venue'          => request('venue', 'outdoor'),
+            'distance'       => (int) request('distance', 18),
+            'arrows_total'   => (int) request('arrows_total', 36),
+            'arrows_per_end' => (int) request('arrows_per_end', 6),
+        ];
+    @endphp
+
+    {{-- 根節點，提供 JS 讀取的初始值 --}}
+    <div id="score-root"
+         data-bow="{{ $defaults['bow_type'] }}"
+         data-venue="{{ $defaults['venue'] }}"
+         data-distance="{{ $defaults['distance'] }}"
+         data-arrows-total="{{ $defaults['arrows_total'] }}"
+         data-arrows-per-end="{{ $defaults['arrows_per_end'] }}">
+    </div>
+
     <div class="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 py-8 pb-40 lg:pb-0">
         {{-- Page Header --}}
         <div class="mb-4 flex items-start justify-between gap-4">
@@ -12,90 +31,6 @@
                 <p class="text-sm text-gray-500 mt-1">選好設定後立即產生表格；支援鍵盤快速輸入（0–10、X、M）、自動跳格、點任一格續打。</p>
             </div>
         </div>
-
-        {{-- Filters (collapsible) --}}
-        <details id="scoring-filters" class="mb-4 rounded-2xl border border-gray-200 bg-white shadow-sm" open>
-            <summary class="flex cursor-pointer items-center justify-between px-4 py-3">
-                <div class="text-sm font-medium text-gray-800">設定</div>
-                <span class="text-xs text-gray-500">點擊展開/收合</span>
-            </summary>
-            <div class="border-t border-gray-100 p-4">
-                {{-- 選擇結果 chips（動態由 JS 更新） --}}
-                <div id="chips-line" class="mb-3 hidden flex-wrap gap-2"></div>
-
-                <form id="setup-form" onsubmit="return false;" class="grid grid-cols-1 md:grid-cols-5 gap-3">
-                    {{-- Bow Type --}}
-                    <div>
-                        <label class="block text-xs font-medium text-gray-600 mb-1" for="bow_type">弓種</label>
-                        <select id="bow_type" name="bow_type" class="block w-full rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-indigo-500">
-                            <option value="recurve">Recurve（反曲）</option>
-                            <option value="compound">Compound（複合）</option>
-                            <option value="barebow">Barebow（裸弓）</option>
-                            <option value="yumi">Yumi（和弓）</option>
-                            <option value="longbow">Longbow</option>
-                        </select>
-                    </div>
-
-                    {{-- Venue --}}
-                    <div>
-                        <label class="block text-xs font-medium text-gray-600 mb-1" for="venue">場地</label>
-                        <select id="venue" name="venue" class="block w-full rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-indigo-500">
-                            <option value="indoor">室內</option>
-                            <option value="outdoor" selected>室外</option>
-                        </select>
-                    </div>
-
-                    {{-- Distance --}}
-                    <div class="md:col-span-2">
-                        <label class="block text-xs font-medium text-gray-600 mb-1" for="distance">距離（m）</label>
-                        <div class="flex items-center gap-2">
-                            <input id="distance" name="distance" type="number" min="5" max="150" value="18"
-                                   class="w-28 rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-indigo-500" />
-                            <div class="flex flex-wrap items-center gap-1">
-                                @foreach([18,20,30,50,70] as $d)
-                                    <button type="button" data-distance="{{ $d }}" class="px-3 py-1 rounded-xl border text-xs sm:text-sm">{{ $d }}</button>
-                                @endforeach
-                            </div>
-                        </div>
-                        <p class="mt-1 text-xs text-gray-500">可輸入 5–150，熱門：18 / 20 / 30 / 50 / 70</p>
-                    </div>
-
-                    {{-- Arrows total --}}
-                    <div>
-                        <label class="block text-xs font-medium text-gray-600 mb-1" for="arrows_total">總箭數</label>
-                        <div class="flex items-center gap-2">
-                            <input id="arrows_total" name="arrows_total" type="number" min="1" max="300" value="30"
-                                   class="w-28 rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-indigo-500" />
-                            <div class="flex items-center gap-1" id="total-presets">
-                                {{-- 室內：30/60；室外：36/72（JS 會切換） --}}
-                                <button type="button" data-total="30" class="px-3 py-1 rounded-xl border text-xs sm:text-sm">30</button>
-                                <button type="button" data-total="60" class="px-3 py-1 rounded-xl border text-xs sm:text-sm">60</button>
-                            </div>
-                        </div>
-                    </div>
-
-                    {{-- Arrows per end --}}
-                    <div>
-                        <label class="block text-xs font-medium text-gray-600 mb-1" for="arrows_per_end">每趟</label>
-                        <div class="flex items-center gap-2">
-                            <input id="arrows_per_end" name="arrows_per_end" type="number" min="1" max="12" value="6"
-                                   class="w-24 rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-indigo-500" />
-                            <div class="flex items-center gap-1">
-                                @foreach([3,6] as $p)
-                                    <button type="button" data-per-end="{{ $p }}" class="px-3 py-1 rounded-xl border text-xs sm:text-sm">{{ $p }}</button>
-                                @endforeach
-                            </div>
-                        </div>
-                    </div>
-
-                    {{-- 備援按鈕（隱藏） --}}
-                    <div class="md:col-span-5 hidden">
-                        <button id="build-grid" type="button"
-                                class="inline-flex items-center justify-center rounded-xl bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800">產生計分表</button>
-                    </div>
-                </form>
-            </div>
-        </details>
 
         {{-- Table Card --}}
         <div class="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden">
@@ -121,7 +56,7 @@
 {{--            </div>--}}
 
             <div class="p-4 border-t border-gray-100 flex flex-wrap items-center gap-2">
-                <form id="export-form" method="POST" action="{{ route('score.store') }}" class="flex items-center gap-2">
+                <form id="export-form" method="POST" action="{{ route('scores.store') }}" class="flex items-center gap-2">
                     @csrf
                     <input type="hidden" name="payload" id="payload" />
                     <button type="submit" class="inline-flex items-center justify-center rounded-xl bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-500">結束計分</button>
@@ -217,8 +152,9 @@
         </svg>
         <span class="sr-only">展開鍵盤</span>
     </button>
+@endsection
 
-
+@section('js')
     {{-- 簡易樣式（沿用 Tailwind） --}}
     <style>
         #numpad .nkey{
@@ -238,6 +174,60 @@
 
     <script>
         (function () {
+            // ---- DOM（若沒有表單也能運作） ----
+            const root = document.getElementById('score-root');
+            const urlq = new URLSearchParams(location.search);
+
+// 嘗試抓表單元素（如果你未來又加回表單，這些會生效）
+            const bow     = document.getElementById('bow_type');
+            const venue   = document.getElementById('venue');
+            const distance= document.getElementById('distance');
+            const total   = document.getElementById('arrows_total');
+            const perEnd  = document.getElementById('arrows_per_end');
+
+            const chips         = document.getElementById('chips-line');
+            const totalPresets  = document.getElementById('total-presets');
+
+            const theadRow = document.getElementById('thead-row');
+            const tbody    = document.getElementById('tbody');
+            const totalSpan= document.getElementById('total');
+            const metaLine = document.getElementById('meta-line');
+            const payload  = document.getElementById('payload');
+
+            const btnReset      = document.getElementById('reset-grid');
+            const btnExportJSON = document.getElementById('export-json');
+            const btnExportCSV  = document.getElementById('export-csv');
+            const btnBuild      = document.getElementById('build-grid'); // 備援按鈕
+
+// 沒有表單時用 data-* 或 query string 當資料來源
+            const FALLBACKS = {
+                bow   : (root?.dataset.bow)           || urlq.get('bow_type')       || 'recurve',
+                venue : (root?.dataset.venue)         || urlq.get('venue')          || 'outdoor',
+                dist  : parseInt((root?.dataset.distance)     || urlq.get('distance')       || '18', 10),
+                total : parseInt((root?.dataset.arrowsTotal)  || urlq.get('arrows_total')   || '36', 10),
+                per   : parseInt((root?.dataset.arrowsPerEnd) || urlq.get('arrows_per_end') || '6',  10),
+            };
+
+// 建立「表單元素的墊片」，讓後續程式可以用 .value
+            const bowEl     = bow     || { value: FALLBACKS.bow };
+            const venueEl   = venue   || { value: FALLBACKS.venue };
+            const distanceEl= distance|| { value: String(FALLBACKS.dist) };
+            const totalEl   = total   || { value: String(FALLBACKS.total) };
+            const perEndEl  = perEnd  || { value: String(FALLBACKS.per) };
+
+// 顯示文字對照（因為沒有 <option> 時拿不到 .text）
+            const BOW_TEXT = {
+                recurve: 'Recurve（反曲）',
+                compound: 'Compound（複合）',
+                barebow: 'Barebow（裸弓）',
+                yumi: 'Yumi（和弓）',
+                longbow: 'Longbow',
+            };
+            const VENUE_TEXT = { indoor: '室內', outdoor: '室外' };
+
+// 如果沒有 thead/tbody 就沒辦法生成
+            if (!theadRow || !tbody) return;
+
             const ACTIVE = ['bg-gray-900', 'text-white', 'border-gray-900'];
             const INACTIVE = ['bg-white', 'text-gray-700', 'border'];
             const $ = (id) => document.getElementById(id);
@@ -250,29 +240,6 @@
             }
 
             ready(() => {
-                // ---- DOM ----
-                const bow = $('bow_type');
-                const venue = $('venue');
-                const distance = $('distance');
-                const total = $('arrows_total');
-                const perEnd = $('arrows_per_end');
-
-                const chips = $('chips-line');
-                const totalPresets = $('total-presets');
-
-                const theadRow = $('thead-row');
-                const tbody = $('tbody');
-                const totalSpan = $('total');
-                const metaLine = $('meta-line');
-                const payload = $('payload');
-
-                const btnReset = $('reset-grid');
-                const btnExportJSON = $('export-json');
-                const btnExportCSV = $('export-csv');
-                const btnBuild = $('build-grid'); // 若你有備援按鈕
-
-                if (!bow || !venue || !distance || !total || !perEnd || !theadRow || !tbody) return;
-
                 // ---- 狀態 ----
                 let scores = [];   // number|null
                 let isMiss = [];   // boolean
@@ -299,11 +266,11 @@
                 function renderChips() {
                     if (!chips) return;
                     const items = [
-                        `弓種：${bow.options[bow.selectedIndex].text}`,
-                        `場地：${venue.options[venue.selectedIndex].text}`,
-                        `距離：${distance.value}m`,
-                        `總箭數：${total.value}`,
-                        `每趟：${perEnd.value}`,
+                        `弓種：${BOW_TEXT[bowEl.value] || bowEl.value}`,
+                        `場地：${VENUE_TEXT[venueEl.value] || venueEl.value}`,
+                        `距離：${distanceEl.value}m`,
+                        `總箭數：${totalEl.value}`,
+                        `每趟：${perEndEl.value}`,
                     ];
                     chips.classList.remove('hidden');
                     chips.innerHTML = items
@@ -335,36 +302,17 @@
                     setActive(perEndBtns, perEndBtns.find((b) => Number(b.dataset.perEnd) === Number(perEnd.value)) || null);
                 }
 
-                document.addEventListener('click', (e) => {
-                    const btn = e.target.closest('[data-distance],[data-total],[data-per-end]');
-                    if (!btn) return;
-                    if (btn.hasAttribute('data-distance')) distance.value = String(btn.dataset.distance);
-                    else if (btn.hasAttribute('data-total')) total.value = String(btn.dataset.total);
-                    else if (btn.hasAttribute('data-per-end')) perEnd.value = String(btn.dataset.perEnd);
-
-                    updateActiveStates();
-                    renderChips();
-                    buildGrid(); // ← 熱門鍵點擊後即重建
-                });
-
-                venue.addEventListener('change', () => {
-                    renderTotalPresetButtons();
-                    updateActiveStates();
-                    renderChips();
-                    buildGrid();
-                });
-
-                [bow, distance, total, perEnd].forEach((el) => {
-                    el.addEventListener('input', () => { updateActiveStates(); renderChips(); buildGrid(); });
-                    el.addEventListener('change', () => { updateActiveStates(); renderChips(); buildGrid(); });
-                });
+                // [bow, distance, total, perEnd].forEach((el) => {
+                //     el.addEventListener('input', () => { updateActiveStates(); renderChips(); buildGrid(); });
+                //     el.addEventListener('change', () => { updateActiveStates(); renderChips(); buildGrid(); });
+                // });
 
                 // ========== 計分表 part ==========
                 function buildGrid() {
-                    const totalArrows = clamp(parseInt(total.value || '0', 10), 1, 300);
-                    const per = clamp(parseInt(perEnd.value || '0', 10), 1, 12);
-                    total.value = String(totalArrows);
-                    perEnd.value = String(per);
+                    const totalArrows = clamp(parseInt(totalEl.value || '0', 10), 1, 300);
+                    const per = clamp(parseInt(perEndEl.value || '0', 10), 1, 12);
+                    totalEl.value  = String(totalArrows);
+                    perEndEl.value = String(per);
 
                     ends = Math.ceil(totalArrows / per);
                     scores = Array.from({ length: ends }, () => Array(per).fill(null));
@@ -377,7 +325,12 @@
 
                     // Meta 行
                     if (metaLine) {
-                        metaLine.textContent = `弓種：${bow.options[bow.selectedIndex].text}　場地：${venue.options[venue.selectedIndex].text}　距離：${distance.value}m　總箭數：${totalArrows}　每趟：${per}`;
+                        metaLine.textContent =
+                            `弓種：${BOW_TEXT[bowEl.value] || bowEl.value}　` +
+                            `場地：${VENUE_TEXT[venueEl.value] || venueEl.value}　` +
+                            `距離：${distanceEl.value}m　` +
+                            `總箭數：${totalArrows}　` +
+                            `每趟：${per}`;
                     }
 
                     // thead
@@ -492,14 +445,15 @@
                     if (payload) {
                         payload.value = JSON.stringify({
                             meta: {
-                                bow: bow.value,
-                                venue: venue.value,
-                                distance: parseInt(distance.value || '0', 10),
-                                arrows_total: parseInt(total.value || '0', 10),
-                                arrows_per_end: parseInt(perEnd.value || '0', 10),
+                                bow: bowEl.value,
+                                venue: venueEl.value,
+                                distance: parseInt(distanceEl.value || '0', 10),
+                                arrows_total: parseInt(totalEl.value || '0', 10),
+                                arrows_per_end: parseInt(perEndEl.value || '0', 10),
                             },
                             scores,
                             isMiss,
+                            isX,
                             createdAt: new Date().toISOString(),
                         });
                     }
@@ -668,7 +622,7 @@
                     } else if (e.key === 'm' || e.key === 'M') {
                         e.preventDefault(); clearPending(); commitScore(0, true);
                     }else if (e.key === 'x' || e.key === 'X') {
-                        e.preventDefault(); clearPending(); commitScore(10, true);
+                        e.preventDefault(); clearPending(); commitScore(10, false, true);
                     } else if (e.key === 'Enter' || e.key === ' ') {
                         e.preventDefault(); clearPending(); moveNext();
                     } else if (e.key === 'Backspace') {
@@ -680,59 +634,7 @@
                     }
                 });
 
-                // 匯出
-                btnExportJSON?.addEventListener('click', () => {
-                    if (!payload?.value) return;
-                    const blob = new Blob([payload.value], { type: 'application/json' });
-                    const url = URL.createObjectURL(blob);
-                    const a = document.createElement('a'); a.href = url; a.download = `archery_scores_${Date.now()}.json`; a.click();
-                    URL.revokeObjectURL(url);
-                });
-
-                btnExportCSV?.addEventListener('click', () => {
-                    if (!payload?.value) return;
-                    const data = JSON.parse(payload.value);
-                    const per = data.meta.arrows_per_end;
-                    const header = ['End', ...Array.from({ length: per }, (_, i) => `A${i + 1}`), 'EndSum', 'Cumu'];
-                    const rows = [];
-                    let cum = 0;
-                    for (let e = 0; e < data.scores.length; e++) {
-                        const row = data.scores[e].map((v, i) => (data.isMiss[e][i] && v === 0) ? 'M(0)' : (v == null ? '' : v));
-                        const endSum = data.scores[e].reduce((a, b) => a + (b || 0), 0);
-                        cum += endSum;
-                        rows.push([e + 1, ...row, endSum, cum]);
-                    }
-                    const meta = [
-                        ['Bow', data.meta.bow],
-                        ['Venue', data.meta.venue],
-                        ['Distance(m)', data.meta.distance],
-                        ['Arrows', data.meta.arrows_total],
-                        ['Per End', data.meta.arrows_per_end],
-                        [],
-                    ];
-                    const esc = (s) => { s = String(s ?? ''); return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; };
-                    const csv = [...meta, header, ...rows].map(r => r.map(esc).join(',')).join('\n');
-                    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-                    const url = URL.createObjectURL(blob);
-                    const a = document.createElement('a'); a.href = url; a.download = `archery_scores_${Date.now()}.csv`; a.click();
-                    URL.revokeObjectURL(url);
-                });
-
-                // 重置
-                btnReset?.addEventListener('click', () => {
-                    tbody.innerHTML = '';
-                    theadRow.innerHTML = '<th class="px-3 py-2 text-left w-16">End</th>';
-                    if (totalSpan) totalSpan.textContent = '0';
-                    if (payload) payload.value = '';
-                    buildGrid();
-                });
-
-                // 備援按鈕（如果你想改為「按下才建表」，把其它地方的 buildGrid() 呼叫拿掉，留這裡）
-                btnBuild?.addEventListener('click', buildGrid);
-
                 // ---- Init ----
-                renderTotalPresetButtons();
-                updateActiveStates();
                 renderChips();
                 buildGrid(); // 預設進頁就建表
             });

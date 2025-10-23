@@ -11,8 +11,60 @@ use Illuminate\Validation\ValidationException;
 class ScoreController extends Controller
 {
     //
-    public function index(){
-        return view('scores.create');
+    public function index(Request $request)
+    {
+        $q       = $request->string('q')->toString();              // 關鍵字（備註）
+        $bow     = $request->string('bow_type')->toString();       // recurve/compound/...
+        $venue   = $request->string('venue')->toString();          // indoor/outdoor
+        $dFrom   = $request->date('date_from');                    // Y-m-d
+        $dTo     = $request->date('date_to');                      // Y-m-d
+        $sort    = $request->string('sort', 'created_at')->toString(); // created_at | score_total | distance_m
+        $dir     = $request->string('dir', 'desc')->toString();        // asc/desc
+
+        $query = ArcherySession::query()
+            ->where('user_id', $request->user()->id);
+
+        if ($q !== '') {
+            $query->where('note', 'like', '%'.$q.'%');
+        }
+        if ($bow !== '') {
+            $query->where('bow_type', $bow);
+        }
+        if ($venue !== '') {
+            $query->where('venue', $venue);
+        }
+        if ($dFrom) {
+            $query->whereDate('created_at', '>=', $dFrom);
+        }
+        if ($dTo) {
+            $query->whereDate('created_at', '<=', $dTo);
+        }
+
+        // 安全的排序白名單
+        $sortWhiteList = ['created_at','score_total','distance_m'];
+        if (!in_array($sort, $sortWhiteList, true)) $sort = 'created_at';
+        $dir = strtolower($dir) === 'asc' ? 'asc' : 'desc';
+
+        $sessions = $query
+            ->orderBy($sort, $dir)
+            ->paginate(15)
+            ->withQueryString();
+
+        return view('scores.index', compact('sessions'));
+    }
+
+    public function create(Request $request)
+    {
+        // 給前端預設值（若沒傳就用預設）
+        $defaults = [
+            'bow_type'       => $request->string('bow_type', 'recurve')->toString(),
+            'venue'          => $request->string('venue', 'indoor')->toString(),
+            'distance'       => (int) $request->input('distance', 18),
+            'arrows_total'   => (int) $request->input('arrows_total', 30),
+            'arrows_per_end' => (int) $request->input('arrows_per_end', 6),
+        ];
+
+        return view('scores.create', compact('defaults'));
     }
 
     public function store(Request $request)
@@ -138,7 +190,7 @@ class ScoreController extends Controller
         });
 
         return redirect()
-            ->route('score.show', $session)
+            ->route('scores.show', $session)
             ->with('success', '訓練成績已儲存');
     }
 
@@ -171,5 +223,10 @@ class ScoreController extends Controller
             'shots'   => $shots,
             'ends'    => $endRows,
         ]);
+    }
+
+    public function setup()
+    {
+        return view('scores.setup');
     }
 }

@@ -3,6 +3,7 @@
 use App\Http\Controllers\EventController;
 use App\Http\Controllers\GoogleController;
 use App\Http\Controllers\LeaderBoardController;
+use App\Http\Controllers\ScoreController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\ProfileCompletionController;
 use App\Http\Controllers\LoginController;
@@ -34,7 +35,8 @@ Route::middleware(['auth','profile.completed'])->group(function () {
 });
 
 Route::middleware(['auth'])->group(function () {
-    Route::resource('score', \App\Http\Controllers\ScoreController::class);
+    Route::get('scores/setup', [ScoreController::class, 'setup'])->name('score.setup');
+    Route::resource('scores', \App\Http\Controllers\ScoreController::class);
 });
 
 //快速報名
