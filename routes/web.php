@@ -35,7 +35,7 @@ Route::middleware(['auth','profile.completed'])->group(function () {
 });
 
 Route::middleware(['auth'])->group(function () {
-    Route::get('scores/setup', [ScoreController::class, 'setup'])->name('score.setup');
+    Route::get('scores/setup', [ScoreController::class, 'setup'])->name('scores.setup');
     Route::resource('scores', \App\Http\Controllers\ScoreController::class);
 });
 

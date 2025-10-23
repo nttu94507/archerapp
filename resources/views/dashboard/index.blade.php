@@ -74,8 +74,8 @@
 {{--                <p class="text-sm text-gray-500"><span class="font-medium"></span>。以下為你的練習概況。</p>--}}
             </div>
             <div class="flex gap-2">
-                <a href="#" class="inline-flex items-center rounded-xl border px-3 py-2 text-sm text-gray-700 hover:bg-gray-50">匯出月報</a>
-                <a href="#" class="inline-flex items-center rounded-xl bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800">＋開始訓練</a>
+{{--                <a href="#" class="inline-flex items-center rounded-xl border px-3 py-2 text-sm text-gray-700 hover:bg-gray-50">匯出月報</a>--}}
+                <a href="{{route('scores.setup')}}" class="inline-flex items-center rounded-xl bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800">＋開始訓練</a>
             </div>
         </div>
 

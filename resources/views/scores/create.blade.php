@@ -28,7 +28,7 @@
         <div class="mb-4 flex items-start justify-between gap-4">
             <div>
                 <h1 class="text-2xl font-bold tracking-tight text-gray-900">訓練計分</h1>
-                <p class="text-sm text-gray-500 mt-1">選好設定後立即產生表格；支援鍵盤快速輸入（0–10、X、M）、自動跳格、點任一格續打。</p>
+{{--                <p class="text-sm text-gray-500 mt-1">選好設定後立即產生表格；支援鍵盤快速輸入（0–10、X、M）、自動跳格、點任一格續打。</p>--}}
             </div>
         </div>
 
@@ -122,8 +122,8 @@
             <div class="grid grid-cols-4 gap-2">
                 <button type="button" data-key="2"  class="nkey">2</button>
                 <button type="button" data-key="1" class="nkey">1</button>
-                <button type="button" data-key="0" class="nkey">0</button>
                 <button type="button" data-key="M"  class="nkey nkey-miss">M</button>
+{{--                <button type="button" data-key="M"  class="nkey nkey-miss">*</button>--}}
             </div>
 
             {{-- 功能列：清除／收起（可選） --}}
