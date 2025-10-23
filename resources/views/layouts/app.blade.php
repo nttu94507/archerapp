@@ -32,7 +32,7 @@
 
         {{-- 中間主選單（桌機顯示） --}}
         <nav class="hidden md:flex items-center gap-6 text-sm font-medium">
-            <a href="{{ route('leaderboards.index') }}"
+            <a href="{{ route('score.index') }}"
                class="px-2 py-1 rounded-lg hover:bg-gray-100 {{ request()->routeIs('leaderboards.*') ? 'text-gray-900' : 'text-gray-600' }}">
                 訓練
             </a>

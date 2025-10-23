@@ -124,10 +124,10 @@
                 <form id="export-form" method="POST" action="{{ route('score.store') }}" class="flex items-center gap-2">
                     @csrf
                     <input type="hidden" name="payload" id="payload" />
-                    <button type="submit" class="inline-flex items-center justify-center rounded-xl bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-500">儲存到資料庫</button>
+                    <button type="submit" class="inline-flex items-center justify-center rounded-xl bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-500">結束計分</button>
                 </form>
-                <button id="export-json" type="button" class="inline-flex items-center justify-center rounded-xl border px-3 py-2 text-sm hover:bg-gray-50">匯出 JSON</button>
-                <button id="export-csv" type="button" class="inline-flex items-center justify-center rounded-xl border px-3 py-2 text-sm hover:bg-gray-50">匯出 CSV</button>
+{{--                <button id="export-json" type="button" class="inline-flex items-center justify-center rounded-xl border px-3 py-2 text-sm hover:bg-gray-50">匯出 JSON</button>--}}
+{{--                <button id="export-csv" type="button" class="inline-flex items-center justify-center rounded-xl border px-3 py-2 text-sm hover:bg-gray-50">匯出 CSV</button>--}}
             </div>
         </div>
     </div>
