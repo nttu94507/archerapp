@@ -11,8 +11,8 @@
                 <h1 class="text-2xl font-bold tracking-tight text-gray-900">訓練紀錄</h1>
                 <p class="text-sm text-gray-500 mt-1">瀏覽、搜尋與管理你的訓練場次。</p>
             </div>
-            <a href="{{ route('scores.create') }}"
-               class="inline-flex items-center justify-center rounded-xl bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-500">
+            <a href="{{ route('scores.setup') }}"
+               class="inline-flex items-center justify-center rounded-xl bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-600">
                 開始訓練
             </a>
         </div>

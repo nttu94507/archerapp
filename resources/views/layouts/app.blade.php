@@ -32,9 +32,9 @@
 
         {{-- 中間主選單（桌機顯示） --}}
         <nav class="hidden md:flex items-center gap-6 text-sm font-medium">
-            <a href="{{ route('scores.setup') }}"
-               class="px-2 py-1 rounded-lg hover:bg-gray-100 {{ request()->routeIs('leaderboards.*') ? 'text-gray-900' : 'text-gray-600' }}">
-                開始計分
+            <a href="{{ route('scores.index') }}"
+               class="px-2 py-1 rounded-lg hover:bg-gray-100 {{ request()->routeIs('scores.*') ? 'text-gray-900' : 'text-gray-600' }}">
+                訓練紀錄
             </a>
             <a href="{{ route('leaderboards.index') }}"
                class="px-2 py-1 rounded-lg hover:bg-gray-100 {{ request()->routeIs('leaderboards.*') ? 'text-gray-900' : 'text-gray-600' }}">
@@ -114,8 +114,8 @@
 
         <nav class="p-3 space-y-1 text-sm">
             {{-- 主要導覽 --}}
-            <a href="{{ route('scores.setup') }}" class="flex items-center gap-2 rounded-lg px-3 py-2 hover:bg-gray-50 {{ request()->routeIs('events.*') ? 'font-semibold text-gray-900' : 'text-gray-700' }}">
-                開始計分
+            <a href="{{ route('scores.index') }}" class="flex items-center gap-2 rounded-lg px-3 py-2 hover:bg-gray-50 {{ request()->routeIs('scores.*') ? 'font-semibold text-gray-900' : 'text-gray-700' }}">
+                訓練紀錄
             </a>
             <a href="{{ route('leaderboards.index') }}" class="flex items-center gap-2 rounded-lg px-3 py-2 hover:bg-gray-50 {{ request()->routeIs('leaderboards.*') ? 'font-semibold text-gray-900' : 'text-gray-700' }}">
                 排行榜
