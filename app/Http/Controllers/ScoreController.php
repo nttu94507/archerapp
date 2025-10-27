@@ -17,6 +17,7 @@ class ScoreController extends Controller
 
         // 你的篩選（沿用原本）
         if ($q = request('q'))         $query->where('note', 'like', "%{$q}%");
+        if ($score = request('score')) $query->where('score_total', '>=', "{$score}");
         if ($bt = request('bow_type')) $query->where('bow_type', $bt);
         if ($v = request('venue'))     $query->where('venue', $v);
         if ($df = request('date_from')) $query->whereDate('created_at', '>=', $df);

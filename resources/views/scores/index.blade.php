@@ -28,6 +28,7 @@
                 @php
                     $chips = [];
                     if(request('q'))         $chips[] = '關鍵字：'.e(request('q'));
+                    if(request('score'))         $chips[] = '總分：'.e(request('score'));
                     if(request('bow_type'))  $chips[] = '弓種：'.e(request('bow_type'));
                     if(request('venue'))     $chips[] = '場地：'.(request('venue')==='indoor'?'室內':'室外');
                     if(request('date_from') || request('date_to'))
@@ -47,6 +48,13 @@
                         <label for="q" class="block text-xs font-medium text-gray-600 mb-1">關鍵字（備註）</label>
                         <input type="text" id="q" name="q" value="{{ request('q') }}"
                                placeholder="搜尋備註內容"
+                               class="block w-full rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-indigo-500">
+                    </div>
+
+                    <div class="md:col-span-2">
+                        <label for="q" class="block text-xs font-medium text-gray-600 mb-1">總分（以上）</label>
+                        <input type="text" id="score" name="score" value="{{ request('score') }}"
+                               placeholder="請輸入分數"
                                class="block w-full rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-indigo-500">
                     </div>
 
