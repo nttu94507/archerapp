@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\ArcherySession;
 use App\Models\ArcheryShot;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -13,7 +14,8 @@ class ScoreController extends Controller
     //
     public function index()
     {
-        $query = \App\Models\ArcherySession::query();
+        $query = \App\Models\ArcherySession::query()
+        ->where('user_id', Auth::id());;
 
         // 你的篩選（沿用原本）
         if ($q = request('q'))         $query->where('note', 'like', "%{$q}%");
