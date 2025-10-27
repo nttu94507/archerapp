@@ -50,51 +50,106 @@
                 @endif
             </div>
         </div>
+        @php
+            $tenTotal = $analysis['scoreDist'][10] ?? 0;   // 10 分（包含 X）
+            $xOnly    = $analysis['xCount'] ?? 0;          // X 次數
+            $total    = $analysis['totalArrows'] ?? 0;
+
+            $tenRate  = $total ? number_format($tenTotal / $total * 100, 1) : '0.0';
+            $xRate    = $analysis['xRate'] ?? ($total ? number_format($xOnly / $total * 100, 1) : '0.0');
+        @endphp
         <div class=" space-y-4"> {{-- 原本 space-y-6 -> 4 --}}
 
             {{-- 指標卡片（更緊湊） --}}
-            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                <div class="rounded-xl border p-3">
-                    <div class="text-[11px] text-gray-500 mb-0.5">每箭均分</div>
-                    <div class="text-xl font-semibold font-mono tabular-nums leading-tight">{{ $analysis['avg'] }}</div>
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 items-stretch">
+                {{-- 每箭均分 --}}
+                <div class="rounded-xl border p-3 h-full flex flex-col">
+                    <div class="text-[11px] text-gray-500">每箭均分</div>
+                    <div class="mt-auto text-right text-xl font-semibold font-mono tabular-nums leading-tight">
+                        {{ $analysis['avg'] }}
+                    </div>
                 </div>
-                <div class="rounded-xl border p-3">
-                    <div class="text-[11px] text-gray-500 mb-0.5">X 命中/命中率</div>
-                    <div class="font-semibold leading-tight">
+
+                {{-- X 命中/命中率 --}}
+                <div class="rounded-xl border p-3 h-full flex flex-col">
+                    <div class="text-[11px] text-gray-500">X 命中/命中率</div>
+                    <div class="mt-auto text-right font-semibold leading-tight">
                         <span class="font-mono tabular-nums">{{ $analysis['xCount'] }}</span>
                         <span class="text-gray-500 text-xs">（{{ $analysis['xRate'] }}%）</span>
                     </div>
                 </div>
-                <div class="rounded-xl border p-3">
-{{--                    <div class="text-[11px] text-gray-500 mb-0.5">X+10 / X</div>--}}
-                    <div class="font-semibold leading-tight space-y-0.5">
-                        @php
-                            $tenTotal = $analysis['scoreDist'][10] ?? 0;   // 10 分（包含 X）
-                            $xOnly    = $analysis['xCount'] ?? 0;          // X 次數
-                            $total    = $analysis['totalArrows'] ?? 0;
 
-                            $tenRate  = $total ? number_format($tenTotal / $total * 100, 1) : '0.0';
-                            $xRate    = $analysis['xRate'] ?? ($total ? number_format($xOnly / $total * 100, 1) : '0.0');
-                        @endphp
+                {{-- 標準差 --}}
+                <div class="rounded-xl border p-3 h-full flex flex-col">
+                    <div class="text-[11px] text-gray-500">標準差</div>
+                    <div class="mt-auto text-right text-xl font-semibold font-mono tabular-nums leading-tight">
+                        {{ $analysis['stddev'] }}
+                    </div>
+                </div>
 
-                        <div>
-                            <span class="text-xs text-gray-500 mr-1">X+10</span>
-                            <span class="font-mono tabular-nums">={{ $tenTotal }}</span>
-                            <span class="text-gray-500 text-xs">（{{ $tenRate }}%）</span>
+                {{-- 黃圈命中率 --}}
+                <div class="rounded-xl border p-3 h-full flex flex-col">
+                    <div class="text-[11px] text-gray-500">黃圈 命中率</div>
+                    <div class="mt-auto text-right text-xl font-semibold font-mono tabular-nums leading-tight">
+                        {{ $analysis['nineUpRate'] }}%
+                    </div>
+                </div>
+
+                {{-- X+10 / X（佔兩欄） --}}
+                <div class="rounded-xl border p-3 sm:col-span-2 h-full">
+                    <div class="grid grid-cols-2 gap-2">
+                        {{-- X+10 --}}
+                        <div class="rounded-lg border p-2 h-full flex flex-col">
+                            <div class="flex items-baseline justify-between">
+                                <span class="text-[11px] text-gray-500">X+10</span>
+                                <span class="font-mono tabular-nums text-lg font-semibold">{{ $tenTotal }}</span>
+                            </div>
+                            <div class="mt-auto text-[11px] text-gray-500 text-right">（{{ $tenRate }}%）</div>
                         </div>
 
-                        <div>
-                            <span class="text-xs text-gray-500 mr-1">X</span>
-                            <span class="font-mono tabular-nums">={{ $xOnly }}</span>
-                            <span class="text-gray-500 text-xs">（{{ $xRate }}%）</span>
+                        {{-- X --}}
+                        <div class="rounded-lg border p-2 h-full flex flex-col">
+                            <div class="flex items-baseline justify-between">
+                                <span class="text-[11px] text-gray-500">X</span>
+                                <span class="font-mono tabular-nums text-lg font-semibold">{{ $xOnly }}</span>
+                            </div>
+                            <div class="mt-auto text-[11px] text-gray-500 text-right">（{{ $xRate }}%）</div>
                         </div>
                     </div>
                 </div>
-                <div class="rounded-xl border p-3">
-                    <div class="text-[11px] text-gray-500 mb-0.5">黃圈 命中率</div>
-                    <div class="text-xl font-semibold font-mono tabular-nums leading-tight">{{ $analysis['nineUpRate'] }}%</div>
+                {{-- 後勁指數 --}}
+                <div class="rounded-xl border p-3 h-full flex flex-col">
+                    <div class="text-[11px] text-gray-500">後勁指數</div>
+                    @if(!is_null($analysis['staminaDelta']))
+                        <div class="mt-auto text-right text-xl font-semibold font-mono tabular-nums leading-tight
+                    {{ $analysis['staminaDelta'] > 0 ? 'text-emerald-700' : ($analysis['staminaDelta'] < 0 ? 'text-rose-700' : 'text-gray-800') }}">
+                            {{ $analysis['staminaDelta'] > 0 ? '+' : '' }}{{ $analysis['staminaDelta'] }}
+                        </div>
+                        <div class="text-right text-[11px] text-gray-500">
+                            前 {{ $analysis['firstHalfAvg'] }} → 後 {{ $analysis['secondHalfAvg'] }}
+                        </div>
+                    @else
+                        <div class="mt-auto text-right text-sm text-gray-400">資料不足</div>
+                    @endif
                 </div>
             </div>
+
+            {{--            <div class="rounded-xl border p-3">--}}
+{{--                --}}{{--                    <div class="text-[11px] text-gray-500 mb-0.5">X+10 / X</div>--}}
+{{--                <div class="font-semibold leading-tight space-y-0.5">--}}
+
+
+{{--                    <div>--}}
+{{--                        <span class="text-xs text-gray-500 mr-1">X+10</span>--}}
+
+{{--                    </div>--}}
+
+{{--                    <div>--}}
+{{--                        <span class="text-xs text-gray-500 mr-1">X</span>--}}
+
+{{--                    </div>--}}
+{{--                </div>--}}
+{{--            </div>--}}
 
             {{-- 分值統計（更緊湊） --}}
             <div class="rounded-2xl border overflow-hidden">
