@@ -121,76 +121,31 @@
 
         {{-- Table --}}
         <div class="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden">
-            <div class="max-h-[70vh] overflow-auto">
-                <table class="min-w-full divide-y divide-gray-200">
-                    <thead class="bg-gray-50 text-[11px] uppercase text-gray-500 sticky top-0 z-10">
+            <div class="max-h-[70vh] overflow-auto space-y-6">
+                @forelse($sessions as $s)
+                    @php $mobileUrl = route('scores.show', $s); @endphp
+                    {{-- 直接顯示完整計分表（用 shots 分組成 ends） --}}
+                    <div
+                        class="rounded-xl border border-gray-200 bg-white shadow-sm p-3 hover:shadow-md transition cursor-pointer js-row-link"
+                        data-href="{{ $mobileUrl }}"
+                        role="link"
+                        tabindex="0"
+                        aria-label="檢視訓練 {{ $s->created_at->format('Y-m-d H:i') }}"
+                    >
+                                @include('scores._table', ['s' => $s])
+                    </div>
+                @empty
                     <tr>
-                        <th class="px-3 py-2 text-left">日期</th>
-                        <th class="px-3 py-2 text-left">設定</th>
-                        <th class="px-3 py-2 text-right">總分</th>
-                        <th class="px-3 py-2 text-right hidden sm:table-cell">X</th>
-                        <th class="px-3 py-2 text-right hidden sm:table-cell">M</th>
-                        <th class="px-3 py-2 text-right hidden md:table-cell">箭數</th>
-                        <th class="px-3 py-2 text-left hidden xl:table-cell">備註</th>
-                        <th class="px-3 py-2 text-left hidden xl:table-cell">操作</th>
+                        <td colspan="8" class="px-4 py-12">
+                            <div class="flex flex-col items-center justify-center text-center">
+                                <div class="mb-3 rounded-2xl bg-gray-100 p-3">🏹</div>
+                                <p class="text-gray-900 font-medium">還沒有訓練紀錄</p>
+                                <p class="text-gray-500 text-sm mt-1">按右上角「開始新的訓練」試試看。</p>
+                            </div>
+                        </td>
                     </tr>
-                    </thead>
-                    <tbody class="divide-y divide-gray-100 text-sm">
-                    @forelse($sessions as $s)
-                        @php
-                            $mobileUrl = route('scores.show', $s);
-                        @endphp
-                        <tr class="hover:bg-gray-50/60 md:hover:bg-gray-50/60 cursor-pointer md:cursor-default"
-                            data-mobile-link="{{ $mobileUrl }}"
-                            role="link" tabindex="0">
-                            <td class="px-3 py-2 align-top whitespace-nowrap">
-                                <a href="{{ route('scores.show', $s) }}" class="text-indigo-600 hover:underline md:pointer-events-auto pointer-events-none">
-                                    {{ $s->created_at->format('Y-m-d H:i') }}
-                                </a>
-                            </td>
-                            <td class="px-3 py-2 align-top">
-                                <div class="flex flex-wrap gap-1">
-                                <span class="inline-flex items-center rounded-full bg-gray-100 px-1.5 py-0.5 text-[10px] font-medium text-gray-700">
-                                    {{ ucfirst($s->bow_type) }}
-                                </span>
-                                    <span class="inline-flex items-center rounded-full {{ $s->venue==='indoor' ? 'bg-blue-50 text-blue-700' : 'bg-emerald-50 text-emerald-700' }} px-1.5 py-0.5 text-[10px] font-medium">
-                                    {{ $s->venue==='indoor'?'室內':'室外' }}
-                                </span>
-                                    <span class="inline-flex items-center rounded-full bg-gray-100 px-1.5 py-0.5 text-[10px] font-medium text-gray-700">
-                                    {{ $s->distance_m }}m
-                                </span>
-                                    <span class="inline-flex items-center rounded-full bg-gray-100 px-1.5 py-0.5 text-[10px] font-medium text-gray-700">
-                                    {{ $s->arrows_per_end }}/End ・ {{ $s->arrows_total }} Arrows
-                                </span>
-                                </div>
-                            </td>
-                            <td class="px-3 py-2 align-top text-right font-semibold font-mono tabular-nums">{{ $s->score_total }}</td>
-                            <td class="px-3 py-2 align-top text-right hidden sm:table-cell font-mono tabular-nums">{{ $s->x_count }}</td>
-                            <td class="px-3 py-2 align-top text-right hidden sm:table-cell font-mono tabular-nums">{{ $s->m_count }}</td>
-                            <td class="px-3 py-2 align-top text-right hidden md:table-cell font-mono tabular-nums">{{ $s->arrows_total }}</td>
-                            <td class="px-3 py-2 align-top hidden xl:table-cell">
-                                <div class="truncate max-w-[18rem]" title="{{ $s->note }}">{{ $s->note }}</div>
-                            </td>
-                            <td class="px-3 py-2 align-top hidden xl:table-cell">
-                                <a href="{{ route('scores.show', $s) }}"
-                                   class="inline-flex items-center rounded-xl bg-indigo-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-indigo-500">
-                                    檢視
-                                </a>
-                            </td>
-                        </tr>
-                    @empty
-                        <tr>
-                            <td colspan="8" class="px-4 py-12">
-                                <div class="flex flex-col items-center justify-center text-center">
-                                    <div class="mb-3 rounded-2xl bg-gray-100 p-3">🏹</div>
-                                    <p class="text-gray-900 font-medium">還沒有訓練紀錄</p>
-                                    <p class="text-gray-500 text-sm mt-1">按右上角「開始新的訓練」試試看。</p>
-                                </div>
-                            </td>
-                        </tr>
-                    @endforelse
-                    </tbody>
-                </table>
+                @endforelse
+{{--                </d>--}}
             </div>
         </div>
 
@@ -227,6 +182,32 @@
                     if (!isMobile()) return;
                     if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); go(); }
                 });
+            });
+            const isInteractive = el =>
+                el.closest('a, button, input, select, textarea, label, [role="button"], [contenteditable="true"]');
+
+            // 點擊整個卡片導頁
+            document.addEventListener('click', function (e) {
+                const card = e.target.closest('.js-row-link');
+                if (!card) return;
+                if (isInteractive(e.target)) return;
+
+                const sel = window.getSelection && window.getSelection().toString();
+                if (sel) return; // 避免選字後誤觸
+
+                const href = card.getAttribute('data-href');
+                if (href) window.location.assign(href);
+            }, { passive: true });
+
+            // 鍵盤 Enter / Space 也能進入
+            document.addEventListener('keydown', function (e) {
+                if (e.key !== 'Enter' && e.key !== ' ') return;
+                const card = e.target.closest('.js-row-link');
+                if (!card) return;
+                if (isInteractive(e.target)) return;
+                e.preventDefault();
+                const href = card.getAttribute('data-href');
+                if (href) window.location.assign(href);
             });
         });
     </script>

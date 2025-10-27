@@ -11,43 +11,33 @@ use Illuminate\Validation\ValidationException;
 class ScoreController extends Controller
 {
     //
-    public function index(Request $request)
+    public function index()
     {
-        $q       = $request->string('q')->toString();              // 關鍵字（備註）
-        $bow     = $request->string('bow_type')->toString();       // recurve/compound/...
-        $venue   = $request->string('venue')->toString();          // indoor/outdoor
-        $dFrom   = $request->date('date_from');                    // Y-m-d
-        $dTo     = $request->date('date_to');                      // Y-m-d
-        $sort    = $request->string('sort', 'created_at')->toString(); // created_at | score_total | distance_m
-        $dir     = $request->string('dir', 'desc')->toString();        // asc/desc
+        $query = \App\Models\ArcherySession::query();
 
-        $query = ArcherySession::query()
-            ->where('user_id', $request->user()->id);
+        // 你的篩選（沿用原本）
+        if ($q = request('q'))         $query->where('note', 'like', "%{$q}%");
+        if ($bt = request('bow_type')) $query->where('bow_type', $bt);
+        if ($v = request('venue'))     $query->where('venue', $v);
+        if ($df = request('date_from')) $query->whereDate('created_at', '>=', $df);
+        if ($dt = request('date_to'))   $query->whereDate('created_at', '<=', $dt);
 
-        if ($q !== '') {
-            $query->where('note', 'like', '%'.$q.'%');
-        }
-        if ($bow !== '') {
-            $query->where('bow_type', $bow);
-        }
-        if ($venue !== '') {
-            $query->where('venue', $venue);
-        }
-        if ($dFrom) {
-            $query->whereDate('created_at', '>=', $dFrom);
-        }
-        if ($dTo) {
-            $query->whereDate('created_at', '<=', $dTo);
-        }
-
-        // 安全的排序白名單
-        $sortWhiteList = ['created_at','score_total','distance_m'];
-        if (!in_array($sort, $sortWhiteList, true)) $sort = 'created_at';
-        $dir = strtolower($dir) === 'asc' ? 'asc' : 'desc';
+        // 排序（沿用你的選項）
+        $sort = request('sort', 'created_at');
+        $dir  = request('dir', 'desc');
+        $allowed = ['created_at','score_total','distance_m'];
+        if (!in_array($sort, $allowed, true)) $sort = 'created_at';
+        if (!in_array($dir, ['asc','desc'], true)) $dir = 'desc';
 
         $sessions = $query
+            ->with([
+                'shots' => function ($q) {
+                    $q->orderBy('end_seq')
+                        ->orderBy('shot_seq', 'asc'); // 若你的欄位是 sequence/index，改這裡
+                },
+            ])
             ->orderBy($sort, $dir)
-            ->paginate(15)
+            ->paginate(10)
             ->withQueryString();
 
         return view('scores.index', compact('sessions'));

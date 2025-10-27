@@ -148,7 +148,7 @@
 </main>
 
 <footer class="mt-10 py-6 text-center text-sm text-gray-500">
-    &copy; {{ date('Y') }} Archery Leaderboard Demo
+    &copy; {{ date('Y') }} Arrow Track
 </footer>
 
 {{-- 下拉選單（桌機）與 側邊欄（手機）控制腳本 --}}
