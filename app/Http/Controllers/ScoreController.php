@@ -189,36 +189,200 @@ class ScoreController extends Controller
 
     public function show(ArcherySession $score)
     {
-//        dd(123);
         // 依 end_seq、shot_seq 排好回傳
-        $shots = $score->shots()->orderBy('end_seq')->orderBy('shot_seq')->get();
+        $shots = $score->shots()
+            ->orderBy('end_seq')
+            ->orderBy('shot_seq')
+            ->get();
 
-        // 也可以算每趟合計
+        // 每趟合計（你原本的）
         $endSums = $score->shots()
             ->selectRaw('end_seq, SUM(score) AS end_sum')
             ->groupBy('end_seq')
             ->orderBy('end_seq')
             ->get();
 
+        // 累計
         $cumu = 0;
         $endRows = $endSums->map(function ($row) use (&$cumu) {
-            $cumu += (int)$row->end_sum;
+            $cumu += (int) $row->end_sum;
             return [
-                'end_seq'    => (int)$row->end_seq,
-                'end_sum'    => (int)$row->end_sum,
+                'end_seq'    => (int) $row->end_seq,
+                'end_sum'    => (int) $row->end_sum,
                 'cumulative' => $cumu,
             ];
         });
 
+        // ====== 新增：分析資料 ======
+        $totalArrows = $shots->count();
+        $per         = (int) $score->arrows_per_end;
+
+        // 分值統計（0~10）＋ X/M 計數（X: is_x 且 score=10；M: is_miss 且 score=0）
+        $scoreDist = array_fill(0, 11, 0);
+        $xCount = 0; $missCount = 0;
+        foreach ($shots as $s) {
+            $val = (int) $s->score;
+            if (isset($scoreDist[$val])) $scoreDist[$val]++;
+            if (($s->is_x ?? false) && $val === 10) $xCount++;
+            if (($s->is_miss ?? false) && $val === 0) $missCount++;
+        }
+
+        // 9/10 命中
+        $over9      = $shots->where('score', '>=', 9)->count();
+        $avg        = $totalArrows ? round($shots->avg('score'), 2) : 0;
+        $xRate      = $totalArrows ? round($xCount / $totalArrows * 100, 1) : 0.0;
+        $mRate      = $totalArrows ? round($missCount / $totalArrows * 100, 1) : 0.0;
+        $nineUpRate = $totalArrows ? round($over9 / $totalArrows * 100, 1) : 0.0;
+
+        $analysis = [
+            'avg'           => $avg,
+            'xCount'        => $xCount,
+            'missCount'     => $missCount,
+            'xRate'         => $xRate,
+            'mRate'         => $mRate,
+            'nineUpRate'    => $nineUpRate,
+            'scoreDist'     => $scoreDist,          // 0..10
+            'totalArrows'   => $totalArrows,
+            'per'           => $per,
+            // 給圖表用
+            'perEnd'        => $endRows->pluck('end_sum')->values(),      // [每趟合計...]
+            'cumu'          => $endRows->pluck('cumulative')->values(),   // [累計...]
+        ];
+
+        $summary = $this->analysis($analysis);
+
         return view('scores.show', [
-            'session' => $score,
-            'shots'   => $shots,
-            'ends'    => $endRows,
+            'session'  => $score,
+            'shots'    => $shots,
+            'ends'     => $endRows,
+            'analysis' => $analysis,   // 👈 新增傳到 view
+            'summary'  => $summary,
         ]);
     }
+
 
     public function setup()
     {
         return view('scores.setup');
+    }
+    /**
+     * 依分析資料產生嘴砲總結
+     * @param array $a  需含 keys: avg, xCount, missCount, xRate, mRate, nineUpRate, totalArrows, perEnd(Collection|array)
+     * @return array{rule:string,text:string,level:string,stats:array}
+     */
+    private function analysis(array $a): array
+    {
+        $spicyMode = true;
+
+        // 取值（並做安全預設）
+        $avg        = (float)($a['avg']         ?? 0);
+        $xCount     = (int)  ($a['xCount']      ?? 0);
+        $missCount  = (int)  ($a['missCount']   ?? 0);
+        $xRate      = (float)($a['xRate']       ?? 0);   // %
+        $mRate      = (float)($a['mRate']       ?? 0);   // %
+        $nineUpRate = (float)($a['nineUpRate']  ?? 0);   // %
+        $total      = (int)  ($a['totalArrows'] ?? 0);
+        $perEnd     = $a['perEnd'] ?? [];
+
+        // 穩定度：每趟合計的區間（max-min）
+        if ($perEnd instanceof \Illuminate\Support\Collection) {
+            $consistency = $perEnd->count() > 1 ? ((int)$perEnd->max() - (int)$perEnd->min()) : null;
+        } else {
+            $vals = array_values((array)$perEnd);
+            $consistency = count($vals) > 1 ? (max($vals) - min($vals)) : null;
+        }
+
+        // 台詞庫
+        $lines = [
+            'tooManyMiss' => [
+                '失誤太多啦～再多練練吧菜逼八 😈',
+                '空氣切割大師認證 🥷（M 有點多）',
+                '靶心：我在這裡；你：我在別處。M：我都在。🤡',
+                'M 比靶還大，這弓是不是開錯方向了？🤡',
+                '你不是在射箭，是在表演空氣劍術 🥷',
+                '靶心在哭：「他根本沒看我一眼」😭',
+                'M 比成績多，這局直接退賽重練吧 😭',
+            ],
+            'godLike' => [
+                '今日弓神降臨，X 噴到停不下來！🔥',
+                '你是來還債的吧？把 X 還太多了 😎',
+                '穩到像掛，裁判都想盤你手！🧙‍♂️',
+                '弓神降臨，連風都替你瞄準了 🔥',
+                'X 多到靶紙都快報警了 😎',
+                '你射的不是箭，是主宰命運的光 🧙‍♂️',
+                '別射了，再射評審要檢舉你開外掛 ⚡',
+            ],
+            'solid' => [
+                '表現穩健，漂亮～保持節奏就能一路起飛 ✈️',
+                '這波很紮實，繼續維持就對了 💪',
+                '節奏在線，細節再抹一點就更香 👌',
+                '這波穩得像教科書，射箭科代表 🎯',
+                '節奏漂亮，感覺你跟弓已經訂婚了 💍',
+                '穩得我都想請你當代射顧問 😌',
+                '沒什麼好說的，就是職業水準 👏',
+            ],
+            'unstable' => [
+                '一會兒天神一會兒凡人，手感忽冷忽熱 🥶🥵',
+                '波動略大，把呼吸與出手時機卡穩點 ⏱️',
+                '穩定度不太行，讓節奏當你的朋友 📉',
+                '一發神箭一發謎團，你是 RNG 附身嗎？🎲',
+                '今天是靠手感決定命運的一天 🫠',
+                '有時天神、有時凡人，射箭版雙重人格 🤯',
+                '靶心看到你都懷疑人生：你到底要不要射我 😵',
+            ],
+            'lowAvg' => [
+                '平均有點低，再多摸摸弓才有感情啦～🥺',
+                '先別對靶心放電，多對靶紙放點箭 🫡',
+                '這把偏養生，火力不夠。加把勁！🧪',
+                '平均低到像在射月亮 🌕',
+                '建議先跟靶紙交朋友，再談命中 💔',
+                '這成績⋯連風都替你尷尬了 🫠',
+                '你不是沒射中，你只是射進另一個次元 😭',
+            ],
+            'ok' => [
+                '還行！下一場多幾個 X 就完美 ✨',
+                '方向對了，有進步空間 👍',
+                '穩紮穩打，再加點狠勁！🧱',
+                '中規中矩，再努力一點就能少挨兩句罵 😏',
+                '還行啦～至少沒射到隔壁靶 👍',
+                '這分數看起來像暖身而已，下一場該認真了 😬',
+                '穩中帶菜，有潛力當射箭界打醬油之王 🧂',
+            ],
+        ];
+        $pick = static fn(array $arr) => $arr[array_rand($arr)];
+
+        // 規則（由上往下匹配）
+        $rule = 'ok'; $text = $pick($lines['ok']); $level = 'neutral';
+
+        if ($missCount >= 10 || $mRate >= 12) {
+            $rule = 'tooManyMiss'; $text = $pick($lines['tooManyMiss']); $level = 'bad';
+        } elseif ($xRate >= 25 || $xCount >= 10) {
+            $rule = 'godLike';     $text = $pick($lines['godLike']);     $level = 'great';
+        } elseif ($nineUpRate >= 55 && $avg >= 8.5) {
+            $rule = 'solid';       $text = $pick($lines['solid']);       $level = 'good';
+        } elseif ($consistency !== null && $consistency >= 12) {
+            $rule = 'unstable';    $text = $pick($lines['unstable']);    $level = 'warn';
+        } elseif ($avg <= 6.5) {
+            $rule = 'lowAvg';      $text = $pick($lines['lowAvg']);      $level = 'warn';
+        }
+
+        // 溫和模式（可改成用 .env 控制）
+        if (!$spicyMode) {
+            $text = strtr($text, ['菜逼八' => '同學', '🤡' => '🙂', '😈' => '😉']);
+        }
+
+        return [
+            'rule'  => $rule,
+            'text'  => $text,
+            'level' => $level,
+            'stats' => [
+                'avg' => $avg,
+                'xRate' => $xRate,
+                'mRate' => $mRate,
+                'nineUpRate' => $nineUpRate,
+                'consistency' => $consistency,
+                'total' => $total,
+            ],
+        ];
     }
 }

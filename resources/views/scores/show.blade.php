@@ -6,55 +6,142 @@
     <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
 
         {{-- Page Header --}}
-        <div class="mb-6 flex items-start justify-between gap-4">
+        <div class=" flex items-start justify-between gap-4">
             <div>
                 <h1 class="text-2xl font-bold tracking-tight text-gray-900">訓練分析</h1>
-                <p class="text-sm text-gray-500 mt-1">檢視此場訓練的每趟每箭成績、合計與累計。</p>
+                {{-- 嘴砲總結（若有） --}}
+                @if(!empty($summary) && is_array($summary))
+                    @php
+                        $level = $summary['level'] ?? 'neutral';
+                        $tone = match($level) {
+                            'great' => 'bg-emerald-50 text-emerald-800 border-emerald-200',
+                            'good'  => 'bg-sky-50 text-sky-800 border-sky-200',
+                            'warn'  => 'bg-amber-50 text-amber-900 border-amber-200',
+                            'bad'   => 'bg-rose-50 text-rose-800 border-rose-200',
+                            default => 'bg-gray-50 text-gray-800 border-gray-200',
+                        };
+                        $icon = match($level) {
+                            'great' => '🔥', // 神仙發揮
+                            'good'  => '✨',
+                            'warn'  => '🫠',
+                            'bad'   => '🤡',
+                            default => '🎯',
+                        };
+                        $stats = $summary['stats'] ?? [];
+                    @endphp
+
+                    <div class="mt-4 mb-2 rounded-2xl border {{ $tone }} p-4">
+                        <div class="flex items-start justify-between gap-3">
+                            <div class="text-sm leading-6">
+                                    <span class="mr-1">{{ $icon }}</span>{{ $summary['text'] ?? '' }}
+                            </div>
+
+                            {{-- 可關閉的「再來一句」按鈕（重新整理會變新隨機句）--}}
+                            <form method="GET" class="shrink-0 hidden sm:block">
+                                @foreach(request()->except(['_token']) as $k=>$v)
+                                    <input type="hidden" name="{{ $k }}" value="{{ $v }}">
+                                @endforeach
+                                <button class="text-xs px-2 py-1 rounded-lg border hover:bg-white/60">
+                                    再來一句
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                @endif
             </div>
-{{--            <div class="flex items-center gap-2">--}}
-{{--                <button type="button" onclick="history.back()"--}}
-{{--                        class="inline-flex items-center justify-center rounded-xl border px-3 py-2 text-sm text-gray-700 hover:bg-gray-50">--}}
-{{--                    返回--}}
-{{--                </button>--}}
-{{--                --}}{{-- 需要可再加編輯/刪除 --}}
-{{--            </div>--}}
         </div>
+        <div class=" space-y-4"> {{-- 原本 space-y-6 -> 4 --}}
 
-        {{-- Meta Chips --}}
-        <div class="mb-4 flex flex-wrap items-center gap-2 text-xs">
-        <span class="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-1 text-gray-700">
-            弓種：{{ ucfirst($session->bow_type) }}
-        </span>
-            <span class="inline-flex items-center rounded-full {{ $session->venue==='indoor'?'bg-blue-50 text-blue-700':'bg-emerald-50 text-emerald-700' }} px-2.5 py-1">
-            場地：{{ $session->venue==='indoor'?'室內':'室外' }}
-        </span>
-            <span class="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-1 text-gray-700">
-            距離：{{ $session->distance_m }}m
-        </span>
-            <span class="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-1 text-gray-700">
-            總箭數：{{ $session->arrows_total }}
-        </span>
-            <span class="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-1 text-gray-700">
-            每趟：{{ $session->arrows_per_end }}
-        </span>
-            <span class="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-1 text-gray-700">
-            建立：{{ $session->created_at->format('Y-m-d H:i') }}
-        </span>
-            <span class="inline-flex items-center rounded-full bg-indigo-50 px-2.5 py-1 text-indigo-700">
-            總分：{{ $session->score_total }}
-        </span>
-            <span class="inline-flex items-center rounded-full bg-amber-50 px-2.5 py-1 text-amber-700">
-            X：{{ $session->x_count }}
-        </span>
-            <span class="inline-flex items-center rounded-full bg-rose-50 px-2.5 py-1 text-rose-700">
-            M：{{ $session->m_count }}
-        </span>
+            {{-- 指標卡片（更緊湊） --}}
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                <div class="rounded-xl border p-3">
+                    <div class="text-[11px] text-gray-500 mb-0.5">每箭均分</div>
+                    <div class="text-xl font-semibold font-mono tabular-nums leading-tight">{{ $analysis['avg'] }}</div>
+                </div>
+                <div class="rounded-xl border p-3">
+                    <div class="text-[11px] text-gray-500 mb-0.5">X 命中/命中率</div>
+                    <div class="font-semibold leading-tight">
+                        <span class="font-mono tabular-nums">{{ $analysis['xCount'] }}</span>
+                        <span class="text-gray-500 text-xs">（{{ $analysis['xRate'] }}%）</span>
+                    </div>
+                </div>
+                <div class="rounded-xl border p-3">
+{{--                    <div class="text-[11px] text-gray-500 mb-0.5">X+10 / X</div>--}}
+                    <div class="font-semibold leading-tight space-y-0.5">
+                        @php
+                            $tenTotal = $analysis['scoreDist'][10] ?? 0;   // 10 分（包含 X）
+                            $xOnly    = $analysis['xCount'] ?? 0;          // X 次數
+                            $total    = $analysis['totalArrows'] ?? 0;
 
-            @if($session->note)
-                <span class="inline-flex items-center rounded-full bg-yellow-50 px-2.5 py-1 text-yellow-800">
-                備註：{{ $session->note }}
-            </span>
-            @endif
+                            $tenRate  = $total ? number_format($tenTotal / $total * 100, 1) : '0.0';
+                            $xRate    = $analysis['xRate'] ?? ($total ? number_format($xOnly / $total * 100, 1) : '0.0');
+                        @endphp
+
+                        <div>
+                            <span class="text-xs text-gray-500 mr-1">X+10</span>
+                            <span class="font-mono tabular-nums">={{ $tenTotal }}</span>
+                            <span class="text-gray-500 text-xs">（{{ $tenRate }}%）</span>
+                        </div>
+
+                        <div>
+                            <span class="text-xs text-gray-500 mr-1">X</span>
+                            <span class="font-mono tabular-nums">={{ $xOnly }}</span>
+                            <span class="text-gray-500 text-xs">（{{ $xRate }}%）</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="rounded-xl border p-3">
+                    <div class="text-[11px] text-gray-500 mb-0.5">黃圈 命中率</div>
+                    <div class="text-xl font-semibold font-mono tabular-nums leading-tight">{{ $analysis['nineUpRate'] }}%</div>
+                </div>
+            </div>
+
+            {{-- 分值統計（更緊湊） --}}
+            <div class="rounded-2xl border overflow-hidden">
+                <div class="px-3 py-2 bg-gray-50 text-xs font-medium">分值統計</div>
+                <div class="p-3 overflow-x-auto">
+                    @php
+                        // 欄位順序：X、10..0、M
+                        $order = array_merge(['X'], range(10, 0), ['M']);
+                    @endphp
+                    <table class="min-w-[720px] text-xs">
+                        <thead class="text-[11px] uppercase text-gray-800">
+                        <tr>
+                            @foreach($order as $col)
+                                <th class="px-1.5 py-1 text-center w-9 font-bold">{{ $col }}</th>
+                            @endforeach
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr>
+                            @foreach($order as $col)
+                                @if($col === 'X')
+                                    <td class="px-1.5 py-1 text-center font-mono tabular-nums text-gray-700">
+                                        {{ $analysis['xCount'] }}
+                                    </td>
+                                @elseif($col === 'M')
+                                    <td class="px-1.5 py-1 text-center font-mono tabular-nums text-gray-500">
+                                        {{ $analysis['missCount'] }}
+                                    </td>
+                                @else
+                                    <td class="px-1.5 py-1 text-center font-mono tabular-nums">
+                                        {{ $analysis['scoreDist'][$col] ?? 0 }}
+                                    </td>
+                                @endif
+                            @endforeach
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            {{-- 分布圖（更緊湊） --}}
+            <div class="rounded-2xl border overflow-hidden">
+                <div class="px-3 py-2 bg-gray-50 text-xs font-medium">分值分布圖</div>
+                <div class="p-3">
+                    <canvas id="scoreDistChart" height="84"></canvas> {{-- 原 120 -> 84 --}}
+                </div>
+            </div>
         </div>
 
         {{-- Scoring Table --}}
@@ -78,7 +165,7 @@
                     @for($i=1; $i<=$per; $i++)
                         <th class="px-3 py-2 text-center w-14 sm:w-16 whitespace-nowrap">A{{ $i }}</th>
                     @endfor
-                    <th class="px-2 sm:px-3 py-2 text-right w-20 sm:w-24">End 合計</th>
+                    <th class="px-2 sm:px-3 py-2 text-right w-20 sm:w-24">小計</th>
                     <th class="px-2 sm:px-3 py-2 text-right w-20 sm:w-24">累計</th>
                 </tr>
                 </thead>
@@ -127,33 +214,54 @@
                 </tbody>
             </table>
         </div>
+{{--        --}}{{-- 摘要頭：上排 左=總分/距離 ，右=建立時間；下排 右對齊的精簡資訊 --}}
+{{--        @php--}}
+{{--            // 回合數：優先用 $ends，其次用 $shots 的 max(end_seq)--}}
+{{--            $rounds = (isset($ends) && $ends instanceof \Illuminate\Support\Collection)--}}
+{{--                ? $ends->count()--}}
+{{--                : ($shots->max('end_seq') ?? null);--}}
+{{--        @endphp--}}
 
-        {{-- Bottom Actions --}}
-        <div class="mt-4 flex items-center justify-between">
-{{--            <div class="text-sm text-gray-600">--}}
-{{--                總分：<span class="font-semibold">{{ $session->score_total }}</span>--}}
-{{--                ・ X：<span class="font-semibold">{{ $session->x_count }}</span>--}}
-{{--                ・ M：<span class="font-semibold">{{ $session->m_count }}</span>--}}
+{{--        <div class="mb-4">--}}
+{{--            --}}{{-- 上排 --}}
+{{--            <div class="flex items-center justify-between gap-3 w-full whitespace-nowrap">--}}
+{{--        <span class="font-mono tabular-nums text-lg font-bold">--}}
+{{--            {{ $session->score_total }} / {{ $session->distance_m }}公尺--}}
+{{--        </span>--}}
+{{--                <span class="font-mono tabular-nums text-sm text-gray-600">--}}
+{{--            {{ $session->created_at->format('Y-m-d H:i') }}--}}
+{{--        </span>--}}
 {{--            </div>--}}
 
-{{--            <div class="flex items-center gap-2">--}}
-{{--                <button type="button" id="export-json"--}}
-{{--                        class="inline-flex items-center justify-center rounded-xl border px-3 py-2 text-sm text-gray-700 hover:bg-gray-50">--}}
-{{--                    匯出 JSON--}}
-{{--                </button>--}}
-{{--                <button type="button" id="export-csv"--}}
-{{--                        class="inline-flex items-center justify-center rounded-xl bg-indigo-600 px-3 py-2 text-sm font-medium text-white hover:bg-indigo-500">--}}
-{{--                    匯出 CSV--}}
-{{--                </button>--}}
+{{--            --}}{{-- 下排（靠右） --}}
+{{--            <div class="mt-1 flex flex-wrap justify-end gap-1 w-full text-xs">--}}
+{{--        <span class="font-mono tabular-nums">--}}
+{{--            {{ $session->arrows_total }}箭{{ $rounds ? " / {$rounds}回合" : '' }}--}}
+{{--        </span>--}}
+{{--                <span class="font-mono tabular-nums">--}}
+{{--            {{ ucfirst($session->bow_type) }}--}}
+{{--        </span>--}}
+{{--                <span class="font-mono tabular-nums">--}}
+{{--            {{ $session->venue==='indoor' ? '室內' : '室外' }}--}}
+{{--        </span>--}}
+{{--                @if($session->note)--}}
+{{--                    <span class="truncate max-w-full sm:max-w-[24rem]">--}}
+{{--                備註：{{ $session->note }}--}}
+{{--            </span>--}}
+{{--                @endif--}}
+{{--                --}}{{-- 如需顯示 X/M：取消下面註解即可 --}}
+{{--                --}}{{-- <span class="font-mono tabular-nums text-amber-700">X：{{ $session->x_count }}</span>--}}
+{{--                <span class="font-mono tabular-nums text-rose-700">M：{{ $session->m_count }}</span> --}}
 {{--            </div>--}}
-        </div>
-    </div>
+{{--        </div>--}}
+{{--    </div>--}}
 
     {{-- 讓數字等寬更整齊 --}}
     <style>
         #score-table [class*="tabular-nums"] { font-variant-numeric: tabular-nums; }
     </style>
-
+@endsection
+@section('js')
     {{-- 匯出（純前端，從頁面資料組裝） --}}
     <script>
         (() => {
@@ -234,5 +342,31 @@
                 download(`archery_session_{{ $session->id }}.csv`, 'text/csv;charset=utf-8;', csv);
             });
         })();
+    </script>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const labels = [...Array(11).keys()]; // 0..10
+            const data   = @json(array_values($analysis['scoreDist']));
+            const xCount = {{ $analysis['xCount'] }};
+            const mCount = {{ $analysis['missCount'] }};
+
+            const ctx = document.getElementById('scoreDistChart');
+            if (ctx) {
+                new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: [...labels, 'X', 'M'],
+                        datasets: [{ label: '次數', data: [...data, xCount, mCount], borderWidth: 1 }]
+                    },
+                    options: {
+                        responsive: true,
+                        scales: { y: { beginAtZero: true, ticks: { precision: 0 } } },
+                        plugins: { legend: { display: false }, tooltip: { mode: 'index', intersect: false } }
+                    }
+                });
+            }
+        });
     </script>
 @endsection

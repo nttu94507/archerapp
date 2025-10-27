@@ -80,7 +80,6 @@
                 $mCount   = $shots->where('is_m', true)->count();
             @endphp
             <tr class="hover:bg-gray-50">
-{{--                <td class="px-3 py-2 text-left font-mono">E{{ $endSeq }}</td>--}}
 
                 {{-- 該 End 各箭；不足補「—」 --}}
                 @for($i=0; $i<$arrowsPerEnd; $i++)
