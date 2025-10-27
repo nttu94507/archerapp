@@ -62,7 +62,7 @@
     <table class="min-w-full divide-y divide-gray-200 text-sm">
         <thead class="bg-gray-50 text-[11px] uppercase text-gray-500">
         <tr>
-            <th class="px-3 py-2 text-left">End</th>
+{{--            <th class="px-3 py-2 text-left">End</th>--}}
             @for($i=1; $i<=$arrowsPerEnd; $i++)
                 <th class="px-2 py-2 text-center">A{{ $i }}</th>
             @endfor
@@ -80,7 +80,7 @@
                 $mCount   = $shots->where('is_m', true)->count();
             @endphp
             <tr class="hover:bg-gray-50">
-                <td class="px-3 py-2 text-left font-mono">E{{ $endSeq }}</td>
+{{--                <td class="px-3 py-2 text-left font-mono">E{{ $endSeq }}</td>--}}
 
                 {{-- 該 End 各箭；不足補「—」 --}}
                 @for($i=0; $i<$arrowsPerEnd; $i++)
@@ -107,8 +107,8 @@
 
         <tfoot class="bg-gray-50">
         <tr>
-            <td class="px-3 py-2 text-left font-medium">合計</td>
-            <td colspan="{{ $arrowsPerEnd }}" class="px-2 py-2"></td>
+            <td class="px-3 py-2 text-left font-medium">總計</td>
+            <td colspan="5" class="px-2 py-2"></td>
             <td class="px-3 py-2 text-right font-mono font-semibold tabular-nums">{{ $totalScore }}</td>
             <td class="px-3 py-2 text-right font-mono tabular-nums">{{ $totalX }}</td>
             <td class="px-3 py-2 text-right font-mono tabular-nums">{{ $totalM }}</td>
