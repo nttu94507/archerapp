@@ -37,6 +37,7 @@ class ScoreController extends Controller
                         ->orderBy('shot_seq', 'asc'); // 若你的欄位是 sequence/index，改這裡
                 },
             ])
+            ->withMax('shots','end_seq')
             ->orderBy($sort, $dir)
             ->paginate(10)
             ->withQueryString();

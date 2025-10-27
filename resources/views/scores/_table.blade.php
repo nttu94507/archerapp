@@ -53,7 +53,7 @@
 
         <td class="px-3 py-2 align-top">
             <div class="flex flex-wrap justify-end gap-1 w-full">
-                <span class="font-mono tabular-nums text-sm">{{ $s->arrows_total }}箭 / {{ $s->arrows_per_end }}回合 </span>
+                <span class="font-mono tabular-nums text-sm">{{ $s->arrows_total }}箭 / {{ $s->shots_max_end_seq }}回合 </span>
                 <span class="font-mono tabular-nums text-sm">{{ ucfirst($s->bow_type) }} </span>
 
             </div>
