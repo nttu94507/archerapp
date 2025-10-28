@@ -134,23 +134,6 @@
                 </div>
             </div>
 
-            {{--            <div class="rounded-xl border p-3">--}}
-{{--                --}}{{--                    <div class="text-[11px] text-gray-500 mb-0.5">X+10 / X</div>--}}
-{{--                <div class="font-semibold leading-tight space-y-0.5">--}}
-
-
-{{--                    <div>--}}
-{{--                        <span class="text-xs text-gray-500 mr-1">X+10</span>--}}
-
-{{--                    </div>--}}
-
-{{--                    <div>--}}
-{{--                        <span class="text-xs text-gray-500 mr-1">X</span>--}}
-
-{{--                    </div>--}}
-{{--                </div>--}}
-{{--            </div>--}}
-
             {{-- 分值統計（更緊湊） --}}
             <div class="rounded-2xl border overflow-hidden">
                 <div class="px-3 py-2 bg-gray-50 text-xs font-medium">分值統計</div>
@@ -211,12 +194,16 @@
                 $grouped = collect($grouped);
             }
         @endphp
-
+        {{-- 排序控制列（新增） --}}
+        <div class="flex justify-end items-center mb-2">
+            <button id="toggle-sort-desc" class="text-xs px-2 py-1 rounded-lg border hover:bg-white/60">
+                高→低排序
+            </button>
+        </div>
         <div class="overflow-x-auto rounded-2xl border">
             <table id="score-table" class="min-w-full text-sm table-fixed">
                 <thead class="bg-gray-50 text-xs uppercase text-gray-500 sticky top-0 z-10">
                 <tr id="thead-row">
-{{--                    <th class="px-3 py-2 text-left w-16">End</th>--}}
                     @for($i=1; $i<=$per; $i++)
                         <th class="px-3 py-2 text-center w-14 sm:w-16 whitespace-nowrap">A{{ $i }}</th>
                     @endfor
@@ -234,8 +221,6 @@
                         $cumu += $endSum;
                     @endphp
                     <tr class="{{ $loop->even ? 'bg-white' : 'bg-gray-50/50' }}">
-{{--                        <td class="px-3 sm:px-4 py-2 font-medium">{{ $endSeq }}</td>--}}
-
                         {{-- 每箭 --}}
                         @for($i=1; $i<=$per; $i++)
                             @php
@@ -269,47 +254,6 @@
                 </tbody>
             </table>
         </div>
-{{--        --}}{{-- 摘要頭：上排 左=總分/距離 ，右=建立時間；下排 右對齊的精簡資訊 --}}
-{{--        @php--}}
-{{--            // 回合數：優先用 $ends，其次用 $shots 的 max(end_seq)--}}
-{{--            $rounds = (isset($ends) && $ends instanceof \Illuminate\Support\Collection)--}}
-{{--                ? $ends->count()--}}
-{{--                : ($shots->max('end_seq') ?? null);--}}
-{{--        @endphp--}}
-
-{{--        <div class="mb-4">--}}
-{{--            --}}{{-- 上排 --}}
-{{--            <div class="flex items-center justify-between gap-3 w-full whitespace-nowrap">--}}
-{{--        <span class="font-mono tabular-nums text-lg font-bold">--}}
-{{--            {{ $session->score_total }} / {{ $session->distance_m }}公尺--}}
-{{--        </span>--}}
-{{--                <span class="font-mono tabular-nums text-sm text-gray-600">--}}
-{{--            {{ $session->created_at->format('Y-m-d H:i') }}--}}
-{{--        </span>--}}
-{{--            </div>--}}
-
-{{--            --}}{{-- 下排（靠右） --}}
-{{--            <div class="mt-1 flex flex-wrap justify-end gap-1 w-full text-xs">--}}
-{{--        <span class="font-mono tabular-nums">--}}
-{{--            {{ $session->arrows_total }}箭{{ $rounds ? " / {$rounds}回合" : '' }}--}}
-{{--        </span>--}}
-{{--                <span class="font-mono tabular-nums">--}}
-{{--            {{ ucfirst($session->bow_type) }}--}}
-{{--        </span>--}}
-{{--                <span class="font-mono tabular-nums">--}}
-{{--            {{ $session->venue==='indoor' ? '室內' : '室外' }}--}}
-{{--        </span>--}}
-{{--                @if($session->note)--}}
-{{--                    <span class="truncate max-w-full sm:max-w-[24rem]">--}}
-{{--                備註：{{ $session->note }}--}}
-{{--            </span>--}}
-{{--                @endif--}}
-{{--                --}}{{-- 如需顯示 X/M：取消下面註解即可 --}}
-{{--                --}}{{-- <span class="font-mono tabular-nums text-amber-700">X：{{ $session->x_count }}</span>--}}
-{{--                <span class="font-mono tabular-nums text-rose-700">M：{{ $session->m_count }}</span> --}}
-{{--            </div>--}}
-{{--        </div>--}}
-{{--    </div>--}}
 
     {{-- 讓數字等寬更整齊 --}}
     <style>
@@ -424,4 +368,87 @@
             }
         });
     </script>
+            <script>
+                document.addEventListener('DOMContentLoaded', () => {
+                    const btn = document.getElementById('toggle-sort-desc');
+                    const tbody = document.getElementById('tbody');
+                    const theadRow = document.getElementById('thead-row');
+
+                    if (!btn || !tbody || !theadRow) return;
+
+                    // 箭數欄位數（A1..A{per}），thead 最後兩欄是「小計 / 累計」
+                    const per = theadRow.children.length - 2;
+                    let sorted = false;
+
+                    // 幫手：讀取/寫入單一儲存格（優先作用到內層 div）
+                    function getCellText(td) {
+                        const slot = td.querySelector('div');
+                        return (slot ? slot.textContent : td.textContent).trim();
+                    }
+                    function setCellText(td, text) {
+                        const slot = td.querySelector('div');
+                        if (slot) slot.textContent = text;
+                        else td.textContent = text;
+                    }
+
+                    function parseCellText(txt) {
+                        const v = (txt || '').trim().toUpperCase();
+                        if (v === 'X') return { value: 10, isX: true,  text: 'X' };
+                        if (v === 'M') return { value: 0,  isX: false, text: 'M' };
+                        if (v === '')  return { value: -1, isX: false, text: '' }; // 空白最後
+                        const num = parseInt(v, 10);
+                        return { value: isNaN(num) ? -1 : num, isX: false, text: isNaN(num) ? '' : String(num) };
+                    }
+
+                    function sortOneRow(tr) {
+                        const cells = Array.from(tr.querySelectorAll('td')).slice(0, per); // 只處理 A1..A{per}
+                        const items = cells.map((td) => {
+                            const t = getCellText(td);
+                            const parsed = parseCellText(t);
+                            return { t, ...parsed };
+                        });
+
+                        // 規則：X > 10 > 9 > … > 1 > 0 > 空白；同為 10 時 X 優先
+                        items.sort((a, b) => {
+                            if (a.value !== b.value) return b.value - a.value;
+                            if (a.value === 10 && (a.isX !== b.isX)) return a.isX ? -1 : 1;
+                            return 0;
+                        });
+
+                        // 把排序後的文本依序寫回到 A1..A{per}
+                        const sortedTexts = items.map(it => it.text);
+                        cells.forEach((td, i) => setCellText(td, sortedTexts[i]));
+                    }
+
+                    function restoreOneRow(tr) {
+                        const orig = tr.dataset.orig;
+                        if (!orig) return;
+                        try {
+                            const arr = JSON.parse(orig);
+                            const cells = Array.from(tr.querySelectorAll('td')).slice(0, per);
+                            cells.forEach((td, i) => setCellText(td, arr[i] ?? ''));
+                        } catch (_) {}
+                    }
+
+                    btn.addEventListener('click', () => {
+                        const rows = Array.from(tbody.querySelectorAll('tr'));
+
+                        if (!sorted) {
+                            // 進入排序：先保存原始內容
+                            rows.forEach(tr => {
+                                const cells = Array.from(tr.querySelectorAll('td')).slice(0, per);
+                                tr.dataset.orig = JSON.stringify(cells.map(getCellText));
+                            });
+                            rows.forEach(sortOneRow);
+                            sorted = true;
+                            btn.textContent = '原順序';
+                        } else {
+                            // 還原
+                            rows.forEach(restoreOneRow);
+                            sorted = false;
+                            btn.textContent = '高→低排序';
+                        }
+                    });
+                });
+            </script>
 @endsection
