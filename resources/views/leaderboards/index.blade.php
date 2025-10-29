@@ -9,8 +9,8 @@
         {{-- Page Header --}}
         <div class="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
             <div>
-                <h1 class="text-2xl font-semibold tracking-tight">Archery Leaderboard</h1>
-                <p class="text-sm text-gray-500">依你選擇的分組與期間計算綜合分數（R = 0.7×PI + 0.3×Elo）。</p>
+                <h1 class="text-2xl font-semibold tracking-tight">Archery 統計</h1>
+{{--                <p class="text-sm text-gray-500">依你選擇的分組與期間計算綜合分數（R = 0.7×PI + 0.3×Elo）。</p>--}}
             </div>
 
             {{-- Filters --}}

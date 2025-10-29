@@ -134,45 +134,6 @@
                 </div>
             </div>
 
-            {{-- 分值統計（更緊湊） --}}
-            <div class="rounded-2xl border overflow-hidden">
-                <div class="px-3 py-2 bg-gray-50 text-xs font-medium">分值統計</div>
-                <div class="p-3 overflow-x-auto">
-                    @php
-                        // 欄位順序：X、10..0、M
-                        $order = array_merge(['X'], range(10, 0), ['M']);
-                    @endphp
-                    <table class="min-w-[720px] text-xs">
-                        <thead class="text-[11px] uppercase text-gray-800">
-                        <tr>
-                            @foreach($order as $col)
-                                <th class="px-1.5 py-1 text-center w-9 font-bold">{{ $col }}</th>
-                            @endforeach
-                        </tr>
-                        </thead>
-                        <tbody>
-                        <tr>
-                            @foreach($order as $col)
-                                @if($col === 'X')
-                                    <td class="px-1.5 py-1 text-center font-mono tabular-nums text-gray-700">
-                                        {{ $analysis['xCount'] }}
-                                    </td>
-                                @elseif($col === 'M')
-                                    <td class="px-1.5 py-1 text-center font-mono tabular-nums text-gray-500">
-                                        {{ $analysis['missCount'] }}
-                                    </td>
-                                @else
-                                    <td class="px-1.5 py-1 text-center font-mono tabular-nums">
-                                        {{ $analysis['scoreDist'][$col] ?? 0 }}
-                                    </td>
-                                @endif
-                            @endforeach
-                        </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-
             {{-- 分布圖（更緊湊） --}}
             <div class="rounded-2xl border overflow-hidden">
                 <div class="px-3 py-2 bg-gray-50 text-xs font-medium">分值分布圖</div>
@@ -296,11 +257,24 @@
                 return { scores, isX, isMiss };
             }
 
-            function download(name, mime, content) {
-                const blob = new Blob([content], { type: mime });
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a'); a.href = url; a.download = name; a.click();
-                URL.revokeObjectURL(url);
+            // 10（不含 X）與 X 的統計
+            function countTenOnly(scores, isX) {
+                let tenOnly = 0;
+                for (let e = 0; e < scores.length; e++) {
+                    for (let i = 0; i < scores[e].length; i++) {
+                        if (scores[e][i] === 10 && !isX[e][i]) tenOnly++;
+                    }
+                }
+                return tenOnly;
+            }
+            function countX(isX) {
+                let xCount = 0;
+                for (let e = 0; e < isX.length; e++) {
+                    for (let i = 0; i < isX[e].length; i++) {
+                        if (isX[e][i]) xCount++;
+                    }
+                }
+                return xCount;
             }
 
             document.getElementById('export-json')?.addEventListener('click', () => {
@@ -346,8 +320,11 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            const labels = [...Array(11).keys()]; // 0..10
-            const data   = @json(array_values($analysis['scoreDist']));
+            const order = ['X', 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 'M'];
+            const labels = order.map(String);
+            const data = order.map(k => (k === 'X' ? {{ $analysis['xCount'] }}
+                : k === 'M' ? {{ $analysis['missCount'] }}
+                    : ({{ Js::from($analysis['scoreDist']) }}[k] || 0)));
             const xCount = {{ $analysis['xCount'] }};
             const mCount = {{ $analysis['missCount'] }};
 
@@ -356,7 +333,7 @@
                 new Chart(ctx, {
                     type: 'bar',
                     data: {
-                        labels: [...labels, 'X', 'M'],
+                        labels: [...labels],
                         datasets: [{ label: '次數', data: [...data, xCount, mCount], borderWidth: 1 }]
                     },
                     options: {

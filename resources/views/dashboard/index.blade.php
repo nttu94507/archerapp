@@ -60,6 +60,194 @@
         $pct = fn($v) => number_format($v*100, 0) . '%';
     @endphp
 
+    {{-- 放在 @section('content') 裡面，建議把原本內容包成 @auth ... @endauth --}}
+    @guest
+        <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-10">
+            {{-- Hero / 嘲諷挑性宣傳 --}}
+            <div class="relative overflow-hidden rounded-3xl border bg-gradient-to-b from-white to-gray-50 p-6 sm:p-10">
+                <div class="max-w-3xl">
+                    <h1 class="text-3xl sm:text-4xl font-extrabold leading-tight tracking-tight">
+                        還在靠運氣射箭??
+                    </h1>
+                    <p class="mt-3 text-gray-600 text-base sm:text-lg">
+                        你說「今天手感超好」；數據說：<span class="font-semibold">別嘴硬。</span>
+                        只要登入，<span class="font-semibold">平均單箭分、X% 、連續天數</span>直接打臉你的錯覺——
+                        用數據長進，比用藉口舒服多了。
+                    </p>
+
+
+
+                    <div class="mt-4 text-xs text-gray-500">
+                        可隨時刪除資料｜支援手機與桌機
+                    </div>
+                </div>
+
+                {{-- 右側假圖：手機版（文案下方顯示） --}}
+                <div class="mt-6 sm:hidden">
+                    <div class="h-56 w-full max-w-md rounded-2xl border bg-white shadow-xl p-4 mx-auto">
+                        <div class="text-xs text-gray-500 mb-2">ArrowTrack 展示</div>
+                        <div class="grid grid-cols-3 gap-2">
+                            <div class="rounded-xl border p-3">
+                                <div class="text-[10px] text-gray-500">AAE</div>
+                                <div class="text-xl font-bold">8.42</div>
+                                <div class="mt-1 h-2 rounded-full bg-gray-100">
+                                    <div class="h-2 rounded-full bg-gray-900" style="width:78%"></div>
+                                </div>
+                            </div>
+                            <div class="rounded-xl border p-3">
+                                <div class="text-[10px] text-gray-500">X%</div>
+                                <div class="text-xl font-bold">36%</div>
+                                <div class="mt-1 text-[10px] text-emerald-700">↑ 4.2%</div>
+                            </div>
+                            <div class="rounded-xl border p-3">
+                                <div class="text-[10px] text-gray-500">Streak</div>
+                                <div class="text-xl font-bold">7</div>
+                                <div class="mt-1 text-[10px] text-gray-500">天</div>
+                            </div>
+                            <div class="col-span-3 rounded-xl border p-3">
+                                <div class="text-[10px] text-gray-500 mb-1">最近 8 週</div>
+                                <div class="h-24 w-full bg-[linear-gradient(180deg,#000_2px,transparent_2px)] bg-[length:100%_24px]">
+                                    <div class="flex items-end gap-2 h-full">
+                                        @for($i=0;$i<12;$i++)
+                                            @php $h = rand(20,90); @endphp
+                                            <div class="w-4 bg-gray-900/80 rounded-t" style="height: {{ $h }}%"></div>
+                                        @endfor
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="mt-6 flex flex-col sm:flex-row gap-3">
+                    <a href="{{ route('login.options') }}" class="inline-flex items-center justify-center rounded-xl bg-gray-900 px-5 py-3 text-sm font-semibold text-white hover:bg-gray-800">
+                        立即登入
+                    </a>
+                </div>
+
+                {{-- 右側假圖：桌機版（維持絕對定位） --}}
+                <div class="pointer-events-none absolute -right-6 -bottom-6 hidden sm:block">
+                    <div class="h-56 w-96 rounded-2xl border bg-white shadow-xl p-4">
+                        <div class="text-xs text-gray-500 mb-2">ArrowTrack 展示</div>
+                        <div class="grid grid-cols-3 gap-2">
+                            <div class="rounded-xl border p-3">
+                                <div class="text-[10px] text-gray-500">AAE</div>
+                                <div class="text-xl font-bold">8.42</div>
+                                <div class="mt-1 h-2 rounded-full bg-gray-100">
+                                    <div class="h-2 rounded-full bg-gray-900" style="width:78%"></div>
+                                </div>
+                            </div>
+                            <div class="rounded-xl border p-3">
+                                <div class="text-[10px] text-gray-500">X%</div>
+                                <div class="text-xl font-bold">36%</div>
+                                <div class="mt-1 text-[10px] text-emerald-700">↑ 4.2%</div>
+                            </div>
+                            <div class="rounded-xl border p-3">
+                                <div class="text-[10px] text-gray-500">Streak</div>
+                                <div class="text-xl font-bold">7</div>
+                                <div class="mt-1 text-[10px] text-gray-500">天</div>
+                            </div>
+                            <div class="col-span-3 rounded-xl border p-3">
+                                <div class="text-[10px] text-gray-500 mb-1">最近 8 週</div>
+                                <div class="h-24 w-full bg-[linear-gradient(180deg,#000_2px,transparent_2px)] bg-[length:100%_24px]">
+                                    <div class="flex items-end gap-2 h-full">
+                                        @for($i=0;$i<12;$i++)
+                                            @php $h = rand(20,90); @endphp
+                                            <div class="w-4 bg-gray-900/80 rounded-t" style="height: {{ $h }}%"></div>
+                                        @endfor
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {{-- 快速痛點 → 功能亮點 --}}
+            <div class="mt-10 grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="rounded-2xl border p-5">
+                    <div class="text-sm font-semibold">還在「感覺」訓練？</div>
+                    <p class="mt-1 text-sm text-gray-600">你說今天9成好箭；實際只有 28% Gold。<span class="font-medium">登入</span>之後，嘴硬變硬實力。</p>
+                </div>
+                <div class="rounded-2xl border p-5">
+                    <div class="text-sm font-semibold">一鍵看到弱點</div>
+                    <p class="mt-1 text-sm text-gray-600">AAE、X/10、σ 一次到位。出手不穩？<span class="font-medium">數據先說話</span>，動作再調整。</p>
+                </div>
+                <div class="rounded-2xl border p-5">
+                    <div class="text-sm font-semibold">連續挑戰，破個人榜</div>
+                    <p class="mt-1 text-sm text-gray-600">Streak 斷了？別裝忙。每天 20 分鐘，換來你想要的 330+。</p>
+                </div>
+            </div>
+
+            {{-- 對比表（嘲諷但克制） --}}
+            <div class="mt-8 rounded-2xl border p-5">
+                <div class="text-sm font-semibold mb-3">為什麼不要再用紙本筆記</div>
+                <div class="overflow-x-auto">
+                    <table class="min-w-full text-sm">
+                        <thead class="bg-gray-50 text-xs uppercase text-gray-500">
+                        <tr>
+                            <th class="px-3 py-2 text-left">項目</th>
+                            <th class="px-3 py-2 text-left">紙本 </th>
+                            <th class="px-3 py-2 text-left">ArrowTrack</th>
+                        </tr>
+                        </thead>
+                        <tbody class="divide-y">
+                        <tr>
+                            <td class="px-3 py-2">AAE (單箭平均) / X% / 連續日</td>
+                            <td class="px-3 py-2 text-gray-500">自己算、常忘記</td>
+                            <td class="px-3 py-2"><span class="font-medium">自動</span>匯總、週月季一把抓</td>
+                        </tr>
+                        <tr>
+                            <td class="px-3 py-2">弱點識別</td>
+                            <td class="px-3 py-2 text-gray-500">今天怪風、明天怪箭</td>
+                            <td class="px-3 py-2">用數據打臉藉口，<span class="font-medium">準心回正</span></td>
+                        </tr>
+                        <tr>
+                            <td class="px-3 py-2">成就感</td>
+                            <td class="px-3 py-2 text-gray-500">憑感覺爽一下</td>
+                            <td class="px-3 py-2">徽章 / 里程碑，<span class="font-medium">持續爽</span></td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            {{-- 社群背書 / 數字卡位（可替換為真數字） --}}
+            <div class="mt-8 grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div class="rounded-xl border p-4 text-center">
+                    <div class="text-2xl font-bold">10K+</div>
+                    <div class="text-xs text-gray-500 mt-1">總場次紀錄</div>
+                </div>
+                <div class="rounded-xl border p-4 text-center">
+                    <div class="text-2xl font-bold">8.2 → 8.7</div>
+                    <div class="text-xs text-gray-500 mt-1">平均單箭分成長（90 天）</div>
+                </div>
+                <div class="rounded-xl border p-4 text-center">
+                    <div class="text-2xl font-bold">38%</div>
+                    <div class="text-xs text-gray-500 mt-1">X 命中率里程碑</div>
+                </div>
+                <div class="rounded-xl border p-4 text-center">
+                    <div class="text-2xl font-bold">14 天</div>
+                    <div class="text-xs text-gray-500 mt-1">連續訓練挑戰</div>
+                </div>
+            </div>
+
+            {{-- 再次 CTA --}}
+            <div class="mt-8 flex flex-col sm:flex-row gap-3">
+                <a href="{{ route('login.options') }}" class="inline-flex items-center justify-center rounded-xl bg-gray-900 px-5 py-3 text-sm font-semibold text-white hover:bg-gray-800">
+                    我準備好了，帶我登入
+                </a>
+            </div>
+
+            {{-- 隱私 / 說明 --}}
+            <div class="mt-4 text-xs text-gray-500">
+                我們只用你的資料產生統計，不賣資料不亂發通知。<br class="hidden sm:block">
+                你負責專注把箭射好，我們負責把數字算好。
+            </div>
+
+        </div>
+    @endguest
+
+    @auth()
     <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
         {{-- Page Header --}}
         <div class="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
@@ -71,43 +259,90 @@
                         嗨嗨！神射手
                     @endauth
                 </h1>
-{{--                <p class="text-sm text-gray-500"><span class="font-medium"></span>。以下為你的練習概況。</p>--}}
             </div>
             <div class="flex gap-2">
-{{--                <a href="#" class="inline-flex items-center rounded-xl border px-3 py-2 text-sm text-gray-700 hover:bg-gray-50">匯出月報</a>--}}
                 <a href="{{route('scores.setup')}}" class="inline-flex items-center rounded-xl bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800">＋開始訓練</a>
             </div>
         </div>
 
-        {{-- KPI Cards --}}
-        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4 mb-6">
-            @include('components.kpi', [
-              'title' => '開始日期',
-              'value' => $stats['first_session_at'],
-              'hint'  => '已 ' . $stats['days_since_start'] . ' 天'
-            ])
-            @include('components.kpi', [
-              'title' => '本月練習天數',
-              'value' => $stats['active_days_this_month']
-            ])
-            @include('components.kpi', [
-              'title' => '本月總時長',
-              'value' => number_format($stats['hours_this_month'], 1) . ' h'
-            ])
-            @include('components.kpi', [
-              'title' => '本月總箭數',
-              'value' => $stats['arrows_this_month']
-            ])
-            @include('components.kpi', [
-              'title' => '平均單箭分',
-              'value' => number_format($stats['avg_score_per_arrow'], 2)
-            ])
-            @include('components.kpi', [
-              'title' => '連續天數',
-              'value' => $stats['streak_days'] . ' d'
-            ])
-        </div>
+        {{-- ===== 月結指標 ===== --}}
+        @php
+            // 安全換算
+            $fmtNum = function($v, $dec=0){ return number_format((float)$v, $dec); };
+            $pct    = function($v){ return number_format($v*100, 1) . '%'; };
 
+            /**
+             * 回傳：
+             * - textMain：主數字（cur）
+             * - textDelta：變化字串（↑/↓ + % 或 百分點或 絕對值）
+             * - cls：顏色（漲→emerald、跌→rose、持平→gray）
+             */
+            function month_delta($cur, $prev, $mode='pct', $invert=false, $fmt=0) {
+                $cur  = (float)$cur; $prev = (float)$prev;
+                $delta = $cur - $prev;
+                $dir = $delta == 0 ? 0 : ($delta > 0 ? 1 : -1);
+                // 對於 invert（如 σ 越低越好），方向顛倒
+                $good = $invert ? -$dir : $dir;
+
+                $cls = $dir === 0 ? 'text-gray-600' : ($good > 0 ? 'text-emerald-700' : 'text-rose-700');
+                $arrow = $dir === 0 ? '—' : ($dir > 0 ? '↑' : '↓');
+
+                $main = number_format($cur, $fmt);
+
+                if ($mode === 'pct') {
+                    $pct = $prev == 0 ? null : ($delta / max(abs($prev), 1e-9) * 100);
+                    $deltaText = is_null($pct) ? '—' : $arrow . number_format(abs($pct), 1) . '%';
+                } elseif ($mode === 'pp') { // 百分點（for 率）
+                    $pp = ($cur - $prev) * 100;
+                    $deltaText = $arrow . number_format(abs($pp), 1) . ' pp';
+                } elseif ($mode === 'both') { // 同時顯示絕對與 %
+                    $pct = $prev == 0 ? null : ($delta / max(abs($prev), 1e-9) * 100);
+                    $deltaText = ($arrow . number_format(abs($delta), $fmt)) . (is_null($pct) ? '' : '｜' . number_format(abs($pct),1) . '%');
+                } else { // abs
+                    $deltaText = $arrow . number_format(abs($delta), $fmt);
+                }
+                return compact('main','deltaText','cls');
+            }
+        @endphp
+
+        @if(!empty($monthlyIndex) && is_array($monthlyIndex))
+            <div class="mb-2 flex items-center justify-between">
+                <h2 class="text-sm font-semibold">月指標</h2>
+                <div class="text-xs text-gray-500">
+                    @php
+                        $cm = \Carbon\Carbon::now()->format('Y/m');
+                        $pm = \Carbon\Carbon::now()->subMonthNoOverflow()->format('Y/m');
+                    @endphp
+                    比較期間：{{ $cm }} vs {{ $pm }}
+                </div>
+            </div>
+
+            <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4 mb-6">
+                @foreach($monthlyIndex as $key => $row)
+                    @php
+                        $res = month_delta($row['cur'] ?? 0, $row['prev'] ?? 0, $row['mode'] ?? 'pct', $row['invert'] ?? false, $row['fmt'] ?? 0);
+                        $subtitle = match($row['mode'] ?? 'pct') {
+                            'pct'  => '月增率',
+                            'pp'   => '變動（百分點）',
+                            'both' => '本月｜月增率',
+                            default=> '本月變動'
+                        };
+                        $valueText = ($row['mode'] ?? 'pct') === 'pp'
+                                    ? number_format(($row['cur'] ?? 0)*100, 1) . '%'
+                                    : number_format($row['cur'] ?? 0, $row['fmt'] ?? 0);
+                    @endphp
+                    <div class="rounded-2xl border p-4">
+                        <div class="text-xs text-gray-500">{{ $row['label'] }}</div>
+                        <div class="mt-1 text-xl font-semibold">{{ $valueText }}</div>
+                        <div class="mt-1 text-xs">
+                            <span class="text-gray-500">{{ $subtitle }}：</span>
+                            <span class="{{ $res['cls'] }}">{{ $res['deltaText'] }}</span>
+                        </div>
+                    </div>
+                @endforeach
+            </div>
+        @endif
+        {{-- ===== /月結指標 ===== --}}
 
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
             {{-- Trend Chart (fake) --}}
@@ -303,6 +538,7 @@
             });
         })();
     </script>
+    @endauth
 @endsection
 
 {{-- ====== Blade 小元件：KPI 卡（可放在 resources/views/components/kpi.blade.php） ====== --}}
@@ -347,4 +583,3 @@
     });
 @endphp
 
-{{-- 把上方 <x-kpi .../> 改為 @kpi("開始日期", $stats['first_session_at'], '已 999 天') 的寫法也可以 --}}
