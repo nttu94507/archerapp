@@ -14,6 +14,9 @@ use App\Http\Controllers\DashboardController;
 Route::get('/', [DashboardController::class, 'index'])->name('dashboard.index');
 Route::get('/leaderboard', [LeaderBoardController::class, 'index'])->name('leaderboards.index');
 Route::get('/login/options', [\App\Http\Controllers\LoginController::class, 'options'])->name('login.options');
+Route::get('/arrow-rank',function (){
+    return view('arrow-rank.create');
+})->name('arrow-rank.create');
 
 //google 登入相關
 Route::get('/auth/google/redirect', [GoogleController::class, 'redirect'])
