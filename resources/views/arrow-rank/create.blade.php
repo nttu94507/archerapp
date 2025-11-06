@@ -5,6 +5,42 @@
 
 @section('content')
     <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
+        <div class="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+                <h1 class="text-2xl font-semibold tracking-tight">🏆 單敗淘汰賽系統</h1>
+                <p class="text-sm text-gray-500">依初始分數自動排種子、生成對戰樹；可輸入比分、下載 PNG 或列印。</p>
+            </div>
+
+
+            {{-- Controls --}}
+            <div class="flex flex-wrap gap-2 sm:gap-3">
+                <button id="btn-download" type="button"
+                        class="hidden inline-flex items-center justify-center rounded-xl bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-500">
+                    下載 PNG
+                </button>
+                <button id="btn-print" type="button"
+                        class="hidden inline-flex items-center justify-center rounded-xl bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800">
+                    列印
+                </button>
+                <button id="btn-export-json" type="button"
+                        class="hidden inline-flex items-center justify-center rounded-xl border px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
+                    匯出 JSON
+                </button>
+                <button id="btn-export-csv-players" type="button"
+                        class="hidden inline-flex items-center justify-center rounded-xl border px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
+                    匯出選手 CSV
+                </button>
+                <button id="btn-export-csv-matches" type="button"
+                        class="hidden inline-flex items-center justify-center rounded-xl border px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
+                    匯出賽程 CSV
+                </button>
+                <button id="btn-reset" type="button"
+                        class="hidden inline-flex items-center justify-center rounded-xl border px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
+                    重新開始
+                </button>
+            </div>
+        </div>
+
         {{-- Setup Section --}}
         <div id="setup-section" class="rounded-2xl border p-5 sm:p-6">
             <div class="grid gap-4 sm:grid-cols-3">
@@ -78,6 +114,7 @@
             bracketWrap: document.getElementById('bracket-wrap'),
             bracket: document.getElementById('bracket'),
             btnDownload: document.getElementById('btn-download'),
+            btnExportJson: document.getElementById('btn-export-json'),
             btnPrint: document.getElementById('btn-print'),
             btnReset: document.getElementById('btn-reset'),
         };
@@ -148,9 +185,11 @@
             els.setup.classList.add('hidden');
             els.bracketWrap.classList.remove('hidden');
 // 顯示工具列按鈕
-            els.btnDownload.classList.remove('hidden');
+//             els.btnDownload.classList.remove('hidden');
             els.btnPrint.classList.remove('hidden');
             els.btnReset.classList.remove('hidden');
+            // els.btnExportJson.classList.remove('hidden');
+
         }
 
 
@@ -321,19 +360,52 @@ ${score !== null && score !== undefined ? `<div class="text-sm font-bold">${scor
             return res;
         }
 
-        // Download / Print / Reset
+        function exportStateJSON() {
+            const payload = JSON.stringify(state, null, 2);
+            downloadBlob(`${state.name || 'tournament'}_state.json`, 'application/json', payload);
+        }
+
         els.btnDownload.addEventListener('click', async () => {
-            const target = document.getElementById('bracket');
-            const canvas = await html2canvas(target, { scale: 2, backgroundColor: '#ffffff' });
+            const container = document.getElementById('bracket');
+            const target = container.querySelector(':scope > div') || container;
+            const width = Math.max(target.scrollWidth, target.clientWidth);
+            const height = Math.max(target.scrollHeight, target.clientHeight);
+
+            const canvas = await html2canvas(target, {
+                backgroundColor: '#ffffff',
+                width, height,
+                windowWidth: width,
+                windowHeight: height,
+                scrollX: 0, scrollY: 0,
+                scale: 2,
+            });
             const a = document.createElement('a');
             a.download = `${state.name}_bracket.png`;
             a.href = canvas.toDataURL('image/png');
             a.click();
         });
 
+        // Download / Print / Reset
+        els.btnPrint.addEventListener('click', () => {
+            const container = document.getElementById('bracket');
+            const target = container.querySelector(':scope > div') || container;
+            const win = window.open('', 'print-bracket', 'width=1280,height=800');
+            if (!win) return;
+            const doc = win.document;
+            doc.write('<!doctype html><html><head><meta charset="utf-8"><title>Bracket</title>');
+            document.querySelectorAll('link[rel="stylesheet"], style').forEach(n => doc.write(n.outerHTML));
+            doc.write('<style>@media print{ body{ margin:0!important; } }</style>');
+            doc.write('</head><body class="bg-white p-4">');
+            doc.write(`<div id="print-bracket">${target.outerHTML}</div>`);
+            doc.write('</body></html>');
+            doc.close();
+            win.focus();
+            win.addEventListener('load', () => win.print());
+        });
 
-        els.btnPrint.addEventListener('click', () => window.print());
 
+        // els.btnPrint.addEventListener('click', () => window.print());
+        els.btnExportJson.addEventListener('click', exportStateJSON);
 
         els.btnReset.addEventListener('click', () => window.location.reload());
 </script>
