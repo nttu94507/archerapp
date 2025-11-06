@@ -1,11 +1,11 @@
 @extends('layouts.app')
-@section('title', 'ArrowTrack — 排名輸入')
+@section('title', 'ArrowTrack — 對抗表生成器')
 @section('content')
 <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
     <div class="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
-            <h1 class="text-2xl font-semibold tracking-tight">🏆 單敗淘汰賽系統</h1>
-            <p class="text-sm text-gray-500">依初始分數自動排種子、生成對戰樹；可輸入比分、下載 PNG 或列印。</p>
+            <h1 class="text-2xl font-semibold tracking-tight">🏆 對抗賽生成器</h1>
+            <p class="text-sm text-gray-500">依輸入排名分數自動排種子、生成對戰樹</p>
         </div>
 
 
