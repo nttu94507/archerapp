@@ -193,6 +193,10 @@ class ScoreController extends Controller
 
     public function show(ArcherySession $score)
     {
+        $user = Auth::id();
+        if ($score->user_id != $user) {
+            return redirect()->back();
+        }
         // 依 end_seq、shot_seq 排好回傳
         $shots = $score->shots()
             ->orderBy('end_seq')
