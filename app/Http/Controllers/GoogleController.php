@@ -57,6 +57,6 @@ class GoogleController extends Controller
         }
 
         Auth::login($user, true); // 記住我 = true
-        return redirect()->intended('/'); // 或你的會員首頁
+        return redirect()->back(); // 或你的會員首頁
     }
 }
