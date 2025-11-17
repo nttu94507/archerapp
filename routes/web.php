@@ -9,6 +9,7 @@ use App\Http\Controllers\ProfileCompletionController;
 use App\Http\Controllers\LoginController;
 use App\Http\Controllers\EventRegistrationController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\TeamPostController;
 
 // open page
 Route::get('/', [DashboardController::class, 'index'])->name('dashboard.index');
@@ -24,6 +25,19 @@ Route::get('/auth/google/redirect', [GoogleController::class, 'redirect'])
 Route::get('/auth/google/callback', [GoogleController::class, 'callback'])
     ->name('login.google.callback');
 Route::post('/logout', [LoginController::class, 'logout'])->name('logout');
+Route::get('/tool',function (){
+    return view('tool.index');
+})->name('tool.index');
+Route::get('/payment',function (){
+    return view('tool.paymentfinish');
+})->name('tool.paymentfinish');
+
+//組隊報名相關
+Route::get('/team-posts', [TeamPostController::class, 'index'])->name('team-posts.index');
+Route::get('/team-posts/create', [TeamPostController::class, 'create'])->name('team-posts.create');
+Route::post('/team-posts', [TeamPostController::class, 'store'])->name('team-posts.store');
+Route::get('/team-posts/{teamPost}', [TeamPostController::class, 'show'])->name('team-posts.show');
+
 
 //選手資料
 Route::middleware('auth')->group(function () {
