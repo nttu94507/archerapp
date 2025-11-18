@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use App\Models\Event;
 use App\Models\EventStaff;
 use Illuminate\Http\Request;
-use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
 class EventController extends Controller
@@ -32,10 +31,10 @@ class EventController extends Controller
         }
 
         if ($request->filled('date_from')) {
-            $query->whereDate('date', '>=', $request->date_from);
+            $query->whereDate('start_date', '>=', $request->date_from);
         }
         if ($request->filled('date_to')) {
-            $query->whereDate('date', '<=', $request->date_to);
+            $query->whereDate('end_date', '<=', $request->date_to);
         }
 
         // 排序
@@ -102,10 +101,6 @@ class EventController extends Controller
         return view('events.create');
     }
 
-    public function register()
-    {
-        return view('events.register');
-    }
     public function edit(Event $event)
     {
         return view('events.edit', compact('event'));
