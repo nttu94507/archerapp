@@ -82,7 +82,7 @@
                                             </button>
                                         </form>
                                     @else
-                                        <a href="{{ route('events.register', [$event, 'group' => $g->id]) }}"
+                                        <a href="{{ route('login.options') }}"
                                            class="inline-flex items-center rounded-xl border px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50">
                                             登入後報名
                                         </a>
