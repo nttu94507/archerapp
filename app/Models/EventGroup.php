@@ -2,11 +2,13 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class EventGroup extends Model
 {
-    //
+    use HasFactory;
+
     protected $fillable = [
         'event_id','name','bow_type','gender','age_class','distance',
         'quota','fee','is_team',
