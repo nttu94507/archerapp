@@ -32,10 +32,10 @@ class EventController extends Controller
         }
 
         if ($request->filled('date_from')) {
-            $query->whereDate('date', '>=', $request->date_from);
+            $query->whereDate('start_date', '>=', $request->date_from);
         }
         if ($request->filled('date_to')) {
-            $query->whereDate('date', '<=', $request->date_to);
+            $query->whereDate('end_date', '<=', $request->date_to);
         }
 
         // 排序
