@@ -24,6 +24,7 @@ class User extends Authenticatable
         'google_id',
         'google_avatar',
         'email_verified_at',
+        'is_admin',
     ];
 
     /**
@@ -46,6 +47,7 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'is_admin' => 'boolean',
         ];
     }
 
@@ -57,5 +59,10 @@ class User extends Authenticatable
     public function hasCompletedProfile(): bool
     {
         return !is_null($this->profile_completed_at);
+    }
+
+    public function isAdmin(): bool
+    {
+        return (bool) $this->is_admin;
     }
 }

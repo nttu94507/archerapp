@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Admin\EventController as AdminEventController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\EventController;
 use App\Http\Controllers\EventRegistrationController;
@@ -31,6 +32,15 @@ Route::get('/tool', function () {
 Route::get('/payment', function () {
     return view('tool.paymentfinish');
 })->name('tool.paymentfinish');
+
+Route::prefix('admin')->middleware(['auth', 'admin'])->name('admin.')->group(function () {
+    Route::get('/', function () {
+        return redirect()->route('admin.events.index');
+    })->name('home');
+
+    Route::resource('events', AdminEventController::class)
+        ->only(['index', 'create', 'store', 'show']);
+});
 
 //組隊報名相關
 Route::middleware('auth')->group(function () {

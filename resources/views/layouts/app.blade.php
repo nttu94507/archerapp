@@ -50,6 +50,14 @@
                class="px-2 py-1 rounded-lg hover:bg-gray-100 {{ request()->routeIs('events.*') ? 'text-gray-900' : 'text-gray-600' }}">
                 組隊區
             </a>
+            @auth
+                @if(auth()->user()->isAdmin())
+                    <a href="{{ route('admin.events.index') }}"
+                       class="px-2 py-1 rounded-lg hover:bg-gray-100 {{ request()->routeIs('admin.*') ? 'text-gray-900' : 'text-gray-600' }}">
+                        Admin
+                    </a>
+                @endif
+            @endauth
 
         </nav>
 
@@ -141,6 +149,14 @@
                class="flex items-center gap-2 rounded-lg px-3 py-2 hover:bg-gray-50 {{ request()->routeIs('events.*') ? 'font-semibold text-gray-900' : 'text-gray-700' }}">
                 組隊區
             </a>
+            @auth
+                @if(auth()->user()->isAdmin())
+                    <a href="{{ route('admin.events.index') }}"
+                       class="flex items-center gap-2 rounded-lg px-3 py-2 hover:bg-gray-50 {{ request()->routeIs('admin.*') ? 'font-semibold text-gray-900' : 'text-gray-700' }}">
+                        Admin 控制台
+                    </a>
+                @endif
+            @endauth
         </nav>
 
         <div class="mt-auto border-t p-3">
