@@ -13,6 +13,15 @@ class GoogleController extends Controller
     //
     public function redirect()
     {
+        if (!session()->has('url.intended')) {
+            $previous = url()->previous();
+
+            // 可選：避免把登入頁/註冊頁自己存進去，導致登入後又回登入頁
+            if (!str_contains($previous, '/login') && !str_contains($previous, '/register')) {
+                session()->put('url.intended', $previous);
+            }
+        }
+
         // 需要切換帳號時可加 ->with(['prompt' => 'select_account'])
         return Socialite::driver('google')->redirect();
     }
@@ -57,6 +66,6 @@ class GoogleController extends Controller
         }
 
         Auth::login($user, true); // 記住我 = true
-        return redirect()->back(); // 或你的會員首頁
+        return redirect()->intended('/'); // 或你的會員首頁
     }
 }
