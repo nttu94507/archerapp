@@ -24,6 +24,7 @@ class User extends Authenticatable
         'google_id',
         'google_avatar',
         'email_verified_at',
+        'is_admin',
     ];
 
     /**
@@ -46,6 +47,7 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'is_admin' => 'boolean',
         ];
     }
 
@@ -61,9 +63,6 @@ class User extends Authenticatable
 
     public function isAdmin(): bool
     {
-        // Uses the comma-separated ADMIN_EMAILS value defined in config/archer.php
-        $emails = config('archer.admin_emails', []);
-
-        return in_array($this->email, $emails, true);
+        return (bool) $this->is_admin;
     }
 }

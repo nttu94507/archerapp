@@ -18,6 +18,7 @@ class DatabaseSeeder extends Seeder
         User::factory()->create([
             'name' => 'Jason',
             'email' => 'admin@archapp.com',
+            'is_admin' => true,
         ]);
     }
 }
