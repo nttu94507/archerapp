@@ -58,4 +58,11 @@ class User extends Authenticatable
     {
         return !is_null($this->profile_completed_at);
     }
+
+    public function isAdmin(): bool
+    {
+        $emails = config('archer.admin_emails', []);
+
+        return in_array($this->email, $emails, true);
+    }
 }
