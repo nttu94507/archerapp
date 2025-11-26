@@ -46,10 +46,10 @@
             {{--               class="px-2 py-1 rounded-lg hover:bg-gray-100 {{ request()->routeIs('events.*') ? 'text-gray-900' : 'text-gray-600' }}">--}}
             {{--                賽事--}}
             {{--            </a>--}}
-            <a href="{{ route('team-posts.index') }}"
-               class="px-2 py-1 rounded-lg hover:bg-gray-100 {{ request()->routeIs('events.*') ? 'text-gray-900' : 'text-gray-600' }}">
-                組隊區
-            </a>
+{{--            <a href="{{ route('team-posts.index') }}"--}}
+{{--               class="px-2 py-1 rounded-lg hover:bg-gray-100 {{ request()->routeIs('events.*') ? 'text-gray-900' : 'text-gray-600' }}">--}}
+{{--                組隊區--}}
+{{--            </a>--}}
             @auth
                 @if(auth()->user()->isAdmin())
                     <a href="{{ route('admin.events.index') }}"
@@ -145,10 +145,10 @@
             {{--            <a href="{{ route('events.index') }}" class="flex items-center gap-2 rounded-lg px-3 py-2 hover:bg-gray-50 {{ request()->routeIs('events.*') ? 'font-semibold text-gray-900' : 'text-gray-700' }}">--}}
             {{--                賽事--}}
             {{--            </a>--}}
-            <a href="{{ route('team-posts.index') }}"
-               class="flex items-center gap-2 rounded-lg px-3 py-2 hover:bg-gray-50 {{ request()->routeIs('events.*') ? 'font-semibold text-gray-900' : 'text-gray-700' }}">
-                組隊區
-            </a>
+{{--            <a href="{{ route('team-posts.index') }}"--}}
+{{--               class="flex items-center gap-2 rounded-lg px-3 py-2 hover:bg-gray-50 {{ request()->routeIs('events.*') ? 'font-semibold text-gray-900' : 'text-gray-700' }}">--}}
+{{--                組隊區--}}
+{{--            </a>--}}
             @auth
                 @if(auth()->user()->isAdmin())
                     <a href="{{ route('admin.events.index') }}"
