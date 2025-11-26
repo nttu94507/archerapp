@@ -12,7 +12,7 @@
 
     // 箭值顯示（若你的欄位不是 value，改成 score/ring 等）
     $formatArrow = function($shot) {
-        if (isset($shot->is_m) && $shot->is_m) return 'M';
+        if (isset($shot->is_miss) && $shot->is_miss) return 'M';
         if (isset($shot->is_x) && $shot->is_x) return 'X';
         return (string) ($shot->value ?? $shot->score ?? '');
     };
@@ -35,7 +35,7 @@
         return (int) ($a->value ?? $a->score ?? 0);
     });
     $totalX = $s->x_count ?? $s->shots->where('is_x', true)->count();
-    $totalM = $s->m_count ?? $s->shots->where('is_m', true)->count();
+    $totalM = $s->m_count ?? $s->shots->where('is_miss', true)->count();
 @endphp
 
 <div class="overflow-auto ">
