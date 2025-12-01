@@ -133,6 +133,7 @@ class EventController extends Controller
 
         // 目前登入者已經報名哪些 group（有效狀態）
         $myGroupIds = [];
+        $myRegistrations = collect();
         if (auth()->check()) {
             $myGroupIds = \App\Models\EventRegistration::query()
                 ->where('event_id', $event->id)
@@ -140,6 +141,13 @@ class EventController extends Controller
                 ->whereIn('status', ['registered','checked_in'])
                 ->pluck('event_group_id')
                 ->all();
+
+            $myRegistrations = \App\Models\EventRegistration::query()
+                ->with('event_group')
+                ->where('event_id', $event->id)
+                ->where('user_id', auth()->id())
+                ->orderBy('created_at', 'desc')
+                ->get();
         }
 
         // 是否為本賽事工作人員
@@ -160,6 +168,7 @@ class EventController extends Controller
             'regStatus'  => $regStatus,
             'canManage'  => $canManage,
             'myGroupIds' => $myGroupIds,
+            'myRegistrations' => $myRegistrations,
         ]);
     }
 

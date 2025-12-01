@@ -40,6 +40,9 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->name('admin.')->group(fun
 
     Route::resource('events', AdminEventController::class)
         ->only(['index', 'create', 'store', 'show']);
+
+    Route::patch('events/{event}/registrations/{registration}/payment', [AdminEventController::class, 'updatePayment'])
+        ->name('events.registrations.payment');
 });
 
 //組隊報名相關

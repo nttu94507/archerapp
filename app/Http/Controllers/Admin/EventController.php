@@ -202,4 +202,19 @@ class EventController extends Controller
             'bracket'              => $bracket,
         ]);
     }
+
+    public function updatePayment(Event $event, EventRegistration $registration, Request $request): RedirectResponse
+    {
+        if ($registration->event_id !== $event->id) {
+            return back()->with('error', '報名資料與賽事不符。');
+        }
+
+        $validated = $request->validate([
+            'paid' => ['required', 'boolean'],
+        ]);
+
+        $registration->update(['paid' => $validated['paid']]);
+
+        return back()->with('success', '繳費狀態已更新。');
+    }
 }

@@ -91,6 +91,7 @@
                                 <th class="px-4 py-3 text-left">組別</th>
                                 <th class="px-4 py-3 text-left">聯絡方式</th>
                                 <th class="px-4 py-3 text-left">狀態</th>
+                                <th class="px-4 py-3 text-left">繳費</th>
                                 <th class="px-4 py-3 text-right">建立時間</th>
                             </tr>
                             </thead>
@@ -116,6 +117,19 @@
                                             ])">
                                             {{ $participantStatuses[$registration->status] ?? $registration->status }}
                                         </span>
+                                    </td>
+                                    <td class="px-4 py-3">
+                                        <form method="POST" action="{{ route('admin.events.registrations.payment', [$event, $registration]) }}" class="inline-flex items-center gap-2">
+                                            @csrf
+                                            @method('PATCH')
+                                            <input type="hidden" name="paid" value="{{ $registration->paid ? 0 : 1 }}">
+                                            <span class="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium {{ $registration->paid ? 'bg-emerald-50 text-emerald-700' : 'bg-orange-50 text-orange-700' }}">
+                                                {{ $registration->paid ? '已繳費' : '待繳費' }}
+                                            </span>
+                                            <button type="submit" class="text-xs text-indigo-600 hover:text-indigo-800">
+                                                {{ $registration->paid ? '標記未繳' : '標記已繳' }}
+                                            </button>
+                                        </form>
                                     </td>
                                     <td class="px-4 py-3 text-right text-gray-500">{{ optional($registration->created_at)->format('Y-m-d H:i') }}</td>
                                 </tr>

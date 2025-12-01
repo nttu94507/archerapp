@@ -266,29 +266,32 @@
                                     $groupsPageUrl = route('events.show', $event) . '#groups';
                                 @endphp
 
-                                @if($isBetween)
-                                    <a href="{{ route('events.show', $event) }}#groups"
-                                       class="inline-flex items-center rounded-xl bg-indigo-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-indigo-500">
-                                        我要報名
-                                    </a>
-                                @else
-                                    <span class="text-gray-300 text-xs">—</span>
-                                @endif
+                                <div class="flex items-center gap-2">
+                                    @if($isBetween)
+                                        <a href="{{ route('events.show', $event) }}#groups"
+                                           class="inline-flex items-center rounded-xl bg-indigo-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-indigo-500">
+                                            我要報名
+                                        </a>
+                                    @else
+                                        <span class="inline-flex items-center rounded-xl bg-gray-100 px-2.5 py-1 text-[11px] font-medium text-gray-600">
+                                            目前不可報名
+                                        </span>
+                                    @endif
 
-                                {{-- 管理權限者仍可看到「管理」按鈕（不受報名期間限制） --}}
-                                @php
-                                    $canManage = auth()->check() && \App\Models\EventStaff::where([
-                                        'event_id' => $event->id,
-                                        'user_id'  => auth()->id(),
-                                        'status'   => 'active',
-                                    ])->exists();
-                                @endphp
-                                @if($canManage)
-                                    <a href="{{ route('events.groups.index', $event) }}"
-                                       class="ml-2 inline-flex items-center rounded-xl bg-emerald-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-emerald-500">
-                                        管理
-                                    </a>
-                                @endif
+                                    @php
+                                        $canManage = auth()->check() && \App\Models\EventStaff::where([
+                                            'event_id' => $event->id,
+                                            'user_id'  => auth()->id(),
+                                            'status'   => 'active',
+                                        ])->exists();
+                                    @endphp
+                                    @if($canManage)
+                                        <a href="{{ route('events.groups.index', $event) }}"
+                                           class="inline-flex items-center rounded-xl bg-emerald-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-emerald-500">
+                                            管理
+                                        </a>
+                                    @endif
+                                </div>
                             </td>
                         </tr>
                     @empty
