@@ -12,6 +12,7 @@ class ArcheryShot extends Model
         'session_id',
         'end_seq', 'shot_seq',
         'score', 'is_x', 'is_miss',
+        'target_x', 'target_y',
     ];
 
     protected $casts = [
@@ -20,6 +21,8 @@ class ArcheryShot extends Model
         'score'    => 'integer',
         'is_x'     => 'boolean',
         'is_miss'  => 'boolean',
+        'target_x' => 'float',
+        'target_y' => 'float',
     ];
 
     public function session(): BelongsTo

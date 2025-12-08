@@ -134,6 +134,36 @@
                 </div>
             </div>
 
+            {{-- 落點群集 & 靶面 --}}
+            @php
+                $shotPoints = ($shots ?? collect())
+                    ->filter(fn($s) => !is_null($s->target_x) && !is_null($s->target_y))
+                    ->map(fn($s) => [
+                        'x' => (float)$s->target_x,
+                        'y' => (float)$s->target_y,
+                        'score' => (int)$s->score,
+                        'is_miss' => (bool)$s->is_miss,
+                        'is_x' => (bool)$s->is_x,
+                        'end_seq' => (int)$s->end_seq,
+                        'shot_seq' => (int)$s->shot_seq,
+                    ]);
+            @endphp
+            @if(($analysis['hasCoords'] ?? false) && $shotPoints->count())
+                <div class="rounded-2xl border overflow-hidden">
+                    <div class="px-3 py-2 bg-gray-50 text-xs font-medium flex items-center justify-between">
+                        <span>落點圖</span>
+                        <span class="text-gray-500">平均群集半徑 {{ $analysis['groupRadius'] ?? '—' }}，離中心 {{ $analysis['groupOffset'] ?? '—' }}</span>
+                    </div>
+                    <div class="p-4 flex flex-col items-center gap-2">
+                        <div class="relative w-full max-w-[420px] aspect-square">
+                            <div class="absolute inset-0 target-face"></div>
+                            <canvas id="target-map" class="absolute inset-0"></canvas>
+                        </div>
+                        <div class="text-xs text-gray-500 text-center">色塊位置為實際記錄的落點，標示對應分值。</div>
+                    </div>
+                </div>
+            @endif
+
             {{-- 分布圖（更緊湊） --}}
             <div class="rounded-2xl border overflow-hidden">
                 <div class="px-3 py-2 bg-gray-50 text-xs font-medium">分值分布圖</div>
@@ -219,6 +249,12 @@
     {{-- 讓數字等寬更整齊 --}}
     <style>
         #score-table [class*="tabular-nums"] { font-variant-numeric: tabular-nums; }
+        .target-face {
+            background:
+                radial-gradient(circle at center, #111827 0 6%, transparent 6%),
+                radial-gradient(circle at center, #fcd34d 0 10%, #fcd34d 10% 20%, #f97316 20% 30%, #f97316 30% 40%, #f43f5e 40% 50%, #f43f5e 50% 60%, #2563eb 60% 70%, #2563eb 70% 80%, #d1d5db 80% 90%, #d1d5db 90% 100%);
+            border-radius: 9999px;
+        }
     </style>
 @endsection
 @section('js')
@@ -342,6 +378,43 @@
                         plugins: { legend: { display: false }, tooltip: { mode: 'index', intersect: false } }
                     }
                 });
+            }
+
+            const shotPoints = @json($shotPoints ?? []);
+            const mapCanvas = document.getElementById('target-map');
+            if (mapCanvas && Array.isArray(shotPoints) && shotPoints.length) {
+                const ctxMap = mapCanvas.getContext('2d');
+                const wrapper = mapCanvas.parentElement;
+
+                function resizeMap() {
+                    const rect = wrapper.getBoundingClientRect();
+                    mapCanvas.width = rect.width * devicePixelRatio;
+                    mapCanvas.height = rect.height * devicePixelRatio;
+                    mapCanvas.style.width = `${rect.width}px`;
+                    mapCanvas.style.height = `${rect.height}px`;
+                    renderMap();
+                }
+
+                function renderMap() {
+                    ctxMap.clearRect(0, 0, mapCanvas.width, mapCanvas.height);
+                    const halfW = mapCanvas.width / 2;
+                    const halfH = mapCanvas.height / 2;
+                    shotPoints.forEach((pt) => {
+                        const cx = halfW + pt.x * halfW;
+                        const cy = halfH + pt.y * halfH;
+                        ctxMap.beginPath();
+                        ctxMap.fillStyle = pt.is_x ? 'rgba(37,99,235,0.9)' : 'rgba(59,130,246,0.8)';
+                        ctxMap.arc(cx, cy, 7 * devicePixelRatio, 0, Math.PI * 2);
+                        ctxMap.fill();
+                        ctxMap.font = `${12 * devicePixelRatio}px ui-sans-serif`;
+                        ctxMap.fillStyle = 'rgba(17,24,39,0.75)';
+                        const label = pt.is_miss ? 'M' : (pt.is_x ? 'X' : String(pt.score));
+                        ctxMap.fillText(label, cx + 8 * devicePixelRatio, cy - 8 * devicePixelRatio);
+                    });
+                }
+
+                resizeMap();
+                window.addEventListener('resize', resizeMap);
             }
         });
     </script>
