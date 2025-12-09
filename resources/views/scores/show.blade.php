@@ -249,21 +249,36 @@
     {{-- 讓數字等寬更整齊 --}}
     <style>
         #score-table [class*="tabular-nums"] { font-variant-numeric: tabular-nums; }
-        .target-face {
-            background:
-                radial-gradient(circle at center, #111827 0 4%, transparent 4%),
+        :root {
+            --target-gradient:
                 radial-gradient(circle at center,
-                    #fcd34d 0 10%,
-                    #fcd34d 10% 20%,
-                    #ef4444 20% 30%,
-                    #ef4444 30% 40%,
-                    #3b82f6 40% 50%,
-                    #3b82f6 50% 60%,
-                    #111827 60% 70%,
-                    #111827 70% 80%,
+                    #f6d01f 0 5%,  /* X (inner 10) */
+                    #f6d01f 5% 10%,
+                    #f6d01f 10% 20%,
+                    #d61f26 20% 30%,
+                    #d61f26 30% 40%,
+                    #1877e6 40% 50%,
+                    #1877e6 50% 60%,
+                    #0f172a 60% 70%,
+                    #0f172a 70% 80%,
                     #ffffff 80% 90%,
                     #ffffff 90% 100%);
+        }
+        .target-face {
+            background:
+                repeating-radial-gradient(circle at center,
+                    rgba(255,255,255,0.9) 0%,
+                    rgba(255,255,255,0.9) 0.45%,
+                    transparent 0.45%,
+                    transparent 10%),
+                repeating-radial-gradient(circle at center,
+                    rgba(0,0,0,0.22) 0.25%,
+                    rgba(0,0,0,0.22) 0.65%,
+                    transparent 0.65%,
+                    transparent 10%),
+                var(--target-gradient);
             border-radius: 9999px;
+            box-shadow: inset 0 0 0 2px #0f172a;
         }
     </style>
 @endsection

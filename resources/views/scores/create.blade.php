@@ -43,9 +43,19 @@
                 </div>
                 <div class="p-4 flex flex-col items-center gap-3">
                     <div class="relative w-full max-w-[440px] aspect-square" id="target-container">
-                        <div class="absolute inset-0 target-face"></div>
+                        <div class="absolute inset-0 target-face" aria-hidden="true"></div>
                         <canvas id="target-overlay" class="absolute inset-0"></canvas>
                         <div id="target-surface" class="absolute inset-0"></div>
+                        <div id="target-zoom" class="target-zoom absolute pointer-events-none opacity-0 scale-95 transition duration-150 ease-out">
+                            <div class="target-zoom-bg absolute inset-0 rounded-full" aria-hidden="true"></div>
+                            <div class="absolute inset-0 flex items-center justify-center">
+                                <div class="text-base font-semibold text-white drop-shadow-sm" id="zoom-score"></div>
+                            </div>
+                            <div class="absolute inset-0 flex items-center justify-center" aria-hidden="true">
+                                <div class="h-[2px] w-full bg-white/80"></div>
+                                <div class="h-full w-[2px] bg-white/80"></div>
+                            </div>
+                        </div>
                     </div>
                     <div class="text-xs text-gray-500 text-center">
                         點擊標示落點；拖曳可精調位置。系統會自動判定 X / 10 / Miss 並填入當前箭位。
@@ -178,21 +188,60 @@
 @section('js')
     {{-- 簡易樣式（沿用 Tailwind） --}}
     <style>
-        .target-face {
-            background:
-                radial-gradient(circle at center, #111827 0 4%, transparent 4%),
+        :root {
+            --target-gradient:
                 radial-gradient(circle at center,
-                    #fcd34d 0 10%,
-                    #fcd34d 10% 20%,
-                    #ef4444 20% 30%,
-                    #ef4444 30% 40%,
-                    #3b82f6 40% 50%,
-                    #3b82f6 50% 60%,
-                    #111827 60% 70%,
-                    #111827 70% 80%,
+                    #f6d01f 0 5%,  /* X (inner 10) */
+                    #f6d01f 5% 10%,
+                    #f6d01f 10% 20%,
+                    #d61f26 20% 30%,
+                    #d61f26 30% 40%,
+                    #1877e6 40% 50%,
+                    #1877e6 50% 60%,
+                    #0f172a 60% 70%,
+                    #0f172a 70% 80%,
                     #ffffff 80% 90%,
                     #ffffff 90% 100%);
+        }
+        .target-face {
+            background:
+                repeating-radial-gradient(circle at center,
+                    rgba(255,255,255,0.9) 0%,
+                    rgba(255,255,255,0.9) 0.45%,
+                    transparent 0.45%,
+                    transparent 10%),
+                repeating-radial-gradient(circle at center,
+                    rgba(0,0,0,0.22) 0.25%,
+                    rgba(0,0,0,0.22) 0.65%,
+                    transparent 0.65%,
+                    transparent 10%),
+                var(--target-gradient);
             border-radius: 9999px;
+            box-shadow: inset 0 0 0 2px #0f172a;
+        }
+        .target-zoom,
+        .target-zoom-bg {
+            background:
+                repeating-radial-gradient(circle at center,
+                    rgba(255,255,255,0.9) 0%,
+                    rgba(255,255,255,0.9) 0.45%,
+                    transparent 0.45%,
+                    transparent 10%),
+                repeating-radial-gradient(circle at center,
+                    rgba(0,0,0,0.22) 0.25%,
+                    rgba(0,0,0,0.22) 0.65%,
+                    transparent 0.65%,
+                    transparent 10%),
+                var(--target-gradient);
+            background-size: 200% 200%;
+        }
+        .target-zoom {
+            width: 120px;
+            height: 120px;
+            border-radius: 9999px;
+            box-shadow: 0 20px 30px rgba(0,0,0,0.18);
+            border: 3px solid rgba(255,255,255,0.85);
+            transform-origin: center;
         }
         #target-surface {
             cursor: crosshair;
@@ -652,22 +701,19 @@
                     setActiveCell(eIdx, iIdx);
                 });
 
-                // 依照落點自動計分
+                // 依照落點自動計分（等寬 10 個環，X 為中心 5%）
                 function calcScoreFromPoint(x, y) {
                     const dist = Math.sqrt(x * x + y * y);
-                    if (dist > 1.05) return { score: 0, isMissFlag: true, isXFlag: false };
-                    const thresholds = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0];
-                    let score = 0;
-                    thresholds.some((limit, idx) => {
-                        if (dist <= limit) {
-                            score = 10 - idx;
-                            return true;
+                    if (dist > 1.02) return { score: 0, isMissFlag: true, isXFlag: false };
+                    const bands = [0.05, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0];
+                    const scores = [10, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1];
+                    for (let i = 0; i < bands.length; i++) {
+                        if (dist <= bands[i]) {
+                            const score = scores[i];
+                            return { score, isMissFlag: false, isXFlag: i === 0 };
                         }
-                        return false;
-                    });
-                    const isXFlag = dist <= 0.05;
-                    const isMissFlag = score === 0 && !isXFlag;
-                    return { score, isMissFlag, isXFlag };
+                    }
+                    return { score: 0, isMissFlag: true, isXFlag: false };
                 }
 
                 function renderTarget() {
@@ -713,6 +759,44 @@
                     });
                 }
 
+                const zoomEl = document.getElementById('target-zoom');
+                const zoomScoreEl = document.getElementById('zoom-score');
+                let zoomTimer = null;
+
+                function hideZoom(after = 0) {
+                    if (!zoomEl) return;
+                    if (zoomTimer) { clearTimeout(zoomTimer); zoomTimer = null; }
+                    if (after) {
+                        zoomTimer = setTimeout(() => hideZoom(0), after);
+                        return;
+                    }
+                    zoomEl.classList.add('opacity-0', 'scale-95');
+                }
+
+                function showZoom(nx, ny, label, persist = false) {
+                    if (!zoomEl || !zoomScoreEl) return;
+                    const container = document.getElementById('target-container');
+                    const rect = container?.getBoundingClientRect();
+                    if (!rect) return;
+                    const pctX = 50 + nx * 50;
+                    const pctY = 50 + ny * 50;
+                    zoomEl.style.left = `${pctX}%`;
+                    zoomEl.style.top = `${pctY}%`;
+                    zoomEl.style.transform = 'translate(-50%, -50%)';
+                    zoomEl.style.backgroundPosition = `${pctX}% ${pctY}%`;
+                    const bgLayers = getComputedStyle(document.documentElement).getPropertyValue('--target-gradient');
+                    const zoomBg = zoomEl.querySelector('.target-zoom-bg');
+                    if (zoomBg) {
+                        zoomBg.style.backgroundPosition = `${pctX}% ${pctY}%`;
+                        if (bgLayers) {
+                            zoomBg.style.backgroundImage = `repeating-radial-gradient(circle at center, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0.9) 0.45%, transparent 0.45%, transparent 10%), repeating-radial-gradient(circle at center, rgba(0,0,0,0.22) 0.25%, rgba(0,0,0,0.22) 0.65%, transparent 0.65%, transparent 10%), ${bgLayers.trim()}`;
+                        }
+                    }
+                    zoomScoreEl.textContent = label;
+                    zoomEl.classList.remove('opacity-0', 'scale-95');
+                    if (persist) hideZoom(1100);
+                }
+
                 function handlePointer(evt, commit = false) {
                     const surface = document.getElementById('target-surface');
                     if (!surface) return;
@@ -721,8 +805,10 @@
                     const nx = ((evt.clientX - rect.left) / rect.width - 0.5) * 2;
                     const ny = ((evt.clientY - rect.top) / rect.height - 0.5) * 2;
                     const { score, isMissFlag, isXFlag } = calcScoreFromPoint(nx, ny);
+                    const label = isMissFlag ? 'M' : (isXFlag ? 'X' : score);
                     if (commit) {
                         commitScore(score, isMissFlag, isXFlag, { x: nx, y: ny });
+                        showZoom(nx, ny, label, true);
                     } else {
                         // 即時預覽目前落點
                         const canvas = document.getElementById('target-overlay');
@@ -738,6 +824,7 @@
                         overlayCtx.arc(halfW + nx * halfW, halfH + ny * halfH, 14 * devicePixelRatio, 0, Math.PI * 2);
                         overlayCtx.stroke();
                         overlayCtx.setLineDash([]);
+                        showZoom(nx, ny, label, false);
                     }
                 }
 
@@ -764,6 +851,7 @@
                     surface.addEventListener('pointerleave', () => {
                         isPointerDown = false;
                         renderTarget();
+                        hideZoom();
                     });
 
                     const resizeObserver = new ResizeObserver(() => {
