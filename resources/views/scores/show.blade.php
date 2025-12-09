@@ -251,8 +251,18 @@
         #score-table [class*="tabular-nums"] { font-variant-numeric: tabular-nums; }
         .target-face {
             background:
-                radial-gradient(circle at center, #111827 0 6%, transparent 6%),
-                radial-gradient(circle at center, #fcd34d 0 10%, #fcd34d 10% 20%, #f97316 20% 30%, #f97316 30% 40%, #f43f5e 40% 50%, #f43f5e 50% 60%, #2563eb 60% 70%, #2563eb 70% 80%, #d1d5db 80% 90%, #d1d5db 90% 100%);
+                radial-gradient(circle at center, #111827 0 4%, transparent 4%),
+                radial-gradient(circle at center,
+                    #fcd34d 0 10%,
+                    #fcd34d 10% 20%,
+                    #ef4444 20% 30%,
+                    #ef4444 30% 40%,
+                    #3b82f6 40% 50%,
+                    #3b82f6 50% 60%,
+                    #111827 60% 70%,
+                    #111827 70% 80%,
+                    #ffffff 80% 90%,
+                    #ffffff 90% 100%);
             border-radius: 9999px;
         }
     </style>
