@@ -5,59 +5,8 @@
 
 @section('content')
     @php
-        // ======== 假資料（之後用 Controller 填入真資料） ========
-        $user = [
-            'name' => 'Alex',
-            'bow_type' => 'Recurve',
-        ];
-        $stats = [
-            'first_session_at' => '2023/08/12',
-            'days_since_start' => 432,
-            'active_days_this_month' => 9,
-            'hours_this_month' => 12.8,
-            'arrows_this_month' => 1140,
-            'avg_score_per_arrow' => 8.23,
-            'streak_days' => 4,
-            'best_end' => 58, // 單趟 6 箭
-            'best_36' => 321,
-            'gold_rate' => 0.34,
-            'red_rate' => 0.47,
-            'last_active' => '2 天前',
-        ];
-        $weeklyTrend = [
-            ['week' => 'W35', 'arrows' => 420, 'avg' => 8.1, 'mins' => 340],
-            ['week' => 'W36', 'arrows' => 360, 'avg' => 8.0, 'mins' => 300],
-            ['week' => 'W37', 'arrows' => 510, 'avg' => 8.3, 'mins' => 390],
-            ['week' => 'W38', 'arrows' => 480, 'avg' => 8.4, 'mins' => 370],
-            ['week' => 'W39', 'arrows' => 600, 'avg' => 8.5, 'mins' => 420],
-            ['week' => 'W40', 'arrows' => 540, 'avg' => 8.6, 'mins' => 410],
-            ['week' => 'W41', 'arrows' => 450, 'avg' => 8.2, 'mins' => 360],
-            ['week' => 'W42', 'arrows' => 510, 'avg' => 8.3, 'mins' => 380],
-        ];
-        $recentSessions = [
-            ['date' => '2025/10/15', 'location' => 'Indoor A', 'arrows' => 180, 'avg' => 8.4, 'score' => 1510, 'wind' => '—', 'notes' => '專注呼吸節奏'],
-            ['date' => '2025/10/12', 'location' => 'Outdoor 30m', 'arrows' => 144, 'avg' => 8.1, 'score' => 1167, 'wind' => '2.3 m/s', 'notes' => '順風左飄，調整瞄準'],
-            ['date' => '2025/10/10', 'location' => 'Indoor B', 'arrows' => 120, 'avg' => 8.6, 'score' => 1032, 'wind' => '—', 'notes' => '拉弓穩定度提升'],
-            ['date' => '2025/10/07', 'location' => 'Outdoor 50m', 'arrows' => 90,  'avg' => 7.9, 'score' => 711,  'wind' => '3.1 m/s', 'notes' => '注意扳指角度'],
-        ];
-        $goals = [
-            ['title' => '36 箭 ≥ 330', 'progress' => 0.74, 'due' => '2025/12/31'],
-            ['title' => '連續訓練 14 天', 'progress' => $stats['streak_days'] / 14, 'due' => '—'],
-            ['title' => 'X% ≥ 38%', 'progress' => $stats['gold_rate'] < 0.38 ? $stats['gold_rate']/0.38 : 1, 'due' => '2026/03/31'],
-        ];
-        $notes = [
-            ['tag' => '站姿', 'text' => '腳尖對準靶心微內扣，骨架撐住重心。'],
-            ['tag' => '放箭', 'text' => '放鬆後臂，手肘沿線後移，不要側甩。'],
-            ['tag' => '瞄準', 'text' => '呼吸停在第二拍，穩住 0.8 秒再放。'],
-        ];
-        $badges = [
-            ['icon' => '🔥', 'title' => '7-Day Streak'],
-            ['icon' => '🎯', 'title' => '1000 Arrows a Day'],
-            ['icon' => '🏆', 'title' => 'Best End 58'],
-        ];
-        // ======== /假資料 ========
-
-        $pct = fn($v) => number_format($v*100, 0) . '%';
+        $fmtNum = fn($v, $dec = 0) => is_null($v) ? '—' : number_format((float) $v, $dec);
+        $pct = fn($v, $dec = 0) => is_null($v) ? '—' : number_format((float) $v * 100, $dec) . '%';
     @endphp
 
     {{-- 放在 @section('content') 裡面，建議把原本內容包成 @auth ... @endauth --}}
@@ -354,21 +303,26 @@
                 {{-- 無外部圖表庫：以純 CSS 長條 + 線條模擬 --}}
                 <div class="overflow-x-auto">
                     <div class="min-w-[640px] grid grid-cols-8 gap-3">
-                        @foreach($weeklyTrend as $w)
+                        @forelse($weeklyTrend as $w)
                             @php
-                                $hArrows = min(200, $w['arrows'] / 3);  // 600 arrows -> 200px
-                                $hMins   = min(200, $w['mins']   / 2);  // 400 mins -> 200px
-                                $posAvg  = 200 - ($w['avg'] * 20);      // 10 -> top 0px
+                                $arrows = $w['arrows'] ?? 0;
+                                $mins = $w['mins'] ?? 0;
+                                $avg = $w['avg'] ?? null;
+                                $hArrows = min(200, max(0, $arrows / 3));  // 600 arrows -> 200px
+                                $hMins   = min(200, max(0, $mins / 2));    // 400 mins -> 200px
+                                $posAvg  = is_null($avg) ? 200 : 200 - (max(0, min(10, $avg)) * 20);      // 10 -> top 0px
                             @endphp
                             <div class="flex flex-col items-center">
                                 <div class="relative h-[200px] w-12">
-                                    <div class="absolute bottom-0 left-0 right-0 rounded-t bg-gray-200" style="height: {{ $hArrows }}px" title="Arrows: {{ $w['arrows'] }}"></div>
-                                    <div class="absolute bottom-0 left-2 right-2 rounded-t bg-gray-400/60" style="height: {{ $hMins }}px" title="Mins: {{ $w['mins'] }}"></div>
-                                    <div class="absolute left-0 right-0 h-[2px] bg-gray-900/80" style="top: {{ $posAvg }}px" title="Avg: {{ $w['avg'] }}"></div>
+                                    <div class="absolute bottom-0 left-0 right-0 rounded-t bg-gray-200" style="height: {{ $hArrows }}px" title="Arrows: {{ $arrows }}"></div>
+                                    <div class="absolute bottom-0 left-2 right-2 rounded-t bg-gray-400/60" style="height: {{ $hMins }}px" title="時長：{{ $mins ?: '—' }} 分"></div>
+                                    <div class="absolute left-0 right-0 h-[2px] bg-gray-900/80" style="top: {{ $posAvg }}px" title="Avg: {{ $avg ?? '—' }}"></div>
                                 </div>
-                                <div class="mt-2 text-xs text-gray-600">{{ $w['week'] }}</div>
+                                <div class="mt-2 text-xs text-gray-600">{{ $w['week'] ?? '—' }}</div>
                             </div>
-                        @endforeach
+                        @empty
+                            <div class="col-span-8 text-xs text-gray-500">暫無足夠資料繪製趨勢</div>
+                        @endforelse
                     </div>
                 </div>
                 <div class="mt-3 text-xs text-gray-500">說明：灰深＝時長、灰淺＝箭數、黑線＝平均單箭分。</div>
@@ -381,14 +335,16 @@
                     <a href="#" class="text-xs text-gray-500 hover:underline">管理</a>
                 </div>
                 <ul class="space-y-2">
-                    @foreach($notes as $n)
+                    @forelse($notes as $n)
                         <li class="rounded-xl bg-gray-50 p-3">
-                            <div class="text-xs text-gray-500">{{ $n['tag'] }}</div>
-                            <div class="text-sm">{{ $n['text'] }}</div>
+                            <div class="text-xs text-gray-500">{{ $n['tag'] ?? '備忘' }}</div>
+                            <div class="text-sm">{{ $n['text'] ?? '—' }}</div>
                         </li>
-                    @endforeach
+                    @empty
+                        <li class="rounded-xl bg-gray-50 p-3 text-xs text-gray-500">目前沒有備忘紀錄</li>
+                    @endforelse
                 </ul>
-                <div class="mt-3 text-xs text-gray-500">最近活動：{{ $stats['last_active'] }}</div>
+                <div class="mt-3 text-xs text-gray-500">最近活動：{{ $stats['last_active'] ?? '—' }}</div>
             </div>
         </div>
 
@@ -412,17 +368,21 @@
                     </tr>
                     </thead>
                     <tbody class="divide-y">
-                    @foreach($recentSessions as $s)
+                    @forelse($recentSessions as $s)
                         <tr class="hover:bg-gray-50">
-                            <td class="px-3 py-2">{{ $s['date'] }}</td>
-                            <td class="px-3 py-2">{{ $s['location'] }}</td>
-                            <td class="px-3 py-2 text-right">{{ $s['arrows'] }}</td>
-                            <td class="px-3 py-2 text-right">{{ number_format($s['avg'], 2) }}</td>
-                            <td class="px-3 py-2 text-right">{{ number_format($s['score']) }}</td>
-                            <td class="px-3 py-2">{{ $s['wind'] }}</td>
-                            <td class="px-3 py-2">{{ $s['notes'] }}</td>
+                            <td class="px-3 py-2">{{ $s['date'] ?? '—' }}</td>
+                            <td class="px-3 py-2">{{ $s['location'] ?? '—' }}</td>
+                            <td class="px-3 py-2 text-right">{{ $s['arrows'] ?? 0 }}</td>
+                            <td class="px-3 py-2 text-right">{{ isset($s['avg']) ? number_format($s['avg'], 2) : '—' }}</td>
+                            <td class="px-3 py-2 text-right">{{ isset($s['score']) ? number_format($s['score']) : '—' }}</td>
+                            <td class="px-3 py-2">{{ $s['wind'] ?? '—' }}</td>
+                            <td class="px-3 py-2">{{ $s['notes'] ?? '—' }}</td>
                         </tr>
-                    @endforeach
+                    @empty
+                        <tr>
+                            <td colspan="7" class="px-3 py-4 text-center text-sm text-gray-500">尚無訓練紀錄</td>
+                        </tr>
+                    @endforelse
                     </tbody>
                 </table>
             </div>
@@ -451,12 +411,14 @@
                 <div class="mt-5">
                     <h3 class="text-xs font-semibold text-gray-500 mb-2">成就徽章</h3>
                     <div class="flex flex-wrap gap-2">
-                        @foreach($badges as $b)
+                        @forelse($badges as $b)
                             <div class="inline-flex items-center gap-2 rounded-xl border px-3 py-2 text-xs">
                                 <span class="text-base">{{ $b['icon'] }}</span>
                                 <span class="font-medium">{{ $b['title'] }}</span>
                             </div>
-                        @endforeach
+                        @empty
+                            <div class="text-xs text-gray-500">達成挑戰後會顯示徽章</div>
+                        @endforelse
                     </div>
                 </div>
             </div>
@@ -466,11 +428,11 @@
         <div class="mt-6 grid grid-cols-2 sm:hidden gap-2">
             <div class="rounded-xl border p-3 text-center">
                 <div class="text-xs text-gray-500">Gold 率</div>
-                <div class="text-base font-semibold">{{ $pct($stats['gold_rate']) }}</div>
+                <div class="text-base font-semibold">{{ $pct($stats['gold_rate'] ?? null) }}</div>
             </div>
             <div class="rounded-xl border p-3 text-center">
                 <div class="text-xs text-gray-500">Red 率</div>
-                <div class="text-base font-semibold">{{ $pct($stats['red_rate']) }}</div>
+                <div class="text-base font-semibold">{{ $pct($stats['red_rate'] ?? null) }}</div>
             </div>
         </div>
 
