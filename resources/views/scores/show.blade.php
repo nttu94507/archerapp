@@ -404,8 +404,8 @@
                         const cx = halfW + pt.x * halfW;
                         const cy = halfH + pt.y * halfH;
                         ctxMap.beginPath();
-                        ctxMap.fillStyle = pt.is_x ? 'rgba(37,99,235,0.9)' : 'rgba(59,130,246,0.8)';
-                        ctxMap.arc(cx, cy, 7 * devicePixelRatio, 0, Math.PI * 2);
+                        ctxMap.fillStyle = 'rgba(34,197,94,0.9)';
+                        ctxMap.arc(cx, cy, 4 * devicePixelRatio, 0, Math.PI * 2);
                         ctxMap.fill();
                         ctxMap.font = `${12 * devicePixelRatio}px ui-sans-serif`;
                         ctxMap.fillStyle = 'rgba(17,24,39,0.75)';

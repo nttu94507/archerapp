@@ -761,9 +761,20 @@
                     if (!zoomEl || !zoomScoreEl) return;
                     const container = document.getElementById('target-container');
                     const rect = container?.getBoundingClientRect();
-                    if (!rect) return;
+                    const lensRect = zoomEl.getBoundingClientRect();
+                    if (!rect || !lensRect) return;
 
-                    // 以實際落點為背景中心，放大並將整個放大鏡稍微往上側偏移，避免被手指遮住
+                    // 以實際落點為放大中心，畫面同步靠像素對齊；鏡面本身仍上移避免被手指遮住
+                    const pointPx = {
+                        x: rect.width * (0.5 + nx / 2),
+                        y: rect.height * (0.5 + ny / 2),
+                    };
+                    const zoomFactor = 2.6; // 與背景 260% 等效，但用像素定位以校準中心
+                    const bgW = rect.width * zoomFactor;
+                    const bgH = rect.height * zoomFactor;
+                    const bgPosX = (lensRect.width / 2) - pointPx.x * zoomFactor;
+                    const bgPosY = (lensRect.height / 2) - pointPx.y * zoomFactor;
+
                     const basePctX = 50 + nx * 50;
                     const basePctY = 50 + ny * 50;
                     const offsetPctX = clamp(basePctX + (nx >= 0 ? 10 : -10), 6, 94);
@@ -772,11 +783,13 @@
                     zoomEl.style.left = `${offsetPctX}%`;
                     zoomEl.style.top = `${offsetPctY}%`;
                     zoomEl.style.transform = 'translate(-50%, -50%)';
-                    zoomEl.style.backgroundPosition = `${basePctX}% ${basePctY}%`;
+                    zoomEl.style.backgroundSize = `${bgW}px ${bgH}px`;
+                    zoomEl.style.backgroundPosition = `${bgPosX}px ${bgPosY}px`;
                     if (targetImage) zoomEl.style.backgroundImage = targetImage;
                     const zoomBg = zoomEl.querySelector('.target-zoom-bg');
                     if (zoomBg) {
-                        zoomBg.style.backgroundPosition = `${basePctX}% ${basePctY}%`;
+                        zoomBg.style.backgroundSize = `${bgW}px ${bgH}px`;
+                        zoomBg.style.backgroundPosition = `${bgPosX}px ${bgPosY}px`;
                         if (targetImage) zoomBg.style.backgroundImage = targetImage;
                     }
                     zoomScoreEl.textContent = label;
