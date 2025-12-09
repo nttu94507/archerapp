@@ -19,6 +19,11 @@ class EventRegistration extends Model
         'withdrawn_at' => 'datetime',
     ];
 
+    public function event()
+    {
+        return $this->belongsTo(Event::class);
+    }
+
     public function event_group(){
         return $this->belongsTo(EventGroup::class, 'event_group_id');
     }
