@@ -186,52 +186,20 @@
 @section('js')
     {{-- 簡易樣式（沿用 Tailwind） --}}
     <style>
-        :root {
-            --target-gradient:
-                radial-gradient(circle at center,
-                    #f6d01f 0 5%,   /* X (inner 10) */
-                    #f6d01f 5% 10%,  /* 10 */
-                    #f6d01f 10% 20%, /* 9 */
-                    #d61f26 20% 30%, /* 8 */
-                    #d61f26 30% 40%, /* 7 */
-                    #1877e6 40% 50%, /* 6 */
-                    #1877e6 50% 60%, /* 5 */
-                    #0f172a 60% 70%, /* 4 */
-                    #0f172a 70% 80%, /* 3 */
-                    #ffffff 80% 90%, /* 2 */
-                    #ffffff 90% 100% /* 1 */);
-        }
+        :root { --target-image: url('/images/target-122.svg'); }
         .target-face {
-            background:
-                repeating-radial-gradient(circle at center,
-                    rgba(255,255,255,0.9) 0%,
-                    rgba(255,255,255,0.9) 0.45%,
-                    transparent 0.45%,
-                    transparent 10%),
-                repeating-radial-gradient(circle at center,
-                    rgba(0,0,0,0.22) 0.25%,
-                    rgba(0,0,0,0.22) 0.65%,
-                    transparent 0.65%,
-                    transparent 10%),
-                var(--target-gradient);
+            background: var(--target-image) center/contain no-repeat;
+            background-color: #f8fafc;
             border-radius: 9999px;
             box-shadow: inset 0 0 0 2px #0f172a;
         }
         .target-zoom,
         .target-zoom-bg {
-            background:
-                repeating-radial-gradient(circle at center,
-                    rgba(255,255,255,0.9) 0%,
-                    rgba(255,255,255,0.9) 0.45%,
-                    transparent 0.45%,
-                    transparent 10%),
-                repeating-radial-gradient(circle at center,
-                    rgba(0,0,0,0.22) 0.25%,
-                    rgba(0,0,0,0.22) 0.65%,
-                    transparent 0.65%,
-                    transparent 10%),
-                var(--target-gradient);
+            background-image: var(--target-image);
             background-size: 260% 260%;
+            background-repeat: no-repeat;
+            background-position: center;
+            background-color: #f8fafc;
         }
         .target-zoom {
             width: 140px;
@@ -759,6 +727,7 @@
 
                 const zoomEl = document.getElementById('target-zoom');
                 const zoomScoreEl = document.getElementById('zoom-score');
+                const targetImage = getComputedStyle(document.documentElement).getPropertyValue('--target-image').trim();
                 let zoomTimer = null;
 
                 function hideZoom(after = 0) {
@@ -787,13 +756,11 @@
                     zoomEl.style.top = `${offsetPctY}%`;
                     zoomEl.style.transform = 'translate(-50%, -50%)';
                     zoomEl.style.backgroundPosition = `${basePctX}% ${basePctY}%`;
-                    const bgLayers = getComputedStyle(document.documentElement).getPropertyValue('--target-gradient');
+                    if (targetImage) zoomEl.style.backgroundImage = targetImage;
                     const zoomBg = zoomEl.querySelector('.target-zoom-bg');
                     if (zoomBg) {
                         zoomBg.style.backgroundPosition = `${basePctX}% ${basePctY}%`;
-                        if (bgLayers) {
-                            zoomBg.style.backgroundImage = `repeating-radial-gradient(circle at center, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0.9) 0.45%, transparent 0.45%, transparent 10%), repeating-radial-gradient(circle at center, rgba(0,0,0,0.22) 0.25%, rgba(0,0,0,0.22) 0.65%, transparent 0.65%, transparent 10%), ${bgLayers.trim()}`;
-                        }
+                        if (targetImage) zoomBg.style.backgroundImage = targetImage;
                     }
                     zoomScoreEl.textContent = label;
                     zoomEl.classList.remove('opacity-0', 'scale-95');
