@@ -696,7 +696,9 @@
                         row.forEach((pt, iIdx) => {
                             if (!pt) return;
                             const isActive = eIdx === active.end && iIdx === active.idx;
-                            drawPoint(pt, isActive ? 'rgba(239,68,68,0.9)' : 'rgba(37,99,235,0.75)', isActive ? 10 : 7, isActive);
+                            // 使用與靶面色環不同的顏色，以確保落點清晰可辨
+                            const pointColor = isActive ? 'rgba(124,58,237,0.9)' : 'rgba(34,197,94,0.85)';
+                            drawPoint(pt, pointColor, isActive ? 10 : 7, isActive);
                         });
                     });
                 }
@@ -736,7 +738,8 @@
                     surface.addEventListener('pointerdown', (e) => {
                         isPointerDown = true;
                         surface.setPointerCapture(e.pointerId);
-                        handlePointer(e, true);
+                        // 先預覽落點，不立即計分，避免點擊觸發兩次
+                        handlePointer(e, false);
                     });
                     surface.addEventListener('pointermove', (e) => {
                         if (!isPointerDown) return;
