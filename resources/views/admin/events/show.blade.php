@@ -54,7 +54,7 @@
             <div class="lg:col-span-2 space-y-4">
                 <div class="flex items-center justify-between">
                     <h2 class="text-lg font-semibold text-gray-900">報名名單</h2>
-                    <span class="text-xs text-gray-500">共 {{ $participants->total() }} 筆</span>
+                    <span class="text-xs text-gray-500">共 {{ $participants->count() }} 筆</span>
                 </div>
                 <div class="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
                     <form method="GET" class="grid grid-cols-1 gap-4 sm:grid-cols-6">
@@ -82,66 +82,76 @@
                         </div>
                     </form>
                 </div>
-                <div class="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden">
-                    <div class="overflow-x-auto">
-                        <table class="min-w-full divide-y divide-gray-200 text-sm">
-                            <thead class="bg-gray-50 text-xs uppercase tracking-widest text-gray-500">
-                            <tr>
-                                <th class="px-4 py-3 text-left">選手</th>
-                                <th class="px-4 py-3 text-left">組別</th>
-                                <th class="px-4 py-3 text-left">聯絡方式</th>
-                                <th class="px-4 py-3 text-left">狀態</th>
-                                <th class="px-4 py-3 text-left">繳費</th>
-                                <th class="px-4 py-3 text-right">建立時間</th>
-                            </tr>
-                            </thead>
-                            <tbody class="divide-y divide-gray-100">
-                            @forelse($participants as $registration)
-                                <tr>
-                                    <td class="px-4 py-3">
-                                        <div class="font-semibold text-gray-900">{{ $registration->name }}</div>
-                                        <div class="text-xs text-gray-500">{{ $registration->team_name ?: '—' }}</div>
-                                    </td>
-                                    <td class="px-4 py-3 text-gray-700">{{ optional($registration->event_group)->name ?: '未指定' }}</td>
-                                    <td class="px-4 py-3 text-gray-700">
-                                        <div>{{ $registration->email }}</div>
-                                        <div class="text-xs text-gray-500">{{ $registration->phone }}</div>
-                                    </td>
-                                    <td class="px-4 py-3">
-                                        <span class="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium
-                                            @class([
-                                                'bg-yellow-100 text-yellow-700' => $registration->status === 'pending',
-                                                'bg-blue-100 text-blue-700' => $registration->status === 'registered',
-                                                'bg-emerald-100 text-emerald-700' => $registration->status === 'checked_in',
-                                                'bg-gray-200 text-gray-700' => $registration->status === 'withdrawn',
-                                            ])">
-                                            {{ $participantStatuses[$registration->status] ?? $registration->status }}
-                                        </span>
-                                    </td>
-                                    <td class="px-4 py-3">
-                                        <form method="POST" action="{{ route('admin.events.registrations.payment', [$event, $registration]) }}" class="inline-flex items-center gap-2">
-                                            @csrf
-                                            @method('PATCH')
-                                            <input type="hidden" name="paid" value="{{ $registration->paid ? 0 : 1 }}">
-                                            <span class="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium {{ $registration->paid ? 'bg-emerald-50 text-emerald-700' : 'bg-orange-50 text-orange-700' }}">
-                                                {{ $registration->paid ? '已繳費' : '待繳費' }}
-                                            </span>
-                                            <button type="submit" class="text-xs text-indigo-600 hover:text-indigo-800">
-                                                {{ $registration->paid ? '標記未繳' : '標記已繳' }}
-                                            </button>
-                                        </form>
-                                    </td>
-                                    <td class="px-4 py-3 text-right text-gray-500">{{ optional($registration->created_at)->format('Y-m-d H:i') }}</td>
-                                </tr>
-                            @empty
-                                <tr>
-                                    <td colspan="5" class="px-4 py-10 text-center text-sm text-gray-500">尚無報名資料</td>
-                                </tr>
-                            @endforelse
-                            </tbody>
-                        </table>
-                    </div>
-                    <div class="px-4 py-3 border-t border-gray-100">{{ $participants->links() }}</div>
+                <div class="space-y-6">
+                    @forelse($groupedParticipants as $groupName => $registrations)
+                        <div class="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden">
+                            <div class="flex items-center justify-between border-b border-gray-100 px-4 py-3 bg-gray-50">
+                                <div>
+                                    <p class="text-xs uppercase tracking-widest text-gray-500">組別</p>
+                                    <h3 class="text-base font-semibold text-gray-900">{{ $groupName }}</h3>
+                                </div>
+                                <div class="flex items-center gap-2 text-xs">
+                                    <span class="inline-flex items-center rounded-full bg-gray-100 px-2 py-1 text-gray-700">共 {{ $groupStats[$groupName]['total'] ?? 0 }}</span>
+                                    <span class="inline-flex items-center rounded-full bg-emerald-50 px-2 py-1 text-emerald-700">已繳 {{ $groupStats[$groupName]['paid'] ?? 0 }}</span>
+                                    <span class="inline-flex items-center rounded-full bg-orange-50 px-2 py-1 text-orange-700">待繳 {{ $groupStats[$groupName]['unpaid'] ?? 0 }}</span>
+                                </div>
+                            </div>
+                            <div class="overflow-x-auto">
+                                <table class="min-w-full divide-y divide-gray-200 text-sm">
+                                    <thead class="bg-gray-50 text-xs uppercase tracking-widest text-gray-500">
+                                    <tr>
+                                        <th class="px-4 py-3 text-left">選手</th>
+                                        <th class="px-4 py-3 text-left">聯絡方式</th>
+                                        <th class="px-4 py-3 text-left">狀態</th>
+                                        <th class="px-4 py-3 text-left">繳費</th>
+                                        <th class="px-4 py-3 text-right">建立時間</th>
+                                    </tr>
+                                    </thead>
+                                    <tbody class="divide-y divide-gray-100">
+                                    @foreach($registrations as $registration)
+                                        <tr>
+                                            <td class="px-4 py-3">
+                                                <div class="font-semibold text-gray-900">{{ $registration->name }}</div>
+                                                <div class="text-xs text-gray-500">{{ $registration->team_name ?: '—' }}</div>
+                                            </td>
+                                            <td class="px-4 py-3 text-gray-700">
+                                                <div>{{ $registration->email }}</div>
+                                                <div class="text-xs text-gray-500">{{ $registration->phone }}</div>
+                                            </td>
+                                            <td class="px-4 py-3">
+                                                <span class="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium
+                                                    @class([
+                                                        'bg-yellow-100 text-yellow-700' => $registration->status === 'pending',
+                                                        'bg-blue-100 text-blue-700' => $registration->status === 'registered',
+                                                        'bg-emerald-100 text-emerald-700' => $registration->status === 'checked_in',
+                                                        'bg-gray-200 text-gray-700' => $registration->status === 'withdrawn',
+                                                    ])">
+                                                    {{ $participantStatuses[$registration->status] ?? $registration->status }}
+                                                </span>
+                                            </td>
+                                            <td class="px-4 py-3">
+                                                <form method="POST" action="{{ route('admin.events.registrations.payment', [$event, $registration]) }}" class="inline-flex items-center gap-2">
+                                                    @csrf
+                                                    @method('PATCH')
+                                                    <input type="hidden" name="paid" value="{{ $registration->paid ? 0 : 1 }}">
+                                                    <span class="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium {{ $registration->paid ? 'bg-emerald-50 text-emerald-700' : 'bg-orange-50 text-orange-700' }}">
+                                                        {{ $registration->paid ? '已繳費' : '待繳費' }}
+                                                    </span>
+                                                    <button type="submit" class="text-xs text-indigo-600 hover:text-indigo-800">
+                                                        {{ $registration->paid ? '標記未繳' : '標記已繳' }}
+                                                    </button>
+                                                </form>
+                                            </td>
+                                            <td class="px-4 py-3 text-right text-gray-500">{{ optional($registration->created_at)->format('Y-m-d H:i') }}</td>
+                                        </tr>
+                                    @endforeach
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    @empty
+                        <div class="rounded-2xl border border-gray-200 bg-white p-6 text-center text-sm text-gray-500">尚無報名資料</div>
+                    @endforelse
                 </div>
             </div>
 

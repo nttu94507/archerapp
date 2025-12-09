@@ -136,9 +136,30 @@ class EventController extends Controller
         }
 
         $participants = $participantQuery
+            ->orderBy('event_group_id')
             ->orderBy('created_at', 'desc')
-            ->paginate(10)
-            ->withQueryString();
+            ->get();
+
+        $groupedParticipants = $event->groups
+            ->mapWithKeys(function ($group) use ($participants) {
+                $registrations = $participants->where('event_group_id', $group->id);
+
+                return [$group->name => $registrations];
+            })
+            ->filter(fn ($group) => $group->isNotEmpty());
+
+        $unassigned = $participants->whereNull('event_group_id');
+        if ($unassigned->isNotEmpty()) {
+            $groupedParticipants = $groupedParticipants->put('未指定組別', $unassigned)->sortKeys();
+        }
+
+        $groupStats = $groupedParticipants->map(function ($group) {
+            return [
+                'total'  => $group->count(),
+                'paid'   => $group->where('paid', true)->count(),
+                'unpaid' => $group->where('paid', false)->count(),
+            ];
+        });
 
         $statusCounts = EventRegistration::query()
             ->select('status', DB::raw('COUNT(*) as total'))
@@ -200,6 +221,8 @@ class EventController extends Controller
             'statDir'              => $statDir,
             'summary'              => $summary,
             'bracket'              => $bracket,
+            'groupedParticipants'  => $groupedParticipants,
+            'groupStats'           => $groupStats,
         ]);
     }
 
