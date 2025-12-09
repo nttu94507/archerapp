@@ -429,48 +429,49 @@
                     updateGrid();
                     focusActive();
                 }
-                function setActiveCell(eIdx, iIdx) {
+                function setActiveCell(eIdx, iIdx, options = {}) {
                     active = { end: clamp(eIdx, 0, ends - 1), idx: clamp(iIdx, 0, scores[0].length - 1) };
                     if (pendingTimer) { clearTimeout(pendingTimer); pendingTimer = null; }
                     pendingDigit = null;
-                    focusActive();
+                    focusActive(options);
                 }
 
-                function focusActive() {
+                function focusActive(options = {}) {
+                    const { suppressScroll = false } = options;
                     tbody.querySelectorAll('[data-cell]').forEach((btn) => btn.classList.remove('bg-yellow-100'));
                     const btn = tbody.querySelector(`[data-cell="${active.end}-${active.idx}"]`);
                     const label = document.getElementById('active-cell-label');
                     if (label) label.textContent = `End ${active.end + 1} / Arrow ${active.idx + 1}`;
                     btn?.classList.add('bg-yellow-100');
-                    btn?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+                    if (!suppressScroll) btn?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
                     btn?.focus({ preventScroll: true });
                     renderTarget();
                 }
 
-                function commitScore(val, miss = false, x = false, point = null) {
+                function commitScore(val, miss = false, x = false, point = null, options = {}) {
                     scores[active.end][active.idx] = val;
                     isMiss[active.end][active.idx] = !!miss;
                     isX[active.end][active.idx]    = !!x;
                     coords[active.end][active.idx] = point ? { x: point.x, y: point.y } : null;
-                    moveNext();
+                    moveNext(options);
                     updateGrid();
                 }
 
-                function moveNext() {
+                function moveNext(options = {}) {
                     const per = scores[0].length;
                     let e = active.end, i = active.idx + 1;
                     if (i >= per) { i = 0; e++; }
                     if (e >= ends) { e = ends - 1; i = per - 1; }
                     active = { end: e, idx: i };
-                    focusActive();
+                    focusActive(options);
                 }
 
-                function movePrev() {
+                function movePrev(options = {}) {
                     const per = scores[0].length;
                     let e = active.end, i = active.idx - 1;
                     if (i < 0) { e = Math.max(0, e - 1); i = per - 1; }
                     active = { end: e, idx: i };
-                    focusActive();
+                    focusActive(options);
                 }
 
                 function clearCell() {
@@ -826,7 +827,7 @@
                     const { score, isMissFlag, isXFlag } = calcScoreFromPoint(nx, ny);
                     const label = isMissFlag ? 'M' : (isXFlag ? 'X' : score);
                     if (commit) {
-                        commitScore(score, isMissFlag, isXFlag, { x: nx, y: ny });
+                        commitScore(score, isMissFlag, isXFlag, { x: nx, y: ny }, { suppressScroll: true });
                         showZoom(nx, ny, label, true, pointPx);
                     } else {
                         // 即時預覽目前落點
