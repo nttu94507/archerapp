@@ -113,7 +113,15 @@ class DashboardController extends Controller
         $goals = $this->mockGoals($stats);
         $badges = $this->deriveBadges($stats);
 
-        return compact('stats', 'weeklyTrend', 'recentSessions', 'goals', 'notes', 'badges');
+        $insights = $this->deriveInsights($weeklyTrend, $stats);
+        $heroStats = $this->heroStats($stats, $weeklyTrend);
+        $sparks = [
+            'arrows' => array_map(fn ($w) => $w['arrows'] ?? 0, $weeklyTrend),
+            'avg' => array_map(fn ($w) => $w['avg'] ?? null, $weeklyTrend),
+            'sigma' => array_map(fn ($w) => $w['sigma'] ?? null, $weeklyTrend),
+        ];
+
+        return compact('stats', 'weeklyTrend', 'recentSessions', 'goals', 'notes', 'badges', 'insights', 'heroStats', 'sparks');
     }
 
     private function computeStreak(\Illuminate\Database\Eloquent\Builder $sessionQuery): int
@@ -260,6 +268,112 @@ class DashboardController extends Controller
         }
 
         return $badges;
+    }
+
+    private function deriveInsights(array $weeklyTrend, array $stats): array
+    {
+        if (empty($weeklyTrend)) {
+            return [];
+        }
+
+        $latest = end($weeklyTrend) ?: [];
+        $prev = count($weeklyTrend) > 1 ? $weeklyTrend[count($weeklyTrend) - 2] : [];
+
+        $insights = [];
+
+        if (($latest['arrows'] ?? 0) > 0) {
+            $deltaArrows = ($latest['arrows'] ?? 0) - ($prev['arrows'] ?? 0);
+            $trendText = $deltaArrows === 0
+                ? '訓練量與上週相近'
+                : (($deltaArrows > 0 ? '增加 ' : '減少 ') . abs($deltaArrows) . ' 支箭');
+            $insights[] = [
+                'title' => '訓練量',
+                'value' => $latest['arrows'] ?? 0,
+                'hint' => $trendText,
+            ];
+        }
+
+        if (!is_null($latest['avg'] ?? null)) {
+            $deltaAvg = ($latest['avg'] ?? 0) - ($prev['avg'] ?? 0);
+            $trendText = $deltaAvg === 0
+                ? '平均分與上週持平'
+                : (($deltaAvg > 0 ? '提升 ' : '下降 ') . number_format(abs($deltaAvg), 2) . ' 分');
+            $insights[] = [
+                'title' => '單箭分數',
+                'value' => $latest['avg'],
+                'hint' => $trendText,
+            ];
+        }
+
+        if (!is_null($latest['sigma'] ?? null)) {
+            $deltaSigma = ($latest['sigma'] ?? 0) - ($prev['sigma'] ?? 0);
+            $trendText = $deltaSigma === 0
+                ? '穩定度與上週一致'
+                : (($deltaSigma < 0 ? '更穩定 ' : '波動增加 ') . number_format(abs($deltaSigma), 2));
+            $insights[] = [
+                'title' => '穩定度 σ',
+                'value' => $latest['sigma'],
+                'hint' => $trendText,
+            ];
+        }
+
+        if (($stats['streak_days'] ?? 0) > 0) {
+            $insights[] = [
+                'title' => '連續天數',
+                'value' => $stats['streak_days'],
+                'hint' => '持續累積紀律',
+            ];
+        }
+
+        return $insights;
+    }
+
+    private function heroStats(array $stats, array $weeklyTrend): array
+    {
+        $latestWeek = end($weeklyTrend) ?: [];
+        $arrowsWeek = $latestWeek['arrows'] ?? 0;
+
+        $activeDays = $stats['active_days_this_month'] ?? 0;
+        $avgArrowsPerDay = $activeDays > 0 ? round(($stats['arrows_this_month'] ?? 0) / $activeDays) : null;
+
+        return [
+            [
+                'label' => 'AAE 全期平均',
+                'value' => $stats['avg_score_per_arrow'] ?? null,
+                'suffix' => '分',
+                'hint' => '全部訓練平均單箭分',
+            ],
+            [
+                'label' => '本月箭數',
+                'value' => $stats['arrows_this_month'] ?? 0,
+                'suffix' => '支',
+                'hint' => $avgArrowsPerDay ? '活躍日均 ' . $avgArrowsPerDay . ' 支' : '等待更多練習',
+            ],
+            [
+                'label' => '當週訓練量',
+                'value' => $arrowsWeek,
+                'suffix' => '支',
+                'hint' => $latestWeek['range'] ?? '—',
+            ],
+            [
+                'label' => 'Streak',
+                'value' => $stats['streak_days'] ?? 0,
+                'suffix' => '天',
+                'hint' => '保持連續訓練',
+            ],
+            [
+                'label' => '最佳單趟',
+                'value' => $stats['best_end'] ?? null,
+                'suffix' => '分',
+                'hint' => '6 箭合計',
+            ],
+            [
+                'label' => '最佳 36 箭',
+                'value' => $stats['best_36'] ?? null,
+                'suffix' => '分',
+                'hint' => '完整一輪',
+            ],
+        ];
     }
     private function monthAgg(Carbon $from, Carbon $to): array
     {
