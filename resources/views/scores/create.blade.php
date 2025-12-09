@@ -764,27 +764,29 @@
                     zoomEl.classList.add('opacity-0', 'scale-95');
                 }
 
-                function showZoom(nx, ny, label, persist = false) {
+                function showZoom(nx, ny, label, persist = false, pointOverridePx = null) {
                     if (!zoomEl || !zoomScoreEl) return;
                     const container = document.getElementById('target-container');
                     const rect = container?.getBoundingClientRect();
-                    const lensRect = zoomEl.getBoundingClientRect();
-                    if (!rect || !lensRect) return;
+                    if (!rect) return;
+
+                    const lensWidth = zoomEl.offsetWidth || zoomEl.getBoundingClientRect().width;
+                    const lensHeight = zoomEl.offsetHeight || zoomEl.getBoundingClientRect().height;
 
                     // 以實際落點為放大中心，畫面同步靠像素對齊；鏡面本身仍上移避免被手指遮住
-                    const pointPx = {
+                    const pointPx = pointOverridePx || {
                         x: rect.width * (0.5 + nx / 2),
                         y: rect.height * (0.5 + ny / 2),
                     };
                     const zoomFactor = 2.6; // 與背景 260% 等效，但用像素定位以校準中心
                     const bgW = rect.width * zoomFactor;
                     const bgH = rect.height * zoomFactor;
-                    const bgPosX = (lensRect.width / 2) - pointPx.x * zoomFactor;
-                    const bgPosY = (lensRect.height / 2) - pointPx.y * zoomFactor;
+                    const bgPosX = (lensWidth / 2) - pointPx.x * zoomFactor;
+                    const bgPosY = (lensHeight / 2) - pointPx.y * zoomFactor;
 
-                    const lensOffsetY = lensRect.height * 0.75; // keep lens above the finger
-                    const lensX = clamp(pointPx.x, lensRect.width / 2 + 4, rect.width - lensRect.width / 2 - 4);
-                    const lensY = clamp(pointPx.y - lensOffsetY, lensRect.height / 2 + 4, rect.height - lensRect.height / 2 - 4);
+                    const lensOffsetY = lensHeight * 0.75; // keep lens above the finger
+                    const lensX = clamp(pointPx.x, lensWidth / 2 + 4, rect.width - lensWidth / 2 - 4);
+                    const lensY = clamp(pointPx.y - lensOffsetY, lensHeight / 2 + 4, rect.height - lensHeight / 2 - 4);
 
                     zoomEl.style.left = `${lensX}px`;
                     zoomEl.style.top = `${lensY}px`;
@@ -810,11 +812,15 @@
                     targetRect = rect;
                     const nx = ((evt.clientX - rect.left) / rect.width - 0.5) * 2;
                     const ny = ((evt.clientY - rect.top) / rect.height - 0.5) * 2;
+                    const pointPx = {
+                        x: (evt.clientX - rect.left),
+                        y: (evt.clientY - rect.top),
+                    };
                     const { score, isMissFlag, isXFlag } = calcScoreFromPoint(nx, ny);
                     const label = isMissFlag ? 'M' : (isXFlag ? 'X' : score);
                     if (commit) {
                         commitScore(score, isMissFlag, isXFlag, { x: nx, y: ny });
-                        showZoom(nx, ny, label, true);
+                        showZoom(nx, ny, label, true, pointPx);
                     } else {
                         // 即時預覽目前落點
                         const canvas = document.getElementById('target-overlay');
@@ -830,7 +836,7 @@
                         overlayCtx.arc(halfW + nx * halfW, halfH + ny * halfH, 14 * devicePixelRatio, 0, Math.PI * 2);
                         overlayCtx.stroke();
                         overlayCtx.setLineDash([]);
-                        showZoom(nx, ny, label, false);
+                        showZoom(nx, ny, label, false, pointPx);
                     }
                 }
 
