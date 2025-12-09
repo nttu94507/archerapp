@@ -49,8 +49,7 @@
                         <div id="target-zoom" class="target-zoom absolute pointer-events-none opacity-0 scale-95 transition duration-150 ease-out">
                             <div class="target-zoom-bg absolute inset-0 rounded-full" aria-hidden="true"></div>
                             <div class="absolute inset-0 flex items-center justify-center" aria-hidden="true">
-                                <div class="h-[2px] w-full bg-white/80"></div>
-                                <div class="h-full w-[2px] bg-white/80"></div>
+                                <div class="target-zoom-center"></div>
                             </div>
                             <div class="absolute top-2 left-2 rounded-full bg-gray-900/85 px-3 py-1 text-xs font-semibold text-white shadow-sm" id="zoom-score"></div>
                         </div>
@@ -208,6 +207,14 @@
             box-shadow: 0 20px 30px rgba(0,0,0,0.18);
             border: 3px solid rgba(255,255,255,0.85);
             transform-origin: center;
+        }
+        .target-zoom-center {
+            width: 16px;
+            height: 16px;
+            border-radius: 9999px;
+            border: 3px solid rgba(34,197,94,0.95);
+            background: rgba(34,197,94,0.35);
+            box-shadow: 0 0 0 1px rgba(255,255,255,0.9);
         }
         #target-surface {
             cursor: crosshair;
