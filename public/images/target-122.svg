@@ -3,30 +3,33 @@
     <style>
       .stroke-dark { stroke: #0f172a; vector-effect: non-scaling-stroke; }
       .stroke-light { stroke: #ffffff; vector-effect: non-scaling-stroke; }
+      .stroke-thin { stroke-width: 4; }
+      .stroke-thinner { stroke-width: 3; }
+      .ring-fill { fill-opacity: 1; }
     </style>
   </defs>
   <g transform="translate(610 610)">
     <!-- 1 ring (outer white) -->
-    <circle r="610" fill="#ffffff" class="stroke-dark" stroke-width="12" />
+    <circle r="610" fill="#ffffff" class="stroke-dark stroke-thin ring-fill" />
     <!-- 2 ring (inner white) -->
-    <circle r="549" fill="#ffffff" class="stroke-dark" stroke-width="10" />
+    <circle r="549" fill="#ffffff" class="stroke-dark stroke-thin ring-fill" />
     <!-- 3 ring (outer black) -->
-    <circle r="488" fill="#0f172a" class="stroke-light" stroke-width="8" />
+    <circle r="488" fill="#0f172a" class="stroke-light stroke-thin ring-fill" />
     <!-- 4 ring (inner black) -->
-    <circle r="427" fill="#0f172a" class="stroke-light" stroke-width="8" />
+    <circle r="427" fill="#0f172a" class="stroke-light stroke-thin ring-fill" />
     <!-- 5 ring (outer blue) -->
-    <circle r="366" fill="#1877e6" class="stroke-light" stroke-width="8" />
+    <circle r="366" fill="#1877e6" class="stroke-light stroke-thin ring-fill" />
     <!-- 6 ring (inner blue) -->
-    <circle r="305" fill="#1877e6" class="stroke-light" stroke-width="8" />
+    <circle r="305" fill="#1877e6" class="stroke-light stroke-thin ring-fill" />
     <!-- 7 ring (outer red) -->
-    <circle r="244" fill="#d61f26" class="stroke-dark" stroke-width="8" />
+    <circle r="244" fill="#d61f26" class="stroke-dark stroke-thin ring-fill" />
     <!-- 8 ring (inner red) -->
-    <circle r="183" fill="#d61f26" class="stroke-dark" stroke-width="8" />
+    <circle r="183" fill="#d61f26" class="stroke-dark stroke-thin ring-fill" />
     <!-- 9 ring (outer yellow) -->
-    <circle r="122" fill="#f6d01f" class="stroke-dark" stroke-width="8" />
+    <circle r="122" fill="#f6d01f" class="stroke-dark stroke-thin ring-fill" />
     <!-- 10 ring (inner yellow) -->
-    <circle r="61" fill="#f6d01f" class="stroke-dark" stroke-width="8" />
+    <circle r="61" fill="#f6d01f" class="stroke-dark stroke-thinner ring-fill" />
     <!-- X ring (inner-most circle) -->
-    <circle r="30.5" fill="none" class="stroke-dark" stroke-width="6" />
+    <circle r="30.5" fill="#f6d01f" class="stroke-dark stroke-thinner ring-fill" />
   </g>
 </svg>

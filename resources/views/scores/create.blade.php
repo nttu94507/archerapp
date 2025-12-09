@@ -667,18 +667,25 @@
                     setActiveCell(eIdx, iIdx);
                 });
 
-                // 依照落點自動計分（等寬 10 個環，X 為中心 5%）
+                // 依照落點自動計分（等寬 10 個環，中心同屬 10／X）
                 function calcScoreFromPoint(x, y) {
                     const dist = Math.sqrt(x * x + y * y);
-                    if (dist > 1.02) return { score: 0, isMissFlag: true, isXFlag: false };
-                    const bands = [0.05, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0];
-                    const scores = [10, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1];
-                    for (let i = 0; i < bands.length; i++) {
-                        if (dist <= bands[i]) {
+                    const EPS = 1e-6;
+                    if (dist > 1 + EPS) return { score: 0, isMissFlag: true, isXFlag: false };
+
+                    // 等寬色環（含 10/X 內圈）並在邊線時給予較高分數
+                    const bands = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0];
+                    const scores = [10, 9, 8, 7, 6, 5, 4, 3, 2, 1];
+
+                    if (dist <= bands[0] + EPS) return { score: 10, isMissFlag: false, isXFlag: true };
+
+                    for (let i = 1; i < bands.length; i++) {
+                        if (dist <= bands[i] + EPS) {
                             const score = scores[i];
-                            return { score, isMissFlag: false, isXFlag: i === 0 };
+                            return { score, isMissFlag: false, isXFlag: false };
                         }
                     }
+
                     return { score: 0, isMissFlag: true, isXFlag: false };
                 }
 
