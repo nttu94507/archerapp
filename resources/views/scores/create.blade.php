@@ -784,9 +784,16 @@
                     const bgPosX = (lensWidth / 2) - pointPx.x * zoomFactor;
                     const bgPosY = (lensHeight / 2) - pointPx.y * zoomFactor;
 
-                    const lensOffsetY = lensHeight * 0.75; // keep lens above the finger
+                    const lensOffsetY = lensHeight * 0.75; // keep lens offset from the finger
                     const lensX = clamp(pointPx.x, lensWidth / 2 + 4, rect.width - lensWidth / 2 - 4);
-                    const lensY = clamp(pointPx.y - lensOffsetY, lensHeight / 2 + 4, rect.height - lensHeight / 2 - 4);
+
+                    const minLensY = lensHeight / 2 + 4;
+                    const maxLensY = rect.height - lensHeight / 2 - 4;
+                    const desiredAbove = pointPx.y - lensOffsetY;
+                    const wouldHitTop = desiredAbove - lensHeight / 2 <= 0;
+                    const lensY = wouldHitTop
+                        ? clamp(pointPx.y + lensOffsetY, minLensY, maxLensY)
+                        : clamp(desiredAbove, minLensY, maxLensY);
 
                     zoomEl.style.left = `${lensX}px`;
                     zoomEl.style.top = `${lensY}px`;
