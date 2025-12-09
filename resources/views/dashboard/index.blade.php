@@ -298,7 +298,7 @@
             <div class="rounded-2xl border p-4 lg:col-span-2">
                 <div class="flex items-center justify-between mb-3">
                     <h2 class="text-sm font-semibold">最近 8 週趨勢</h2>
-                    <div class="text-xs text-gray-500">箭數 / 平均分 / 時長</div>
+                    <div class="text-xs text-gray-500">箭數 / 平均分 / 穩定度 σ</div>
                 </div>
                 {{-- 無外部圖表庫：以純 CSS 長條 + 線條模擬 --}}
                 <div class="overflow-x-auto">
@@ -306,26 +306,44 @@
                         @forelse($weeklyTrend as $w)
                             @php
                                 $arrows = $w['arrows'] ?? 0;
-                                $mins = $w['mins'] ?? 0;
                                 $avg = $w['avg'] ?? null;
+                                $sigma = $w['sigma'] ?? null;
+                                $xRate = $w['x_rate'] ?? null;
                                 $hArrows = min(200, max(0, $arrows / 3));  // 600 arrows -> 200px
-                                $hMins   = min(200, max(0, $mins / 2));    // 400 mins -> 200px
-                                $posAvg  = is_null($avg) ? 200 : 200 - (max(0, min(10, $avg)) * 20);      // 10 -> top 0px
+                                $posAvg  = is_null($avg) ? null : 200 - (max(0, min(10, $avg)) * 18);      // 10 -> top 20px
+                                $posSigma = is_null($sigma) ? null : (int) round(200 * max(0, min(3, $sigma)) / 3); // σ<=3 → 0-200
+                                $sigmaColor = is_null($sigma)
+                                    ? 'bg-indigo-200'
+                                    : ($sigma <= 1.2
+                                        ? 'bg-emerald-200 border-emerald-500/80'
+                                        : ($sigma <= 1.8 ? 'bg-amber-200 border-amber-500/80' : 'bg-rose-200 border-rose-500/80'));
                             @endphp
                             <div class="flex flex-col items-center">
                                 <div class="relative h-[200px] w-12">
                                     <div class="absolute bottom-0 left-0 right-0 rounded-t bg-gray-200" style="height: {{ $hArrows }}px" title="Arrows: {{ $arrows }}"></div>
-                                    <div class="absolute bottom-0 left-2 right-2 rounded-t bg-gray-400/60" style="height: {{ $hMins }}px" title="時長：{{ $mins ?: '—' }} 分"></div>
-                                    <div class="absolute left-0 right-0 h-[2px] bg-gray-900/80" style="top: {{ $posAvg }}px" title="Avg: {{ $avg ?? '—' }}"></div>
+                                    @if(!is_null($posSigma))
+                                        <div class="absolute left-1 right-1 h-[8px] rounded-full border {{ $sigmaColor }}" style="bottom: {{ 200 - $posSigma }}px" title="σ: {{ $sigma }}"></div>
+                                    @endif
+                                    @if(!is_null($posAvg))
+                                        <div class="absolute left-0 right-0 h-[2px] bg-gray-900/80" style="top: {{ $posAvg }}px" title="Avg: {{ $avg ?? '—' }}"></div>
+                                    @endif
                                 </div>
                                 <div class="mt-2 text-xs text-gray-600">{{ $w['week'] ?? '—' }}</div>
+                                <div class="text-[11px] text-gray-500">{{ $w['range'] ?? '' }}</div>
+                                <div class="mt-1 text-[11px] text-gray-700 space-x-1">
+                                    <span>AAE {{ is_null($avg) ? '—' : number_format($avg, 2) }}</span>
+                                    <span class="text-gray-400">·</span>
+                                    <span>σ {{ is_null($sigma) ? '—' : number_format($sigma, 2) }}</span>
+                                    <span class="text-gray-400">·</span>
+                                    <span>X% {{ is_null($xRate) ? '—' : number_format($xRate, 1) . '%' }}</span>
+                                </div>
                             </div>
                         @empty
                             <div class="col-span-8 text-xs text-gray-500">暫無足夠資料繪製趨勢</div>
                         @endforelse
                     </div>
                 </div>
-                <div class="mt-3 text-xs text-gray-500">說明：灰深＝時長、灰淺＝箭數、黑線＝平均單箭分。</div>
+                <div class="mt-3 text-xs text-gray-500">說明：灰柱＝箭數、黑線＝單箭平均分、彩色橫條＝穩定度（σ 越低越靠上）。</div>
             </div>
 
             {{-- Notes / Coach To-Dos --}}

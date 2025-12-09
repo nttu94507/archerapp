@@ -152,17 +152,26 @@ class DashboardController extends Controller
                     ->where('user_id', $userId)
                     ->whereBetween('created_at', [$from, $to])
                 )
-                ->selectRaw('COUNT(*) AS arrows, SUM(score) AS score_sum')
+                ->selectRaw('
+                    COUNT(*) AS arrows,
+                    SUM(score) AS score_sum,
+                    SUM(CASE WHEN is_x = 1 AND score = 10 THEN 1 ELSE 0 END) AS x_cnt,
+                    STDDEV_SAMP(score) AS sigma
+                ')
                 ->first();
 
             $arrows = (int) ($agg->arrows ?? 0);
             $scoreSum = (int) ($agg->score_sum ?? 0);
+            $xCnt = (int) ($agg->x_cnt ?? 0);
+            $sigma = is_null($agg->sigma) ? null : (float) $agg->sigma;
 
             $result[] = [
                 'week' => 'W' . $from->isoWeek(),
+                'range' => $from->format('m/d') . ' - ' . $to->format('m/d'),
                 'arrows' => $arrows,
                 'avg' => $arrows > 0 ? round($scoreSum / $arrows, 2) : null,
-                'mins' => null,
+                'sigma' => is_null($sigma) ? null : round($sigma, 2),
+                'x_rate' => $arrows > 0 ? round($xCnt / $arrows * 100, 1) : null,
             ];
         }
 
