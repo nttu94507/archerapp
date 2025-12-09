@@ -308,6 +308,7 @@
                 let overlayCtx = null;
                 let targetRect = null;
                 let isPointerDown = false;
+                let lastPointerCommitTs = 0;
 
                 // ========== 表單 part（與 form-only 相同） ==========
                 function setActive(groupBtns, targetBtn) {
@@ -670,19 +671,28 @@
                 // 依照落點自動計分（等寬 10 個環，中心同屬 10／X）
                 function calcScoreFromPoint(x, y) {
                     const dist = Math.sqrt(x * x + y * y);
-                    const EPS = 1e-6;
+                    // 提高邊界容忍度，落在線上給高分
+                    const EPS = 0.003;
                     if (dist > 1 + EPS) return { score: 0, isMissFlag: true, isXFlag: false };
 
-                    // 等寬色環（含 10/X 內圈）並在邊線時給予較高分數
-                    const bands = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0];
-                    const scores = [10, 9, 8, 7, 6, 5, 4, 3, 2, 1];
+                    // 與 122cm 靶一致的半徑（相對比例）：X 5%、10 10%、其餘等寬
+                    const rings = [
+                        { r: 0.05, score: 10, isX: true },
+                        { r: 0.10, score: 10, isX: false },
+                        { r: 0.20, score: 9,  isX: false },
+                        { r: 0.30, score: 8,  isX: false },
+                        { r: 0.40, score: 7,  isX: false },
+                        { r: 0.50, score: 6,  isX: false },
+                        { r: 0.60, score: 5,  isX: false },
+                        { r: 0.70, score: 4,  isX: false },
+                        { r: 0.80, score: 3,  isX: false },
+                        { r: 0.90, score: 2,  isX: false },
+                        { r: 1.00, score: 1,  isX: false },
+                    ];
 
-                    if (dist <= bands[0] + EPS) return { score: 10, isMissFlag: false, isXFlag: true };
-
-                    for (let i = 1; i < bands.length; i++) {
-                        if (dist <= bands[i] + EPS) {
-                            const score = scores[i];
-                            return { score, isMissFlag: false, isXFlag: false };
+                    for (const ring of rings) {
+                        if (dist <= ring.r + EPS) {
+                            return { score: ring.score, isMissFlag: false, isXFlag: ring.isX };
                         }
                     }
 
@@ -824,11 +834,22 @@
                         isPointerDown = false;
                         surface.releasePointerCapture(e.pointerId);
                         handlePointer(e, true);
+                        lastPointerCommitTs = performance.now();
                     });
                     surface.addEventListener('pointerleave', () => {
                         isPointerDown = false;
                         renderTarget();
                         hideZoom();
+                    });
+                    surface.addEventListener('pointercancel', () => {
+                        isPointerDown = false;
+                        hideZoom();
+                    });
+
+                    // 觸控裝置的保險機制：若未觸發 pointerup，也能靠 click 提交一次
+                    surface.addEventListener('click', (e) => {
+                        if (performance.now() - lastPointerCommitTs < 220) return;
+                        handlePointer(e, true);
                     });
 
                     const resizeObserver = new ResizeObserver(() => {

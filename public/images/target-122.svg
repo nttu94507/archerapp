@@ -3,8 +3,8 @@
     <style>
       .stroke-dark { stroke: #0f172a; vector-effect: non-scaling-stroke; }
       .stroke-light { stroke: #ffffff; vector-effect: non-scaling-stroke; }
-      .stroke-thin { stroke-width: 4; }
-      .stroke-thinner { stroke-width: 3; }
+      .stroke-thin { stroke-width: 1.5; }
+      .stroke-thinner { stroke-width: 1; }
       .ring-fill { fill-opacity: 1; }
     </style>
   </defs>
