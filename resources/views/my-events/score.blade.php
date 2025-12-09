@@ -9,6 +9,7 @@
                 <p class="text-xs text-gray-500">我的賽事</p>
                 <h1 class="text-2xl font-bold text-gray-900">{{ $event->name }}</h1>
                 <p class="text-sm text-gray-600">{{ $event->start_date }} ~ {{ $event->end_date }}</p>
+                <p class="text-sm text-gray-600">{{ optional($registration->event_group)->name }} · {{ optional($registration->event_group)->distance }}</p>
             </div>
             <div class="flex items-center gap-2">
                 @if($scoreable)
@@ -24,13 +25,16 @@
             <div class="flex items-center justify-between border-b px-4 py-3">
                 <div>
                     <p class="text-sm font-semibold text-gray-900">計分表</p>
-                    <p class="text-xs text-gray-500">點擊下一趟開始填寫，每趟 6 支箭，填滿自動送出。</p>
+                    <p class="text-xs text-gray-500">本組 {{ $arrowSettings['total_arrows'] }} 支 / {{ $arrowSettings['total_ends'] }} 趟，每趟 {{ $arrowSettings['arrows_per_end'] }} 支，超過 {{ $event->mode === 'indoor' ? 30 : 36 }} 支會分兩局。</p>
                 </div>
                 @if($scoreable)
-                    <button id="open-sheet" data-next="{{ $nextEnd }}"
-                            class="inline-flex items-center rounded-xl bg-indigo-600 px-3 py-2 text-sm font-semibold text-white hover:bg-indigo-500">
-                        新增第 {{ $nextEnd }} 趟
-                    </button>
+                    <div class="flex items-center gap-2">
+                        <span class="text-xs text-gray-500">目前缺少第 {{ $nextEnd }} 趟</span>
+                        <button id="open-next" data-next="{{ $nextEnd }}"
+                                class="inline-flex items-center rounded-xl bg-indigo-600 px-3 py-2 text-sm font-semibold text-white hover:bg-indigo-500">
+                            前往填寫
+                        </button>
+                    </div>
                 @endif
             </div>
 
@@ -41,29 +45,33 @@
                     <div class="col-span-2 text-right">合計</div>
                 </div>
 
-                @forelse($entries as $entry)
-                    <button type="button"
-                            class="grid w-full grid-cols-12 px-4 py-3 text-left hover:bg-gray-50"
-                            data-end="{{ $entry->end_number }}" data-can-open="{{ $scoreable ? '1' : '0' }}">
-                        <div class="col-span-2 text-sm font-semibold text-gray-900">第 {{ $entry->end_number }} 趟</div>
-                        <div class="col-span-8 text-sm text-gray-700 flex flex-wrap gap-2">
-                            @foreach($entry->scores as $score)
-                                <span class="inline-flex h-7 w-10 items-center justify-center rounded-lg bg-gray-100 text-sm font-semibold text-gray-800">{{ $score === '' ? '—' : $score }}</span>
-                            @endforeach
-                        </div>
-                        <div class="col-span-2 text-right text-sm font-semibold text-gray-900">{{ $entry->end_total }}</div>
-                    </button>
-                @empty
-                    <div class="px-4 py-6 text-center text-sm text-gray-500">尚無計分紀錄，點擊右上角新增第 {{ $nextEnd }} 趟開始。</div>
-                @endforelse
-
-                @if($scoreable)
-                    <button id="add-row" data-next="{{ $nextEnd }}" type="button" class="grid w-full grid-cols-12 items-center px-4 py-4 text-left text-sm font-semibold text-indigo-600 hover:bg-indigo-50">
-                        <div class="col-span-2">第 {{ $nextEnd }} 趟</div>
-                        <div class="col-span-8 text-gray-500">點擊開始填寫本趟 6 支箭分數</div>
-                        <div class="col-span-2 text-right">開始</div>
-                    </button>
-                @endif
+                @foreach($segments as $segment)
+                    <div class="bg-gray-50/70 px-4 py-2 text-xs font-semibold text-gray-600">{{ $segment['label'] }}</div>
+                    @for($end = $segment['start']; $end <= $segment['end']; $end++)
+                        @php
+                            $entry = $entries->get($end);
+                            $scores = $entry?->scores ?? array_fill(0, $arrowSettings['arrows_per_end'], '');
+                        @endphp
+                        <button type="button"
+                                class="end-row grid w-full grid-cols-12 items-center px-4 py-3 text-left {{ $scoreable ? 'hover:bg-gray-50' : 'cursor-not-allowed' }} {{ $nextEnd === $end ? 'bg-indigo-50/50' : '' }}"
+                                data-end="{{ $end }}" data-scores='@json($scores)' data-can-open="{{ $scoreable ? '1' : '0' }}">
+                            <div class="col-span-2 text-sm font-semibold text-gray-900 flex items-center gap-2">
+                                <span>第 {{ $end }} 趟</span>
+                                @if(!$entry)
+                                    <span class="rounded-full bg-orange-50 px-2 py-0.5 text-[11px] font-medium text-orange-700">未填</span>
+                                @else
+                                    <span class="rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-medium text-emerald-700">已填</span>
+                                @endif
+                            </div>
+                            <div class="col-span-8 text-sm text-gray-700 flex flex-wrap gap-2">
+                                @foreach($scores as $score)
+                                    <span class="inline-flex h-7 w-10 items-center justify-center rounded-lg bg-gray-100 text-sm font-semibold text-gray-800">{{ $score === '' ? '—' : $score }}</span>
+                                @endforeach
+                            </div>
+                            <div class="col-span-2 text-right text-sm font-semibold text-gray-900">{{ $entry?->end_total ?? '—' }}</div>
+                        </button>
+                    @endfor
+                @endforeach
             </div>
         </div>
     </div>
@@ -109,10 +117,13 @@
             const endField = document.getElementById('end_number');
             const form = document.getElementById('score-form');
 
-            function openSheet(end){
+            function openSheet(end, scores = []){
                 title.textContent = `第 ${end} 趟`;
                 endField.value = end;
-                inputs.forEach(i => { i.value=''; i.classList.remove('ring-2','ring-indigo-500'); });
+                inputs.forEach((i, idx) => {
+                    i.value = scores[idx] ?? '';
+                    i.classList.remove('ring-2','ring-indigo-500');
+                });
                 sheet.classList.remove('hidden');
                 sheet.classList.add('flex');
                 inputs[0]?.focus();
@@ -143,21 +154,19 @@
                 }
             }
 
-            document.getElementById('open-sheet')?.addEventListener('click', (e)=>{
+            document.getElementById('open-next')?.addEventListener('click', (e)=>{
                 const end = Number(e.currentTarget.dataset.next || '1');
-                openSheet(end);
+                const target = document.querySelector(`[data-end="${end}"]`);
+                const scores = target?.dataset.scores ? JSON.parse(target.dataset.scores) : [];
+                openSheet(end, scores);
             });
 
-            document.getElementById('add-row')?.addEventListener('click', (e)=>{
-                const end = Number(e.currentTarget.dataset.next || '1');
-                openSheet(end);
-            });
-
-            document.querySelectorAll('[data-end]').forEach(btn => {
+            document.querySelectorAll('.end-row').forEach(btn => {
                 btn.addEventListener('click', (e)=>{
                     if (e.currentTarget.dataset.canOpen === '1'){
                         const end = Number(e.currentTarget.dataset.end);
-                        openSheet(end);
+                        const scores = e.currentTarget.dataset.scores ? JSON.parse(e.currentTarget.dataset.scores) : [];
+                        openSheet(end, scores);
                     }
                 });
             });

@@ -10,7 +10,7 @@ class EventGroup extends Model
     use HasFactory;
 
     protected $fillable = [
-        'event_id','name','bow_type','gender','age_class','distance',
+        'event_id','name','bow_type','gender','age_class','distance','arrow_count',
         'quota','fee','is_team',
     ];
 
