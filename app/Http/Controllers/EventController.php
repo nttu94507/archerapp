@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Event;
 use App\Models\EventStaff;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -11,41 +12,58 @@ class EventController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Event::query();
+        $events = Event::query()
+            ->orderBy('start_date', 'desc')
+            ->get();
 
-        // 篩選條件
-        if ($request->filled('q')) {
-            $query->where(function($q) use ($request) {
-                $q->where('name', 'like', '%'.$request->q.'%')
-                    ->orWhere('organizer', 'like', '%'.$request->q.'%')
-                    ->orWhere('venue', 'like', '%'.$request->q.'%');
-            });
-        }
+        $now = Carbon::now();
 
-        if ($request->filled('mode')) {
-            $query->where('mode', $request->mode);
-        }
+        $openEvents = $events
+            ->filter(function ($event) use ($now) {
+                if (!$event->reg_start || !$event->reg_end) {
+                    return false;
+                }
 
-        if ($request->filled('verified')) {
-            $query->where('verified', $request->verified);
-        }
+                $regStart = Carbon::parse($event->reg_start);
+                $regEnd   = Carbon::parse($event->reg_end);
 
-        if ($request->filled('date_from')) {
-            $query->whereDate('start_date', '>=', $request->date_from);
-        }
-        if ($request->filled('date_to')) {
-            $query->whereDate('end_date', '<=', $request->date_to);
-        }
+                return $now->between($regStart, $regEnd);
+            })
+            ->sortBy(function ($event) {
+                return $event->reg_end ? Carbon::parse($event->reg_end) : Carbon::parse($event->start_date);
+            })
+            ->values();
 
-        // 排序
-        $sort = $request->get('sort', 'start_date');
-        $dir  = $request->get('dir', 'desc');
-        $query->orderBy($sort, $dir);
+        $upcomingEvents = $events
+            ->filter(function ($event) use ($now) {
+                return $event->start_date && Carbon::parse($event->start_date)->isFuture();
+            })
+            ->sortBy(function ($event) {
+                return Carbon::parse($event->start_date);
+            })
+            ->values();
 
-        // 這裡很重要：用 paginate，不要用 get()
-        $events = $query->paginate(15);
+        $pastEvents = $events
+            ->filter(function ($event) use ($now) {
+                $endDate = $event->end_date ? Carbon::parse($event->end_date) : null;
+                $startDate = $event->start_date ? Carbon::parse($event->start_date) : null;
 
-        return view('events.index', compact('events'));
+                if ($endDate) {
+                    return $endDate->lt($now->startOfDay());
+                }
+
+                return $startDate ? $startDate->lt($now->startOfDay()) : false;
+            })
+            ->sortByDesc(function ($event) {
+                return $event->end_date ? Carbon::parse($event->end_date) : Carbon::parse($event->start_date);
+            })
+            ->values();
+
+        return view('events.index', [
+            'openEvents'     => $openEvents,
+            'upcomingEvents' => $upcomingEvents,
+            'pastEvents'     => $pastEvents,
+        ]);
     }
     /**
      * 儲存新賽事
