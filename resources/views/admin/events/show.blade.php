@@ -164,11 +164,9 @@
                             <input type="hidden" name="participant_status" value="{{ request('participant_status') }}">
                             <select name="stat_sort" class="rounded-lg border-gray-200 bg-gray-50 px-2 py-1 focus:border-indigo-500 focus:ring-indigo-500">
                                 <option value="total_score" @selected($statSort==='total_score')>總分</option>
-                                <option value="x_count" @selected($statSort==='x_count')>X 數</option>
-                                <option value="ten_count" @selected($statSort==='ten_count')>10 數</option>
+                                <option value="ends_recorded" @selected($statSort==='ends_recorded')>已填趟數</option>
                                 <option value="arrow_count" @selected($statSort==='arrow_count')>箭數</option>
-                                <option value="stdev" @selected($statSort==='stdev')>穩定度</option>
-                                <option value="scored_at" @selected($statSort==='scored_at')>計分時間</option>
+                                <option value="last_updated" @selected($statSort==='last_updated')>最近更新</option>
                             </select>
                             <select name="stat_dir" class="rounded-lg border-gray-200 bg-gray-50 px-2 py-1 focus:border-indigo-500 focus:ring-indigo-500">
                                 <option value="desc" @selected($statDir==='desc')>高→低</option>
@@ -179,17 +177,37 @@
                     </div>
                     <div class="mt-4 space-y-3 max-h-[420px] overflow-y-auto pr-1">
                         @forelse($leaderboard as $score)
-                            <div class="flex items-center justify-between rounded-xl border border-gray-100 bg-gray-50/70 px-3 py-2">
-                                <div>
-                                    <p class="text-xs uppercase text-gray-500">#{{ $score->rank_position }}</p>
-                                    <p class="text-sm font-semibold text-gray-900">{{ optional($score->archer)->name ?? '未命名選手' }}</p>
-                                    <p class="text-xs text-gray-500">{{ optional($score->round)->name }} · {{ optional($score->scored_at)->format('Y/m/d') }}</p>
+                            <details class="group rounded-xl border border-gray-100 bg-gray-50/70 px-3 py-2 open:bg-indigo-50/50">
+                                <summary class="flex cursor-pointer items-center justify-between gap-3">
+                                    <div>
+                                        <p class="text-xs uppercase text-gray-500">#{{ $score['rank_position'] }}</p>
+                                        <p class="text-sm font-semibold text-gray-900">{{ $score['registration']->name ?? '未命名選手' }}</p>
+                                        <p class="text-xs text-gray-500">{{ optional($score['registration']->event_group)->name ?? '未分組' }} · 更新：{{ optional($score['last_updated'])->diffForHumans() ?? '—' }}</p>
+                                    </div>
+                                    <div class="text-right">
+                                        <p class="text-lg font-bold text-gray-900">{{ $score['total_score'] }}</p>
+                                        <p class="text-xs text-gray-500">{{ $score['arrow_count'] }} 支 / {{ $score['ends_recorded'] }} 趟</p>
+                                    </div>
+                                </summary>
+                                <div class="mt-3 space-y-2 rounded-lg border border-gray-200 bg-white/60 p-3">
+                                    @foreach($score['entries'] as $entry)
+                                        <div class="flex items-center justify-between rounded-lg border border-gray-100 bg-gray-50 px-3 py-2">
+                                            <div>
+                                                <p class="text-xs uppercase text-gray-500">第 {{ $entry->end_number }} 趟</p>
+                                                <div class="mt-1 flex flex-wrap gap-1">
+                                                    @foreach(($entry->scores ?? []) as $arrow)
+                                                        <span class="inline-flex h-6 w-8 items-center justify-center rounded-md bg-gray-100 text-[13px] font-semibold text-gray-800">{{ $arrow === '' ? '—' : $arrow }}</span>
+                                                    @endforeach
+                                                </div>
+                                            </div>
+                                            <div class="text-right">
+                                                <p class="text-sm font-semibold text-gray-900">{{ $entry->end_total }}</p>
+                                                <p class="text-[11px] text-gray-500">{{ optional($entry->updated_at)->format('m-d H:i') }}</p>
+                                            </div>
+                                        </div>
+                                    @endforeach
                                 </div>
-                                <div class="text-right">
-                                    <p class="text-lg font-bold text-gray-900">{{ $score->total_score }}</p>
-                                    <p class="text-xs text-gray-500">X{{ $score->x_count }} / 10{{ $score->ten_count }}</p>
-                                </div>
-                            </div>
+                            </details>
                         @empty
                             <p class="text-sm text-gray-500">尚無任何成績紀錄。</p>
                         @endforelse
@@ -207,13 +225,13 @@
                                     <p class="text-xs uppercase text-gray-500 mb-2">Match {{ $match['match'] }}</p>
                                     <div class="flex items-center justify-between gap-3">
                                         <div class="flex-1">
-                                            <p class="text-sm font-semibold text-gray-900">{{ optional($match['a']->archer)->name ?? 'TBD' }}</p>
-                                            <p class="text-xs text-gray-500">{{ $match['a']->total_score }} pts</p>
+                                            <p class="text-sm font-semibold text-gray-900">{{ $match['a']['registration']->name ?? 'TBD' }}</p>
+                                            <p class="text-xs text-gray-500">{{ $match['a']['total_score'] ?? 0 }} pts</p>
                                         </div>
                                         <span class="text-xs font-semibold text-gray-500">VS</span>
                                         <div class="flex-1 text-right">
-                                            <p class="text-sm font-semibold text-gray-900">{{ optional($match['b']->archer)->name ?? 'TBD' }}</p>
-                                            <p class="text-xs text-gray-500">{{ $match['b']->total_score }} pts</p>
+                                            <p class="text-sm font-semibold text-gray-900">{{ $match['b']['registration']->name ?? 'TBD' }}</p>
+                                            <p class="text-xs text-gray-500">{{ $match['b']['total_score'] ?? 0 }} pts</p>
                                         </div>
                                     </div>
                                 </div>
