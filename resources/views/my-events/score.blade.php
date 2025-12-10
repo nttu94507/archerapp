@@ -116,6 +116,12 @@
             const title = document.getElementById('sheet-title');
             const endField = document.getElementById('end_number');
             const form = document.getElementById('score-form');
+            let currentIndex = 0;
+
+            function setFocus(idx){
+                currentIndex = Math.max(0, Math.min(inputs.length - 1, idx));
+                inputs[currentIndex]?.focus();
+            }
 
             function openSheet(end, scores = []){
                 title.textContent = `第 ${end} 趟`;
@@ -126,7 +132,8 @@
                 });
                 sheet.classList.remove('hidden');
                 sheet.classList.add('flex');
-                inputs[0]?.focus();
+                const firstEmpty = inputs.findIndex(i => i.value.trim() === '');
+                setFocus(firstEmpty === -1 ? 0 : firstEmpty);
             }
 
             function closeSheet(){
@@ -134,18 +141,12 @@
                 sheet.classList.remove('flex');
             }
 
-            function activeIndex(){
-                return inputs.findIndex(i => i === document.activeElement);
-            }
-
             function focusNext(idx){
-                const next = Math.min(inputs.length -1, idx +1);
-                inputs[next]?.focus();
+                setFocus(Math.min(inputs.length -1, idx +1));
             }
 
             function focusPrev(idx){
-                const prev = Math.max(0, idx -1);
-                inputs[prev]?.focus();
+                setFocus(Math.max(0, idx -1));
             }
 
             function trySubmit(){
@@ -179,19 +180,22 @@
             });
 
             inputs.forEach(input => {
+                input.addEventListener('focus', (e)=>{
+                    const idx = inputs.indexOf(e.currentTarget);
+                    if (idx !== -1) currentIndex = idx;
+                });
                 input.addEventListener('input', () => trySubmit());
             });
 
             document.querySelectorAll('.nkey').forEach(btn => {
                 btn.addEventListener('click', ()=>{
                     const key = btn.dataset.key;
-                    let idx = activeIndex();
-                    if (idx === -1) idx = 0;
+                    let idx = currentIndex;
 
                     if (key === 'NEXT') return focusNext(idx);
                     if (key === 'PREV') return focusPrev(idx);
                     if (key === 'BKSP') { inputs[idx].value=''; return; }
-                    if (key === 'CLR') { inputs.forEach(i=> i.value=''); inputs[0]?.focus(); return; }
+                    if (key === 'CLR') { inputs.forEach(i=> i.value=''); setFocus(0); return; }
 
                     inputs[idx].value = key;
                     focusNext(idx);
