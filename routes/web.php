@@ -78,6 +78,7 @@ Route::middleware(['auth', 'profile.completed'])->group(function () {
     Route::get('/my-events', [MyEventController::class, 'index'])->name('my-events.index');
     Route::get('/my-events/{event}/score', [MyEventController::class, 'score'])->name('my-events.score');
     Route::post('/my-events/{event}/score', [MyEventController::class, 'storeScore'])->name('my-events.score.store');
+    Route::post('/my-events/{event}/submit', [MyEventController::class, 'submitAll'])->name('my-events.score.submit');
 });
 
 //快速報名

@@ -55,6 +55,7 @@ class MyEventController extends Controller
 
         $now = Carbon::now();
         $scoreable = $this->isWithinWindow($event, $now);
+        $finalized = (bool) $registration->score_submitted_at;
 
         $entries = EventScoreEntry::query()
             ->where('event_id', $event->id)
@@ -67,12 +68,14 @@ class MyEventController extends Controller
         $totalEnds = (int) ceil($totalArrows / $arrowsPerEnd);
         $segments = $this->buildSegments($event, $totalArrows, $arrowsPerEnd, $totalEnds);
         $nextEnd = $this->findNextEnd($entries, $totalEnds);
+        $allComplete = $entries->count() >= $totalEnds;
 
         return view('my-events.score', [
             'event' => $event,
             'entries' => $entries,
             'scoreable' => $scoreable,
             'registration' => $registration,
+            'finalized' => $finalized,
             'arrowSettings' => [
                 'total_arrows' => $totalArrows,
                 'arrows_per_end' => $arrowsPerEnd,
@@ -80,6 +83,7 @@ class MyEventController extends Controller
             ],
             'segments' => $segments,
             'nextEnd' => $nextEnd,
+            'allComplete' => $allComplete,
         ]);
     }
 
@@ -87,6 +91,11 @@ class MyEventController extends Controller
     {
         $userId = Auth::id();
         $registration = $this->ensureRegistration($event, $userId);
+
+        if ($registration->score_submitted_at) {
+            return redirect()->route('my-events.score', $event)
+                ->with('error', '已送出整局成績，無法再修改。');
+        }
 
         if (!$this->isWithinWindow($event, Carbon::now())) {
             return redirect()->route('my-events.score', $event)
@@ -119,18 +128,6 @@ class MyEventController extends Controller
 
         $endTotal = array_sum($normalized);
 
-        $existing = EventScoreEntry::query()
-            ->where('event_id', $event->id)
-            ->where('user_id', $userId)
-            ->where('end_number', $validated['end_number'])
-            ->first();
-
-        if ($existing) {
-            return redirect()
-                ->route('my-events.score', $event)
-                ->with('error', '此趟成績已確認，無法修改。');
-        }
-
         EventScoreEntry::updateOrCreate(
             [
                 'event_id' => $event->id,
@@ -145,7 +142,39 @@ class MyEventController extends Controller
 
         return redirect()
             ->route('my-events.score', $event)
-            ->with('success', "已送出第 {$validated['end_number']} 趟成績");
+            ->with('success', "已儲存第 {$validated['end_number']} 趟成績，整局送出前仍可修改。");
+    }
+
+    public function submitAll(Event $event): RedirectResponse
+    {
+        $userId = Auth::id();
+        $registration = $this->ensureRegistration($event, $userId);
+
+        if ($registration->score_submitted_at) {
+            return redirect()->route('my-events.score', $event)
+                ->with('success', '整局成績已送出。');
+        }
+
+        [$totalArrows, $arrowsPerEnd] = $this->resolveArrowSettings($event, $registration);
+        $totalEnds = (int) ceil($totalArrows / $arrowsPerEnd);
+
+        $entries = EventScoreEntry::query()
+            ->where('event_id', $event->id)
+            ->where('user_id', $userId)
+            ->get()
+            ->keyBy('end_number');
+
+        foreach (range(1, $totalEnds) as $end) {
+            if (!$entries->has($end)) {
+                return redirect()->route('my-events.score', $event)
+                    ->with('error', '還有趟次未填寫，無法送出整局成績。');
+            }
+        }
+
+        $registration->update(['score_submitted_at' => Carbon::now()]);
+
+        return redirect()->route('my-events.score', $event)
+            ->with('success', '整局成績已送出，將無法再修改。');
     }
 
     private function ensureRegistration(Event $event, int $userId): EventRegistration

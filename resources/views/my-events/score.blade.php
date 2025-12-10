@@ -21,18 +21,28 @@
             </div>
         </div>
 
+        @if($finalized)
+            <div class="mb-4 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+                整局成績已送出，無法再修改。
+            </div>
+        @endif
+
         <div class="rounded-2xl border bg-white shadow-sm overflow-hidden">
             <div class="flex items-center justify-between border-b px-4 py-3">
                 <div>
                     <p class="text-sm font-semibold text-gray-900">計分表</p>
                     <p class="text-xs text-gray-500">本組 {{ $arrowSettings['total_arrows'] }} 支 / {{ $arrowSettings['total_ends'] }} 趟，每趟 {{ $arrowSettings['arrows_per_end'] }} 支，超過 {{ $event->mode === 'indoor' ? 30 : 36 }} 支會分兩局。</p>
                 </div>
-                @if($scoreable)
-                    <div class="flex items-center gap-2">
+                <div class="flex items-center gap-2">
+                    @if($scoreable && !$finalized)
                         <span class="text-xs text-gray-500">目前缺少第 {{ $nextEnd }} 趟</span>
-                        <span class="text-xs text-gray-400">點擊對應趟次填寫，送出後無法修改</span>
-                    </div>
-                @endif
+                        <span class="text-xs text-gray-400">整局送出前都可修改已填寫的趟次</span>
+                    @elseif($finalized)
+                        <span class="text-xs text-gray-400">已送出整局成績</span>
+                    @else
+                        <span class="text-xs text-gray-400">不在計分時間內</span>
+                    @endif
+                </div>
             </div>
 
             <div class="divide-y divide-gray-100">
@@ -50,8 +60,8 @@
                             $scores = $entry?->scores ?? array_fill(0, $arrowSettings['arrows_per_end'], '');
                         @endphp
                         <button type="button"
-                                class="end-row grid w-full grid-cols-12 items-center px-4 py-3 text-left {{ $scoreable && !$entry ? 'hover:bg-gray-50' : 'cursor-not-allowed opacity-60' }} {{ !$entry && $nextEnd === $end ? 'bg-indigo-50/50' : '' }}"
-                                data-end="{{ $end }}" data-scores='@json($scores)' data-can-open="{{ $scoreable && !$entry ? '1' : '0' }}">
+                                class="end-row grid w-full grid-cols-12 items-center px-4 py-3 text-left {{ $scoreable && !$finalized ? 'hover:bg-gray-50' : 'cursor-not-allowed opacity-60' }} {{ !$entry && $nextEnd === $end ? 'bg-indigo-50/50' : '' }}"
+                                data-end="{{ $end }}" data-scores='@json($scores)' data-can-open="{{ $scoreable && !$finalized ? '1' : '0' }}">
                             <div class="col-span-2 text-sm font-semibold text-gray-900 flex items-center gap-2">
                                 <span>第 {{ $end }} 趟</span>
                                 @if(!$entry)
@@ -69,6 +79,29 @@
                         </button>
                     @endfor
                 @endforeach
+            </div>
+
+            <div class="flex flex-col gap-2 border-t bg-gray-50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+                <div class="text-xs text-gray-500">
+                    @if($finalized)
+                        整局成績已送出。
+                    @elseif($allComplete)
+                        所有趟次已填寫，請送出整局成績。送出後將無法修改。
+                    @else
+                        尚有趟次未填寫，填完後才能送出整局成績。
+                    @endif
+                </div>
+                @if(!$finalized)
+                    <form method="POST" action="{{ route('my-events.score.submit', $event) }}">
+                        @csrf
+                        <button type="submit"
+                                {{ $allComplete ? '' : 'disabled' }}
+                                onclick="return confirm('確認送出整局成績？') && confirm('送出後無法修改，是否確定？')"
+                                class="inline-flex items-center justify-center rounded-xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 disabled:cursor-not-allowed disabled:bg-gray-300">
+                            送出整局成績
+                        </button>
+                    </form>
+                @endif
             </div>
         </div>
     </div>
@@ -102,9 +135,9 @@
                 </div>
 
                 <div class="flex flex-col gap-2">
-                    <p class="text-xs text-gray-500">送出後無法修改，請確認填寫內容。</p>
+                    <p class="text-xs text-gray-500">可在整局送出前再次開啟此趟修改內容。</p>
                     <button type="button" id="submit-score" class="inline-flex items-center justify-center rounded-xl bg-indigo-600 px-4 py-3 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 disabled:cursor-not-allowed disabled:bg-gray-300">
-                        確認送出
+                        儲存此趟
                     </button>
                 </div>
             </form>
@@ -208,8 +241,7 @@
 
             submitBtn?.addEventListener('click', () => {
                 if (!inputs.every(i => i.value.trim() !== '')) return;
-                if (!confirm('確認送出本趟成績？')) return;
-                if (!confirm('送出後無法修改，是否確定送出？')) return;
+                if (!confirm('確認儲存本趟成績？')) return;
                 form.submit();
             });
         })();
