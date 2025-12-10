@@ -201,12 +201,14 @@
             background-color: #f8fafc;
         }
         .target-zoom {
+            position: fixed;
             width: 140px;
             height: 140px;
             border-radius: 9999px;
             box-shadow: 0 20px 30px rgba(0,0,0,0.18);
             border: 3px solid rgba(255,255,255,0.85);
             transform-origin: center;
+            z-index: 60;
         }
         .target-zoom-center {
             width: 16px;
@@ -765,7 +767,7 @@
                     zoomEl.classList.add('opacity-0', 'scale-95');
                 }
 
-                function showZoom(nx, ny, label, persist = false, pointOverridePx = null) {
+                function showZoom(nx, ny, label, persist = false, opts = {}) {
                     if (!zoomEl || !zoomScoreEl) return;
                     const container = document.getElementById('target-container');
                     const rect = container?.getBoundingClientRect();
@@ -775,25 +777,29 @@
                     const lensHeight = zoomEl.offsetHeight || zoomEl.getBoundingClientRect().height;
 
                     // 以實際落點為放大中心，畫面同步靠像素對齊；鏡面本身仍上移避免被手指遮住
-                    const pointPx = pointOverridePx || {
+                    const pointPx = opts.pointOverridePx || {
                         x: rect.width * (0.5 + nx / 2),
                         y: rect.height * (0.5 + ny / 2),
                     };
+                    const clientX = opts.clientPos?.x ?? rect.left + pointPx.x;
+                    const clientY = opts.clientPos?.y ?? rect.top + pointPx.y;
                     const zoomFactor = 2.6; // 與背景 260% 等效，但用像素定位以校準中心
                     const bgW = rect.width * zoomFactor;
                     const bgH = rect.height * zoomFactor;
                     const bgPosX = (lensWidth / 2) - pointPx.x * zoomFactor;
                     const bgPosY = (lensHeight / 2) - pointPx.y * zoomFactor;
 
-                    const lensOffsetY = lensHeight * 0.75; // keep lens offset from the finger
-                    const lensX = clamp(pointPx.x, lensWidth / 2 + 4, rect.width - lensWidth / 2 - 4);
+                    const lensOffsetY = lensHeight * 0.8; // keep lens offset from the finger
+                    const viewportW = window.innerWidth;
+                    const viewportH = window.innerHeight;
+                    const lensX = clamp(clientX, lensWidth / 2 + 4, viewportW - lensWidth / 2 - 4);
 
                     const minLensY = lensHeight / 2 + 4;
-                    const maxLensY = rect.height - lensHeight / 2 - 4;
-                    const desiredAbove = pointPx.y - lensOffsetY;
+                    const maxLensY = viewportH - lensHeight / 2 - 4;
+                    const desiredAbove = clientY - lensOffsetY;
                     const wouldHitTop = desiredAbove - lensHeight / 2 <= 0;
                     const lensY = wouldHitTop
-                        ? clamp(pointPx.y + lensOffsetY, minLensY, maxLensY)
+                        ? clamp(clientY + lensOffsetY, minLensY, maxLensY)
                         : clamp(desiredAbove, minLensY, maxLensY);
 
                     zoomEl.style.left = `${lensX}px`;
@@ -828,7 +834,7 @@
                     const label = isMissFlag ? 'M' : (isXFlag ? 'X' : score);
                     if (commit) {
                         commitScore(score, isMissFlag, isXFlag, { x: nx, y: ny }, { suppressScroll: true });
-                        showZoom(nx, ny, label, true, pointPx);
+                        showZoom(nx, ny, label, true, { pointOverridePx: pointPx, clientPos: { x: evt.clientX, y: evt.clientY } });
                     } else {
                         // 即時預覽目前落點
                         const canvas = document.getElementById('target-overlay');
@@ -844,7 +850,7 @@
                         overlayCtx.arc(halfW + nx * halfW, halfH + ny * halfH, 14 * devicePixelRatio, 0, Math.PI * 2);
                         overlayCtx.stroke();
                         overlayCtx.setLineDash([]);
-                        showZoom(nx, ny, label, false, pointPx);
+                        showZoom(nx, ny, label, false, { pointOverridePx: pointPx, clientPos: { x: evt.clientX, y: evt.clientY } });
                     }
                 }
 
