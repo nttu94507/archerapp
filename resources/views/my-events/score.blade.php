@@ -46,7 +46,7 @@
             </div>
 
             <div class="divide-y divide-gray-100">
-                <div class="grid grid-cols-[120px_1fr_90px_80px_80px] bg-gray-50 px-4 py-2 text-xs font-semibold uppercase text-gray-500">
+                <div class="hidden grid-cols-[120px_1fr_90px_80px_80px] bg-gray-50 px-4 py-2 text-xs font-semibold uppercase text-gray-500 sm:grid">
                     <div>趟次</div>
                     <div>箭序</div>
                     <div class="text-right">小計</div>
@@ -63,34 +63,70 @@
                             $endStats = $entryStats[$end] ?? null;
                         @endphp
                         <button type="button"
-                                class="end-row grid w-full grid-cols-[120px_1fr_90px_80px_80px] items-center px-4 py-3 text-left {{ $scoreable && !$finalized ? 'hover:bg-gray-50' : 'cursor-not-allowed opacity-60' }} {{ !$entry && $nextEnd === $end ? 'bg-indigo-50/50' : '' }}"
+                                class="end-row w-full px-4 py-3 text-left {{ $scoreable && !$finalized ? 'hover:bg-gray-50' : 'cursor-not-allowed opacity-60' }} {{ !$entry && $nextEnd === $end ? 'bg-indigo-50/50' : '' }}"
                                 data-end="{{ $end }}" data-scores='@json($scores)' data-can-open="{{ $scoreable && !$finalized ? '1' : '0' }}">
-                            <div class="text-sm font-semibold text-gray-900 flex items-center gap-2">
-                                <span>第 {{ $end }} 趟</span>
-                                @if(!$entry)
-                                    <span class="rounded-full bg-orange-50 px-2 py-0.5 text-[11px] font-medium text-orange-700">未填</span>
-                                @else
-                                    <span class="rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-medium text-emerald-700">已填</span>
-                                @endif
+                            <div class="grid gap-3 sm:grid-cols-[120px_1fr_90px_80px_80px] sm:items-center">
+                                <div class="hidden items-center gap-2 text-sm font-semibold text-gray-900 sm:flex">
+                                    <span>第 {{ $end }} 趟</span>
+                                    @if(!$entry)
+                                        <span class="rounded-full bg-orange-50 px-2 py-0.5 text-[11px] font-medium text-orange-700">未填</span>
+                                    @else
+                                        <span class="rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-medium text-emerald-700">已填</span>
+                                    @endif
+                                </div>
+                                <div class="space-y-2">
+                                    <div class="grid grid-cols-3 gap-2 text-sm text-gray-700">
+                                        @foreach(array_chunk($scores, 3) as $chunk)
+                                            @foreach($chunk as $score)
+                                                <span class="inline-flex h-9 items-center justify-center rounded-lg bg-gray-100 text-base font-semibold text-gray-800">{{ $score === '' ? '—' : $score }}</span>
+                                            @endforeach
+                                            @if(count($chunk) < 3)
+                                                @for($i = 0; $i < 3 - count($chunk); $i++)
+                                                    <span class="inline-flex h-9 items-center justify-center rounded-lg bg-gray-50 text-base font-semibold text-gray-300">—</span>
+                                                @endfor
+                                            @endif
+                                        @endforeach
+                                    </div>
+                                    <div class="flex items-center justify-between text-xs text-gray-500 sm:hidden">
+                                        <div class="flex items-center gap-2 font-semibold text-gray-900">
+                                            <span class="rounded-full bg-gray-100 px-2 py-0.5 text-[11px]">#{{ $end }}</span>
+                                            @if(!$entry)
+                                                <span class="rounded-full bg-orange-50 px-2 py-0.5 text-[11px] font-medium text-orange-700">未填</span>
+                                            @else
+                                                <span class="rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-medium text-emerald-700">已填</span>
+                                            @endif
+                                        </div>
+                                        <div class="flex items-center gap-3 text-sm font-semibold text-gray-900">
+                                            <span>小計 {{ $entry?->end_total ?? '—' }}</span>
+                                            <span>X+10 {{ $endStats['ten_plus'] ?? '—' }}</span>
+                                            <span>X {{ $endStats['x_count'] ?? '—' }}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="hidden text-right text-sm font-semibold text-gray-900 sm:block">{{ $entry?->end_total ?? '—' }}</div>
+                                <div class="hidden text-center text-sm font-semibold text-gray-900 sm:block">{{ $endStats['ten_plus'] ?? '—' }}</div>
+                                <div class="hidden text-center text-sm font-semibold text-gray-900 sm:block">{{ $endStats['x_count'] ?? '—' }}</div>
                             </div>
-                            <div class="text-sm text-gray-700 flex flex-wrap gap-2">
-                                @foreach($scores as $score)
-                                    <span class="inline-flex h-7 w-10 items-center justify-center rounded-lg bg-gray-100 text-sm font-semibold text-gray-800">{{ $score === '' ? '—' : $score }}</span>
-                                @endforeach
-                            </div>
-                            <div class="text-right text-sm font-semibold text-gray-900">{{ $entry?->end_total ?? '—' }}</div>
-                            <div class="text-center text-sm font-semibold text-gray-900">{{ $endStats['ten_plus'] ?? '—' }}</div>
-                            <div class="text-center text-sm font-semibold text-gray-900">{{ $endStats['x_count'] ?? '—' }}</div>
                         </button>
                     @endfor
                 @endforeach
 
-                <div class="grid grid-cols-[120px_1fr_90px_80px_80px] items-center bg-gray-50 px-4 py-3 text-sm font-semibold text-gray-900">
+                <div class="hidden grid-cols-[120px_1fr_90px_80px_80px] items-center bg-gray-50 px-4 py-3 text-sm font-semibold text-gray-900 sm:grid">
                     <div class="flex items-center gap-2">總計</div>
                     <div></div>
                     <div class="text-right">{{ $stats['total_score'] }}</div>
                     <div class="text-center">{{ $stats['ten_plus'] }}</div>
                     <div class="text-center">{{ $stats['x_count'] }}</div>
+                </div>
+                <div class="flex items-center justify-between gap-3 bg-gray-50 px-4 py-3 text-sm font-semibold text-gray-900 sm:hidden">
+                    <div class="flex flex-wrap items-center gap-2">
+                        <span class="rounded-full bg-gray-100 px-2 py-0.5 text-[11px] font-medium text-gray-700">總計</span>
+                        <span>分數 {{ $stats['total_score'] }}</span>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <span>X+10 {{ $stats['ten_plus'] }}</span>
+                        <span>X {{ $stats['x_count'] }}</span>
+                    </div>
                 </div>
             </div>
 
