@@ -239,10 +239,15 @@
                 });
             });
 
+            form?.addEventListener('submit', closeSheet);
+
             submitBtn?.addEventListener('click', () => {
                 if (!inputs.every(i => i.value.trim() !== '')) return;
-                if (!confirm('確認儲存本趟成績？')) return;
-                form.submit();
+                if (typeof form.requestSubmit === 'function') {
+                    form.requestSubmit();
+                } else {
+                    form.submit();
+                }
             });
         })();
     </script>
