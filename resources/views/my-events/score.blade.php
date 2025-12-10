@@ -155,8 +155,9 @@
             const form = document.getElementById('score-form');
             const submitBtn = document.getElementById('submit-score');
             let currentIndex = 0;
+            let autoSubmitting = false;
 
-            trySubmit();
+            trySubmit({ shouldAuto: false });
 
             function setFocus(idx){
                 currentIndex = Math.max(0, Math.min(inputs.length - 1, idx));
@@ -166,6 +167,7 @@
             function openSheet(end, scores = []){
                 title.textContent = `第 ${end} 趟`;
                 endField.value = end;
+                autoSubmitting = false;
                 inputs.forEach((i, idx) => {
                     i.value = scores[idx] ?? '';
                     i.classList.remove('ring-2','ring-indigo-500');
@@ -174,7 +176,7 @@
                 sheet.classList.add('flex');
                 const firstEmpty = inputs.findIndex(i => i.value.trim() === '');
                 setFocus(firstEmpty === -1 ? 0 : firstEmpty);
-                trySubmit();
+                trySubmit({ shouldAuto: false });
             }
 
             function closeSheet(){
@@ -190,10 +192,22 @@
                 setFocus(Math.max(0, idx -1));
             }
 
-            function trySubmit(){
+            function autoSubmit(){
+                if (autoSubmitting) return;
+                autoSubmitting = true;
+                if (typeof form.requestSubmit === 'function') {
+                    form.requestSubmit();
+                } else {
+                    form.submit();
+                }
+            }
+
+            function trySubmit({ shouldAuto = true } = {}){
                 if (inputs.every(i => i.value.trim() !== '')){
                     submitBtn?.removeAttribute('disabled');
+                    if (shouldAuto) autoSubmit();
                 } else {
+                    autoSubmitting = false;
                     submitBtn?.setAttribute('disabled', 'disabled');
                 }
             }
@@ -243,11 +257,7 @@
 
             submitBtn?.addEventListener('click', () => {
                 if (!inputs.every(i => i.value.trim() !== '')) return;
-                if (typeof form.requestSubmit === 'function') {
-                    form.requestSubmit();
-                } else {
-                    form.submit();
-                }
+                autoSubmit();
             });
         })();
     </script>
