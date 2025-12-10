@@ -123,7 +123,7 @@
                 <input type="hidden" name="end_number" id="end_number" value="1">
                 <div class="grid grid-cols-6 gap-2" id="inputs">
                     @for($i=0; $i<6; $i++)
-                        <input type="text" name="scores[]" inputmode="numeric" maxlength="2"
+                        <input type="text" name="scores[]" inputmode="none" maxlength="2" readonly
                                class="score-input h-12 rounded-xl border border-gray-200 text-center text-lg font-semibold text-gray-900 focus:border-indigo-500 focus:ring-indigo-500" autocomplete="off" />
                     @endfor
                 </div>
@@ -234,6 +234,14 @@
                     const idx = inputs.indexOf(e.currentTarget);
                     if (idx !== -1) currentIndex = idx;
                 });
+                input.addEventListener('keydown', (e)=>{
+                    if (e.key === 'Backspace'){
+                        e.preventDefault();
+                        inputs[currentIndex].value = '';
+                        focusPrev(currentIndex);
+                        trySubmit();
+                    }
+                });
                 input.addEventListener('input', () => trySubmit());
             });
 
@@ -244,7 +252,7 @@
 
                     if (key === 'NEXT') return focusNext(idx);
                     if (key === 'PREV') return focusPrev(idx);
-                    if (key === 'BKSP') { inputs[idx].value=''; trySubmit(); return; }
+                    if (key === 'BKSP') { inputs[idx].value=''; focusPrev(idx); trySubmit(); return; }
                     if (key === 'CLR') { inputs.forEach(i=> i.value=''); setFocus(0); trySubmit(); return; }
 
                     inputs[idx].value = key;
