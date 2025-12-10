@@ -69,6 +69,7 @@ class MyEventController extends Controller
         $segments = $this->buildSegments($event, $totalArrows, $arrowsPerEnd, $totalEnds);
         $nextEnd = $this->findNextEnd($entries, $totalEnds);
         $allComplete = $entries->count() >= $totalEnds;
+        $stats = $this->calculateStats($entries);
 
         return view('my-events.score', [
             'event' => $event,
@@ -84,6 +85,7 @@ class MyEventController extends Controller
             'segments' => $segments,
             'nextEnd' => $nextEnd,
             'allComplete' => $allComplete,
+            'stats' => $stats,
         ]);
     }
 
@@ -244,5 +246,48 @@ class MyEventController extends Controller
         }
 
         return $totalEnds;
+    }
+
+    private function calculateStats(Collection $entries): array
+    {
+        $flattened = $entries->flatMap(fn (EventScoreEntry $entry) => $entry->scores ?? []);
+
+        $xCount = 0;
+        $tenPlus = 0;
+        $totalScore = 0;
+
+        foreach ($flattened as $score) {
+            $val = strtoupper((string)($score ?? ''));
+
+            if ($val === '') {
+                continue;
+            }
+
+            if ($val === 'X') {
+                $xCount++;
+                $tenPlus++;
+                $totalScore += 10;
+                continue;
+            }
+
+            if ($val === 'M') {
+                continue;
+            }
+
+            $num = max(0, min(10, (int)$val));
+
+            if ($num === 10) {
+                $tenPlus++;
+            }
+
+            $totalScore += $num;
+        }
+
+        return [
+            'x_count' => $xCount,
+            'ten_plus' => $tenPlus,
+            'total_score' => $totalScore,
+            'recorded_arrows' => $flattened->filter(fn ($v) => (string)($v ?? '') !== '')->count(),
+        ];
     }
 }
