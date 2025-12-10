@@ -21,24 +21,6 @@
             </div>
         </div>
 
-        <div class="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
-            <div class="rounded-2xl border bg-white px-4 py-3 shadow-sm">
-                <p class="text-xs text-gray-500">目前總分</p>
-                <p class="text-2xl font-bold text-gray-900">{{ $stats['total_score'] }}</p>
-                <p class="text-[11px] text-gray-500">已紀錄 {{ $stats['recorded_arrows'] }} 支箭</p>
-            </div>
-            <div class="rounded-2xl border bg-white px-4 py-3 shadow-sm">
-                <p class="text-xs text-gray-500">X + 10 總箭數</p>
-                <p class="text-2xl font-bold text-gray-900">{{ $stats['ten_plus'] }}</p>
-                <p class="text-[11px] text-gray-500">含 X 及 10 分箭</p>
-            </div>
-            <div class="rounded-2xl border bg-white px-4 py-3 shadow-sm">
-                <p class="text-xs text-gray-500">X 的總箭數</p>
-                <p class="text-2xl font-bold text-gray-900">{{ $stats['x_count'] }}</p>
-                <p class="text-[11px] text-gray-500">僅計 X 箭</p>
-            </div>
-        </div>
-
         @if($finalized)
             <div class="mb-4 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
                 整局成績已送出，無法再修改。
@@ -97,6 +79,26 @@
                         </button>
                     @endfor
                 @endforeach
+            </div>
+
+            <div class="border-t px-4 py-4">
+                <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                    <div class="rounded-2xl border bg-white px-4 py-3 shadow-sm">
+                        <p class="text-xs text-gray-500">目前總分</p>
+                        <p class="text-2xl font-bold text-gray-900">{{ $stats['total_score'] }}</p>
+                        <p class="text-[11px] text-gray-500">已紀錄 {{ $stats['recorded_arrows'] }} 支箭</p>
+                    </div>
+                    <div class="rounded-2xl border bg-white px-4 py-3 shadow-sm">
+                        <p class="text-xs text-gray-500">X + 10 總箭數</p>
+                        <p class="text-2xl font-bold text-gray-900">{{ $stats['ten_plus'] }}</p>
+                        <p class="text-[11px] text-gray-500">含 X 及 10 分箭</p>
+                    </div>
+                    <div class="rounded-2xl border bg-white px-4 py-3 shadow-sm">
+                        <p class="text-xs text-gray-500">X 的總箭數</p>
+                        <p class="text-2xl font-bold text-gray-900">{{ $stats['x_count'] }}</p>
+                        <p class="text-[11px] text-gray-500">僅計 X 箭</p>
+                    </div>
+                </div>
             </div>
 
             <div class="flex flex-col gap-2 border-t bg-gray-50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
