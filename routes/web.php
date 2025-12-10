@@ -63,10 +63,14 @@ Route::middleware('auth')->group(function () {
 });
 
 //選手專區
-Route::middleware(['auth', 'profile.completed'])->group(function () {
-    Route::resource('events', EventController::class);
-    Route::resource('events.groups', \App\Http\Controllers\EventGroupController::class)->except(['show']);
+Route::get('events', [EventController::class, 'index'])->name('events.index');
 
+Route::middleware(['auth', 'admin'])->group(function () {
+    Route::get('events/create', [EventController::class, 'create'])->name('events.create');
+    Route::post('events', [EventController::class, 'store'])->name('events.store');
+    Route::get('events/{event}/edit', [EventController::class, 'edit'])->name('events.edit');
+
+    Route::resource('events.groups', \App\Http\Controllers\EventGroupController::class)->except(['show']);
 });
 
 Route::middleware(['auth'])->group(function () {

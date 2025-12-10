@@ -14,6 +14,15 @@ use Illuminate\Support\Collection;
 
 class EventController extends Controller
 {
+    public function __construct()
+    {
+        $this->middleware(['auth', 'admin'])->only([
+            'create',
+            'store',
+            'edit',
+        ]);
+    }
+
     public function index(Request $request)
     {
         $events = Event::query()
@@ -173,11 +182,7 @@ class EventController extends Controller
         }
 
         // 是否為本賽事工作人員
-        $canManage = auth()->check() && \App\Models\EventStaff::query()
-                ->where('event_id', $event->id)
-                ->where('user_id', auth()->id())
-                ->where('status', 'active')
-                ->exists();
+        $canManage = auth()->check() && auth()->user()->isAdmin();
 
         return view('events.show', [
             'event'      => $event,
