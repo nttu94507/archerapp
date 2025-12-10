@@ -28,15 +28,43 @@
         <div class="mb-4 flex items-start justify-between gap-4">
             <div>
                 <h1 class="text-2xl font-bold tracking-tight text-gray-900">訓練計分</h1>
-{{--                <p class="text-sm text-gray-500 mt-1">選好設定後立即產生表格；支援鍵盤快速輸入（0–10、X、M）、自動跳格、點任一格續打。</p>--}}
             </div>
         </div>
 
-        {{-- Table Card --}}
-        <div class="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden">
-            <div class="p-4 border-b border-gray-100">
-                <div id="meta-line" class="text-sm text-gray-600"></div>
+        <div class="grid lg:grid-cols-2 gap-4 mb-4">
+            {{-- 靶面輸入卡 --}}
+            <div class="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden">
+                <div class="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
+                    <div>
+                        <div class="text-sm font-semibold text-gray-900">靶面輸入</div>
+                        <p class="text-xs text-gray-500">點擊或拖曳落點，自動填入分值。</p>
+                    </div>
+                    <div class="text-xs text-gray-500" id="active-cell-label"></div>
+                </div>
+                <div class="p-4 flex flex-col items-center gap-3">
+                    <div class="relative w-full max-w-[440px] aspect-square" id="target-container">
+                        <div class="absolute inset-0 target-face" aria-hidden="true"></div>
+                        <canvas id="target-overlay" class="absolute inset-0"></canvas>
+                        <div id="target-surface" class="absolute inset-0"></div>
+                        <div id="target-zoom" class="target-zoom absolute pointer-events-none opacity-0 scale-95 transition duration-150 ease-out">
+                            <div class="target-zoom-bg absolute inset-0 rounded-full" aria-hidden="true"></div>
+                            <div class="absolute inset-0 flex items-center justify-center" aria-hidden="true">
+                                <div class="target-zoom-center"></div>
+                            </div>
+                            <div class="absolute top-2 left-2 rounded-full bg-gray-900/85 px-3 py-1 text-xs font-semibold text-white shadow-sm" id="zoom-score"></div>
+                        </div>
+                    </div>
+                    <div class="text-xs text-gray-500 text-center">
+                        點擊標示落點；拖曳可精調位置。系統會自動判定 X / 10 / Miss 並填入當前箭位。
+                    </div>
+                </div>
             </div>
+
+            {{-- Table Card --}}
+            <div class="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden">
+                <div class="p-4 border-b border-gray-100">
+                    <div id="meta-line" class="text-sm text-gray-600"></div>
+                </div>
 
             <div class="max-h-[70vh] overflow-auto">
                 <table class="min-w-full text-sm" id="score-table">
@@ -157,6 +185,43 @@
 @section('js')
     {{-- 簡易樣式（沿用 Tailwind） --}}
     <style>
+        :root { --target-image: url('/images/target-122.svg'); }
+        .target-face {
+            background: var(--target-image) center/contain no-repeat;
+            background-color: #f8fafc;
+            border-radius: 9999px;
+            box-shadow: inset 0 0 0 2px #0f172a;
+        }
+        .target-zoom,
+        .target-zoom-bg {
+            background-image: var(--target-image);
+            background-size: 260% 260%;
+            background-repeat: no-repeat;
+            background-position: center;
+            background-color: #f8fafc;
+        }
+        .target-zoom {
+            position: fixed;
+            width: 140px;
+            height: 140px;
+            border-radius: 9999px;
+            box-shadow: 0 20px 30px rgba(0,0,0,0.18);
+            border: 3px solid rgba(255,255,255,0.85);
+            transform-origin: center;
+            z-index: 60;
+        }
+        .target-zoom-center {
+            width: 16px;
+            height: 16px;
+            border-radius: 9999px;
+            border: 3px solid rgba(34,197,94,0.95);
+            background: rgba(34,197,94,0.35);
+            box-shadow: 0 0 0 1px rgba(255,255,255,0.9);
+        }
+        #target-surface {
+            cursor: crosshair;
+            touch-action: none;
+        }
         #numpad .nkey{
             @apply rounded-xl border px-4 py-3 text-base font-medium text-gray-900 bg-white hover:bg-gray-50 active:scale-95 transition;
         }
@@ -246,8 +311,13 @@
                 let isX = [];
                 let ends = 0;
                 let active = { end: 0, idx: 0 };
+                let coords = [];
                 let pendingDigit = null;
                 let pendingTimer = null;
+                let overlayCtx = null;
+                let targetRect = null;
+                let isPointerDown = false;
+                let lastPointerCommitTs = 0;
 
                 // ========== 表單 part（與 form-only 相同） ==========
                 function setActive(groupBtns, targetBtn) {
@@ -318,6 +388,7 @@
                     scores = Array.from({ length: ends }, () => Array(per).fill(null));
                     isMiss = Array.from({ length: ends }, () => Array(per).fill(false));
                     isX    = Array.from({ length: ends }, () => Array(per).fill(false));
+                    coords = Array.from({ length: ends }, () => Array(per).fill(null));
                     active = { end: 0, idx: 0 };
 
                     if (pendingTimer) { clearTimeout(pendingTimer); pendingTimer = null; }
@@ -360,50 +431,56 @@
                     updateGrid();
                     focusActive();
                 }
-                function setActiveCell(eIdx, iIdx) {
+                function setActiveCell(eIdx, iIdx, options = {}) {
                     active = { end: clamp(eIdx, 0, ends - 1), idx: clamp(iIdx, 0, scores[0].length - 1) };
                     if (pendingTimer) { clearTimeout(pendingTimer); pendingTimer = null; }
                     pendingDigit = null;
-                    focusActive();
+                    focusActive(options);
                 }
 
-                function focusActive() {
+                function focusActive(options = {}) {
+                    const { suppressScroll = false } = options;
                     tbody.querySelectorAll('[data-cell]').forEach((btn) => btn.classList.remove('bg-yellow-100'));
                     const btn = tbody.querySelector(`[data-cell="${active.end}-${active.idx}"]`);
+                    const label = document.getElementById('active-cell-label');
+                    if (label) label.textContent = `End ${active.end + 1} / Arrow ${active.idx + 1}`;
                     btn?.classList.add('bg-yellow-100');
-                    btn?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+                    if (!suppressScroll) btn?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
                     btn?.focus({ preventScroll: true });
+                    renderTarget();
                 }
 
-                function commitScore(val, miss = false,x = false) {
+                function commitScore(val, miss = false, x = false, point = null, options = {}) {
                     scores[active.end][active.idx] = val;
                     isMiss[active.end][active.idx] = !!miss;
                     isX[active.end][active.idx]    = !!x;
-                    moveNext();
+                    coords[active.end][active.idx] = point ? { x: point.x, y: point.y } : null;
+                    moveNext(options);
                     updateGrid();
                 }
 
-                function moveNext() {
+                function moveNext(options = {}) {
                     const per = scores[0].length;
                     let e = active.end, i = active.idx + 1;
                     if (i >= per) { i = 0; e++; }
                     if (e >= ends) { e = ends - 1; i = per - 1; }
                     active = { end: e, idx: i };
-                    focusActive();
+                    focusActive(options);
                 }
 
-                function movePrev() {
+                function movePrev(options = {}) {
                     const per = scores[0].length;
                     let e = active.end, i = active.idx - 1;
                     if (i < 0) { e = Math.max(0, e - 1); i = per - 1; }
                     active = { end: e, idx: i };
-                    focusActive();
+                    focusActive(options);
                 }
 
                 function clearCell() {
                     scores[active.end][active.idx] = null;
                     isMiss[active.end][active.idx] = false;
                     isX[active.end][active.idx]    = false;
+                    coords[active.end][active.idx] = null;
                     updateGrid();
                 }
 
@@ -454,9 +531,12 @@
                             scores,
                             isMiss,
                             isX,
+                            coords,
                             createdAt: new Date().toISOString(),
                         });
                     }
+
+                    renderTarget();
                 }
                 // === Numpad（僅手機/平板） ===
                 (function attachNumpadMobileOnly(){
@@ -597,6 +677,226 @@
                     const [eIdx, iIdx] = cell.dataset.cell.split('-').map(Number);
                     setActiveCell(eIdx, iIdx);
                 });
+
+                // 依照落點自動計分（等寬 10 個環，中心同屬 10／X）
+                function calcScoreFromPoint(x, y) {
+                    const dist = Math.sqrt(x * x + y * y);
+                    // 提高邊界容忍度，落在線上給高分
+                    const EPS = 0.003;
+                    if (dist > 1 + EPS) return { score: 0, isMissFlag: true, isXFlag: false };
+
+                    // 與 122cm 靶一致的半徑（相對比例）：X 5%、10 10%、其餘等寬
+                    const rings = [
+                        { r: 0.05, score: 10, isX: true },
+                        { r: 0.10, score: 10, isX: false },
+                        { r: 0.20, score: 9,  isX: false },
+                        { r: 0.30, score: 8,  isX: false },
+                        { r: 0.40, score: 7,  isX: false },
+                        { r: 0.50, score: 6,  isX: false },
+                        { r: 0.60, score: 5,  isX: false },
+                        { r: 0.70, score: 4,  isX: false },
+                        { r: 0.80, score: 3,  isX: false },
+                        { r: 0.90, score: 2,  isX: false },
+                        { r: 1.00, score: 1,  isX: false },
+                    ];
+
+                    for (const ring of rings) {
+                        if (dist <= ring.r + EPS) {
+                            return { score: ring.score, isMissFlag: false, isXFlag: ring.isX };
+                        }
+                    }
+
+                    return { score: 0, isMissFlag: true, isXFlag: false };
+                }
+
+                function renderTarget() {
+                    const canvas = document.getElementById('target-overlay');
+                    if (!canvas) return;
+                    if (!overlayCtx) overlayCtx = canvas.getContext('2d');
+                    if (!targetRect) {
+                        const box = document.getElementById('target-container');
+                        if (!box) return;
+                        const rect = box.getBoundingClientRect();
+                        canvas.width = rect.width * devicePixelRatio;
+                        canvas.height = rect.height * devicePixelRatio;
+                        canvas.style.width = `${rect.width}px`;
+                        canvas.style.height = `${rect.height}px`;
+                        targetRect = rect;
+                    }
+                    overlayCtx.clearRect(0, 0, canvas.width, canvas.height);
+                    const halfW = canvas.width / 2;
+                    const halfH = canvas.height / 2;
+                    const drawPoint = (pt, color, size = 8, outline = false) => {
+                        if (!pt) return;
+                        const cx = halfW + pt.x * halfW;
+                        const cy = halfH + pt.y * halfH;
+                        overlayCtx.beginPath();
+                        overlayCtx.fillStyle = color;
+                        overlayCtx.arc(cx, cy, size * devicePixelRatio, 0, Math.PI * 2);
+                        overlayCtx.fill();
+                        if (outline) {
+                            overlayCtx.lineWidth = 2 * devicePixelRatio;
+                            overlayCtx.strokeStyle = 'rgba(255,255,255,0.9)';
+                            overlayCtx.stroke();
+                        }
+                    };
+
+                    coords.forEach((row, eIdx) => {
+                        row.forEach((pt, iIdx) => {
+                            if (!pt) return;
+                            const isActive = eIdx === active.end && iIdx === active.idx;
+                            // 使用與靶面色環不同的顏色，以確保落點清晰可辨
+                            const pointColor = isActive ? 'rgba(124,58,237,0.9)' : 'rgba(34,197,94,0.85)';
+                            drawPoint(pt, pointColor, isActive ? 10 : 7, isActive);
+                        });
+                    });
+                }
+
+                const zoomEl = document.getElementById('target-zoom');
+                const zoomScoreEl = document.getElementById('zoom-score');
+                const targetImage = getComputedStyle(document.documentElement).getPropertyValue('--target-image').trim();
+                let zoomTimer = null;
+
+                function hideZoom(after = 0) {
+                    if (!zoomEl) return;
+                    if (zoomTimer) { clearTimeout(zoomTimer); zoomTimer = null; }
+                    if (after) {
+                        zoomTimer = setTimeout(() => hideZoom(0), after);
+                        return;
+                    }
+                    zoomEl.classList.add('opacity-0', 'scale-95');
+                }
+
+                function showZoom(nx, ny, label, persist = false, opts = {}) {
+                    if (!zoomEl || !zoomScoreEl) return;
+                    const container = document.getElementById('target-container');
+                    const rect = container?.getBoundingClientRect();
+                    if (!rect) return;
+
+                    const lensWidth = zoomEl.offsetWidth || zoomEl.getBoundingClientRect().width;
+                    const lensHeight = zoomEl.offsetHeight || zoomEl.getBoundingClientRect().height;
+
+                    // 以實際落點為放大中心，畫面同步靠像素對齊；鏡面本身仍上移避免被手指遮住
+                    const pointPx = opts.pointOverridePx || {
+                        x: rect.width * (0.5 + nx / 2),
+                        y: rect.height * (0.5 + ny / 2),
+                    };
+                    const clientX = opts.clientPos?.x ?? rect.left + pointPx.x;
+                    const clientY = opts.clientPos?.y ?? rect.top + pointPx.y;
+                    const zoomFactor = 2.6; // 與背景 260% 等效，但用像素定位以校準中心
+                    const bgW = rect.width * zoomFactor;
+                    const bgH = rect.height * zoomFactor;
+                    const bgPosX = (lensWidth / 2) - pointPx.x * zoomFactor;
+                    const bgPosY = (lensHeight / 2) - pointPx.y * zoomFactor;
+
+                    const lensOffsetY = lensHeight * 0.8; // keep lens offset from the finger
+                    const viewportW = window.innerWidth;
+                    const viewportH = window.innerHeight;
+                    const lensX = clamp(clientX, lensWidth / 2 + 4, viewportW - lensWidth / 2 - 4);
+
+                    const minLensY = lensHeight / 2 + 4;
+                    const maxLensY = viewportH - lensHeight / 2 - 4;
+                    const desiredAbove = clientY - lensOffsetY;
+                    const wouldHitTop = desiredAbove - lensHeight / 2 <= 0;
+                    const lensY = wouldHitTop
+                        ? clamp(clientY + lensOffsetY, minLensY, maxLensY)
+                        : clamp(desiredAbove, minLensY, maxLensY);
+
+                    zoomEl.style.left = `${lensX}px`;
+                    zoomEl.style.top = `${lensY}px`;
+                    zoomEl.style.transform = 'translate(-50%, -50%)';
+                    zoomEl.style.backgroundSize = `${bgW}px ${bgH}px`;
+                    zoomEl.style.backgroundPosition = `${bgPosX}px ${bgPosY}px`;
+                    if (targetImage) zoomEl.style.backgroundImage = targetImage;
+                    const zoomBg = zoomEl.querySelector('.target-zoom-bg');
+                    if (zoomBg) {
+                        zoomBg.style.backgroundSize = `${bgW}px ${bgH}px`;
+                        zoomBg.style.backgroundPosition = `${bgPosX}px ${bgPosY}px`;
+                        if (targetImage) zoomBg.style.backgroundImage = targetImage;
+                    }
+                    zoomScoreEl.textContent = label;
+                    zoomEl.classList.remove('opacity-0', 'scale-95');
+                    if (persist) hideZoom(1100);
+                }
+
+                function handlePointer(evt, commit = false) {
+                    const surface = document.getElementById('target-surface');
+                    if (!surface) return;
+                    const rect = surface.getBoundingClientRect();
+                    targetRect = rect;
+                    const nx = ((evt.clientX - rect.left) / rect.width - 0.5) * 2;
+                    const ny = ((evt.clientY - rect.top) / rect.height - 0.5) * 2;
+                    const pointPx = {
+                        x: (evt.clientX - rect.left),
+                        y: (evt.clientY - rect.top),
+                    };
+                    const { score, isMissFlag, isXFlag } = calcScoreFromPoint(nx, ny);
+                    const label = isMissFlag ? 'M' : (isXFlag ? 'X' : score);
+                    if (commit) {
+                        commitScore(score, isMissFlag, isXFlag, { x: nx, y: ny }, { suppressScroll: true });
+                        showZoom(nx, ny, label, true, { pointOverridePx: pointPx, clientPos: { x: evt.clientX, y: evt.clientY } });
+                    } else {
+                        // 即時預覽目前落點
+                        const canvas = document.getElementById('target-overlay');
+                        if (!canvas) return;
+                        if (!overlayCtx) overlayCtx = canvas.getContext('2d');
+                        renderTarget();
+                        const halfW = canvas.width / 2;
+                        const halfH = canvas.height / 2;
+                        overlayCtx.beginPath();
+                        overlayCtx.setLineDash([6 * devicePixelRatio, 6 * devicePixelRatio]);
+                        overlayCtx.lineWidth = 2 * devicePixelRatio;
+                        overlayCtx.strokeStyle = 'rgba(17,24,39,0.45)';
+                        overlayCtx.arc(halfW + nx * halfW, halfH + ny * halfH, 14 * devicePixelRatio, 0, Math.PI * 2);
+                        overlayCtx.stroke();
+                        overlayCtx.setLineDash([]);
+                        showZoom(nx, ny, label, false, { pointOverridePx: pointPx, clientPos: { x: evt.clientX, y: evt.clientY } });
+                    }
+                }
+
+                (function bindTargetSurface() {
+                    const surface = document.getElementById('target-surface');
+                    if (!surface) return;
+
+                    surface.addEventListener('pointerdown', (e) => {
+                        isPointerDown = true;
+                        surface.setPointerCapture(e.pointerId);
+                        // 先預覽落點，不立即計分，避免點擊觸發兩次
+                        handlePointer(e, false);
+                    });
+                    surface.addEventListener('pointermove', (e) => {
+                        if (!isPointerDown) return;
+                        handlePointer(e, false);
+                    });
+                    surface.addEventListener('pointerup', (e) => {
+                        if (!isPointerDown) return;
+                        isPointerDown = false;
+                        surface.releasePointerCapture(e.pointerId);
+                        handlePointer(e, true);
+                        lastPointerCommitTs = performance.now();
+                    });
+                    surface.addEventListener('pointerleave', () => {
+                        isPointerDown = false;
+                        renderTarget();
+                        hideZoom();
+                    });
+                    surface.addEventListener('pointercancel', () => {
+                        isPointerDown = false;
+                        hideZoom();
+                    });
+
+                    // 觸控裝置的保險機制：若未觸發 pointerup，也能靠 click 提交一次
+                    surface.addEventListener('click', (e) => {
+                        if (performance.now() - lastPointerCommitTs < 220) return;
+                        handlePointer(e, true);
+                    });
+
+                    const resizeObserver = new ResizeObserver(() => {
+                        targetRect = null;
+                        renderTarget();
+                    });
+                    resizeObserver.observe(surface);
+                })();
 
                 // 鍵盤
                 function clearPending() { pendingDigit = null; if (pendingTimer) { clearTimeout(pendingTimer); pendingTimer = null; } }
