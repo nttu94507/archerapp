@@ -79,6 +79,7 @@ class ScoreController extends Controller
         $scores = $payload['scores'];
         $isMiss = $payload['isMiss'] ?? [];
         $isX = $payload['isX'] ?? [];
+        $coords = $payload['coords'] ?? [];
 
         // 2) 驗基本欄位（bow/venue/distance/...）
         $bowWhitelist = ['recurve', 'compound', 'barebow', 'yumi', 'longbow'];
@@ -117,7 +118,7 @@ class ScoreController extends Controller
         // 4) 寫入 DB（transaction）
         $session = DB::transaction(function () use (
             $request, $bow, $venue, $distance, $arrowsTotal, $arrowsPerEnd,
-            $scores, $isMiss, $isX, $endsCount, &$scoreTotal, &$xCount, &$mCount
+            $scores, $isMiss, $isX, $coords, $endsCount, &$scoreTotal, &$xCount, &$mCount
         ) {
             // 4-1) 建 session（先不填總分，最後再回寫）
             $session = ArcherySession::create([
@@ -138,6 +139,7 @@ class ScoreController extends Controller
                 $rowScores = $scores[$e] ?? [];
                 $rowMiss = $isMiss[$e] ?? [];
                 $rowX = $isX[$e] ?? [];
+                $rowCoords = $coords[$e] ?? [];
 
                 // 此 end 的實際箭數（最後一回合可能不足 arrows_per_end）
                 $shotsThisEnd = min($arrowsPerEnd, $arrowsTotal - $e * $arrowsPerEnd);
@@ -147,6 +149,20 @@ class ScoreController extends Controller
                     $v = (int)($rowScores[$i] ?? 0);
                     $mx = (bool)($rowMiss[$i] ?? false);
                     $x10 = (bool)($rowX[$i] ?? false);
+
+                    $point = $rowCoords[$i] ?? null;
+                    $px = $py = null;
+                    if (is_array($point)) {
+                        $px = array_key_exists('x', $point) ? (float)$point['x'] : null;
+                        $py = array_key_exists('y', $point) ? (float)$point['y'] : null;
+                    }
+
+                    if (!is_null($px) && !is_null($py)) {
+                        // 允許 -1~1 的相對座標，略放寬以容忍取點誤差
+                        if ($px < -1.5 || $px > 1.5 || $py < -1.5 || $py > 1.5) {
+                            $px = $py = null;
+                        }
+                    }
 
                     // 正常化：分數 0..11、X 記 10 分、Miss 記 0 分
                     $v = max(0, min(11, $v));
@@ -164,6 +180,8 @@ class ScoreController extends Controller
                         'score' => $v,
                         'is_x' => $x10,
                         'is_miss' => $mx,
+                        'target_x' => $px,
+                        'target_y' => $py,
                         'created_at' => $now,
                         'updated_at' => $now,
                     ];
@@ -277,6 +295,20 @@ class ScoreController extends Controller
             $firstAvg = $secondAvg = $staminaDelta = null;
         }
 
+        $positionedShots = $shots->filter(fn($s) => !is_null($s->target_x) && !is_null($s->target_y));
+        $groupRadius = null;
+        $groupOffset = null;
+        if ($positionedShots->count() > 0) {
+            $avgX = $positionedShots->avg('target_x');
+            $avgY = $positionedShots->avg('target_y');
+            $groupOffset = round(sqrt(pow($avgX, 2) + pow($avgY, 2)), 3);
+
+            $avgRadius = $positionedShots
+                ->map(fn($s) => sqrt(pow((float)$s->target_x, 2) + pow((float)$s->target_y, 2)))
+                ->avg();
+            $groupRadius = is_numeric($avgRadius) ? round($avgRadius, 3) : null;
+        }
+
         $analysis = [
             'avg' => $avg,
             'stddev'        => $stddevPop,      // 母體標準差
@@ -292,6 +324,9 @@ class ScoreController extends Controller
             'scoreDist' => $scoreDist,          // 0..10
             'totalArrows' => $totalArrows,
             'per' => $per,
+            'hasCoords' => $positionedShots->count() > 0,
+            'groupRadius' => $groupRadius,
+            'groupOffset' => $groupOffset,
             // 給圖表用
             'perEnd' => $endRows->pluck('end_sum')->values(),      // [每趟合計...]
             'cumu' => $endRows->pluck('cumulative')->values(),   // [累計...]
