@@ -30,10 +30,7 @@
                 @if($scoreable)
                     <div class="flex items-center gap-2">
                         <span class="text-xs text-gray-500">目前缺少第 {{ $nextEnd }} 趟</span>
-                        <button id="open-next" data-next="{{ $nextEnd }}"
-                                class="inline-flex items-center rounded-xl bg-indigo-600 px-3 py-2 text-sm font-semibold text-white hover:bg-indigo-500">
-                            前往填寫
-                        </button>
+                        <span class="text-xs text-gray-400">點擊對應趟次填寫，送出後無法修改</span>
                     </div>
                 @endif
             </div>
@@ -53,8 +50,8 @@
                             $scores = $entry?->scores ?? array_fill(0, $arrowSettings['arrows_per_end'], '');
                         @endphp
                         <button type="button"
-                                class="end-row grid w-full grid-cols-12 items-center px-4 py-3 text-left {{ $scoreable ? 'hover:bg-gray-50' : 'cursor-not-allowed' }} {{ $nextEnd === $end ? 'bg-indigo-50/50' : '' }}"
-                                data-end="{{ $end }}" data-scores='@json($scores)' data-can-open="{{ $scoreable ? '1' : '0' }}">
+                                class="end-row grid w-full grid-cols-12 items-center px-4 py-3 text-left {{ $scoreable && !$entry ? 'hover:bg-gray-50' : 'cursor-not-allowed opacity-60' }} {{ !$entry && $nextEnd === $end ? 'bg-indigo-50/50' : '' }}"
+                                data-end="{{ $end }}" data-scores='@json($scores)' data-can-open="{{ $scoreable && !$entry ? '1' : '0' }}">
                             <div class="col-span-2 text-sm font-semibold text-gray-900 flex items-center gap-2">
                                 <span>第 {{ $end }} 趟</span>
                                 @if(!$entry)
@@ -103,6 +100,13 @@
                         <button type="button" data-key="{{ $key }}" class="nkey rounded-xl border px-4 py-3 text-center text-base font-semibold text-gray-900 hover:bg-gray-50">{{ $key === 'BKSP' ? '⌫' : ($key === 'PREV' ? '←' : ($key === 'NEXT' ? '→' : ($key === 'CLR' ? '清除' : $key))) }}</button>
                     @endforeach
                 </div>
+
+                <div class="flex flex-col gap-2">
+                    <p class="text-xs text-gray-500">送出後無法修改，請確認填寫內容。</p>
+                    <button type="button" id="submit-score" class="inline-flex items-center justify-center rounded-xl bg-indigo-600 px-4 py-3 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 disabled:cursor-not-allowed disabled:bg-gray-300">
+                        確認送出
+                    </button>
+                </div>
             </form>
         </div>
     </div>
@@ -116,7 +120,10 @@
             const title = document.getElementById('sheet-title');
             const endField = document.getElementById('end_number');
             const form = document.getElementById('score-form');
+            const submitBtn = document.getElementById('submit-score');
             let currentIndex = 0;
+
+            trySubmit();
 
             function setFocus(idx){
                 currentIndex = Math.max(0, Math.min(inputs.length - 1, idx));
@@ -134,6 +141,7 @@
                 sheet.classList.add('flex');
                 const firstEmpty = inputs.findIndex(i => i.value.trim() === '');
                 setFocus(firstEmpty === -1 ? 0 : firstEmpty);
+                trySubmit();
             }
 
             function closeSheet(){
@@ -151,16 +159,11 @@
 
             function trySubmit(){
                 if (inputs.every(i => i.value.trim() !== '')){
-                    form.submit();
+                    submitBtn?.removeAttribute('disabled');
+                } else {
+                    submitBtn?.setAttribute('disabled', 'disabled');
                 }
             }
-
-            document.getElementById('open-next')?.addEventListener('click', (e)=>{
-                const end = Number(e.currentTarget.dataset.next || '1');
-                const target = document.querySelector(`[data-end="${end}"]`);
-                const scores = target?.dataset.scores ? JSON.parse(target.dataset.scores) : [];
-                openSheet(end, scores);
-            });
 
             document.querySelectorAll('.end-row').forEach(btn => {
                 btn.addEventListener('click', (e)=>{
@@ -194,13 +197,20 @@
 
                     if (key === 'NEXT') return focusNext(idx);
                     if (key === 'PREV') return focusPrev(idx);
-                    if (key === 'BKSP') { inputs[idx].value=''; return; }
-                    if (key === 'CLR') { inputs.forEach(i=> i.value=''); setFocus(0); return; }
+                    if (key === 'BKSP') { inputs[idx].value=''; trySubmit(); return; }
+                    if (key === 'CLR') { inputs.forEach(i=> i.value=''); setFocus(0); trySubmit(); return; }
 
                     inputs[idx].value = key;
                     focusNext(idx);
                     trySubmit();
                 });
+            });
+
+            submitBtn?.addEventListener('click', () => {
+                if (!inputs.every(i => i.value.trim() !== '')) return;
+                if (!confirm('確認送出本趟成績？')) return;
+                if (!confirm('送出後無法修改，是否確定送出？')) return;
+                form.submit();
             });
         })();
     </script>

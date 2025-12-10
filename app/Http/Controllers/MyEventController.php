@@ -119,6 +119,18 @@ class MyEventController extends Controller
 
         $endTotal = array_sum($normalized);
 
+        $existing = EventScoreEntry::query()
+            ->where('event_id', $event->id)
+            ->where('user_id', $userId)
+            ->where('end_number', $validated['end_number'])
+            ->first();
+
+        if ($existing) {
+            return redirect()
+                ->route('my-events.score', $event)
+                ->with('error', '此趟成績已確認，無法修改。');
+        }
+
         EventScoreEntry::updateOrCreate(
             [
                 'event_id' => $event->id,
