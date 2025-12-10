@@ -25,13 +25,19 @@
             </span>
             @endif
 
-            {{-- 管理按鈕 --}}
-            @if($canManage)
-                <a href="{{ route('events.groups.index', $event) }}"
-                   class="ml-2 inline-flex items-center rounded-xl bg-emerald-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-emerald-500">
-                    管理
+            <div class="mt-3 flex flex-wrap gap-2">
+                <a href="{{ route('events.live', $event) }}"
+                   class="inline-flex items-center rounded-xl border border-indigo-100 bg-indigo-50 px-3 py-1.5 text-xs font-semibold text-indigo-800 hover:bg-indigo-100">
+                    即時戰況
                 </a>
-            @endif
+                {{-- 管理按鈕 --}}
+                @if($canManage)
+                    <a href="{{ route('events.groups.index', $event) }}"
+                       class="inline-flex items-center rounded-xl bg-emerald-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-emerald-500">
+                        管理
+                    </a>
+                @endif
+            </div>
         </div>
 
         {{-- 組別清單（公開） --}}

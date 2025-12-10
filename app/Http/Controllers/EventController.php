@@ -3,10 +3,14 @@
 namespace App\Http\Controllers;
 
 use App\Models\Event;
+use App\Models\EventGroup;
+use App\Models\EventRegistration;
+use App\Models\EventScoreEntry;
 use App\Models\EventStaff;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Collection;
 
 class EventController extends Controller
 {
@@ -188,6 +192,112 @@ class EventController extends Controller
             'myGroupIds' => $myGroupIds,
             'myRegistrations' => $myRegistrations,
         ]);
+    }
+
+    public function live(Event $event)
+    {
+        $event->load('groups');
+
+        $registrations = EventRegistration::query()
+            ->with('event_group')
+            ->where('event_id', $event->id)
+            ->whereIn('status', ['registered', 'checked_in'])
+            ->get();
+
+        $scoreEntries = EventScoreEntry::query()
+            ->where('event_id', $event->id)
+            ->orderBy('end_number')
+            ->get()
+            ->groupBy('user_id');
+
+        $scoreboard = $registrations->map(function (EventRegistration $registration) use ($scoreEntries) {
+            $entries = $scoreEntries->get($registration->user_id, collect());
+
+            $arrowCount = $entries->reduce(function (int $carry, EventScoreEntry $entry) {
+                return $carry + count($entry->scores ?? []);
+            }, 0);
+
+            return [
+                'registration'  => $registration,
+                'entries'       => $entries,
+                'total_score'   => $entries->sum('end_total'),
+                'ends_recorded' => $entries->count(),
+                'arrow_count'   => $arrowCount,
+                'last_updated'  => $entries->max('updated_at'),
+                'group_id'      => $registration->event_group_id,
+            ];
+        });
+
+        $flatEntries = $scoreEntries->flatten(1);
+
+        $overallBoard = $scoreboard
+            ->filter(fn ($row) => $row['ends_recorded'] > 0)
+            ->sortByDesc('total_score')
+            ->values();
+
+        $overallSummary = [
+            'registrations'    => $registrations->count(),
+            'groups'           => $event->groups->count(),
+            'entry_records'    => $flatEntries->count(),
+            'arrows_recorded'  => $flatEntries->reduce(fn (int $carry, EventScoreEntry $entry) => $carry + count($entry->scores ?? []), 0),
+            'last_updated'     => $flatEntries->max('updated_at'),
+            'top_row'          => $overallBoard->first(),
+        ];
+
+        $groupedBoards = $scoreboard
+            ->groupBy('group_id')
+            ->map(function (Collection $rows) use ($event) {
+                $sorted = $rows->sortByDesc('total_score')->values()->map(function ($row, $idx) {
+                    $row['rank_position'] = $idx + 1;
+
+                    return $row;
+                });
+
+                $firstRow = $sorted->first();
+                /** @var EventGroup|null $group */
+                $group = $firstRow['registration']->event_group ?? null;
+                [$arrowsPerEnd, $totalArrows, $totalEnds] = $this->resolveGroupArrowSettings($event, $group);
+
+                $groupEntries = $sorted->flatMap(fn ($row) => $row['entries']);
+                $bestEnd = $groupEntries->sortByDesc('end_total')->first();
+
+                $analysis = [
+                    'average_total'   => $sorted->count() ? round($sorted->avg('total_score'), 1) : null,
+                    'completion_rate' => $sorted->count() && $totalEnds > 0
+                        ? round(($sorted->sum('ends_recorded') / ($sorted->count() * $totalEnds)) * 100)
+                        : null,
+                    'best_end'        => $bestEnd,
+                    'recent_update'   => $groupEntries->max('updated_at'),
+                    'total_ends'      => $totalEnds,
+                ];
+
+                return [
+                    'group'        => $group,
+                    'rows'         => $sorted,
+                    'analysis'     => $analysis,
+                    'totalEnds'    => $totalEnds,
+                    'arrowsPerEnd' => $arrowsPerEnd,
+                    'totalArrows'  => $totalArrows,
+                ];
+            })
+            ->sortBy(fn ($group) => $group['group']?->name ?? '未分組')
+            ->values();
+
+        return view('events.live', [
+            'event'          => $event,
+            'groupsBoard'    => $groupedBoards,
+            'overallBoard'   => $overallBoard,
+            'overallSummary' => $overallSummary,
+        ]);
+    }
+
+    private function resolveGroupArrowSettings(Event $event, ?EventGroup $group): array
+    {
+        $arrowsPerEnd = 6;
+        $defaultTotal = $event->mode === 'indoor' ? 30 : 36;
+        $totalArrows = $group?->arrow_count ?: $defaultTotal;
+
+        return [$arrowsPerEnd, $totalArrows, (int) ceil($totalArrows / $arrowsPerEnd)];
     }
 
     //
