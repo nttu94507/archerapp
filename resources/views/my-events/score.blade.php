@@ -46,10 +46,12 @@
             </div>
 
             <div class="divide-y divide-gray-100">
-                <div class="grid grid-cols-12 bg-gray-50 px-4 py-2 text-xs font-semibold uppercase text-gray-500">
-                    <div class="col-span-2">趟次</div>
-                    <div class="col-span-8">箭序</div>
-                    <div class="col-span-2 text-right">合計</div>
+                <div class="grid grid-cols-[120px_1fr_90px_80px_80px] bg-gray-50 px-4 py-2 text-xs font-semibold uppercase text-gray-500">
+                    <div>趟次</div>
+                    <div>箭序</div>
+                    <div class="text-right">小計</div>
+                    <div class="text-center">X + 10</div>
+                    <div class="text-center">X</div>
                 </div>
 
                 @foreach($segments as $segment)
@@ -58,11 +60,12 @@
                         @php
                             $entry = $entries->get($end);
                             $scores = $entry?->scores ?? array_fill(0, $arrowSettings['arrows_per_end'], '');
+                            $endStats = $entryStats[$end] ?? null;
                         @endphp
                         <button type="button"
-                                class="end-row grid w-full grid-cols-12 items-center px-4 py-3 text-left {{ $scoreable && !$finalized ? 'hover:bg-gray-50' : 'cursor-not-allowed opacity-60' }} {{ !$entry && $nextEnd === $end ? 'bg-indigo-50/50' : '' }}"
+                                class="end-row grid w-full grid-cols-[120px_1fr_90px_80px_80px] items-center px-4 py-3 text-left {{ $scoreable && !$finalized ? 'hover:bg-gray-50' : 'cursor-not-allowed opacity-60' }} {{ !$entry && $nextEnd === $end ? 'bg-indigo-50/50' : '' }}"
                                 data-end="{{ $end }}" data-scores='@json($scores)' data-can-open="{{ $scoreable && !$finalized ? '1' : '0' }}">
-                            <div class="col-span-2 text-sm font-semibold text-gray-900 flex items-center gap-2">
+                            <div class="text-sm font-semibold text-gray-900 flex items-center gap-2">
                                 <span>第 {{ $end }} 趟</span>
                                 @if(!$entry)
                                     <span class="rounded-full bg-orange-50 px-2 py-0.5 text-[11px] font-medium text-orange-700">未填</span>
@@ -70,34 +73,24 @@
                                     <span class="rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-medium text-emerald-700">已填</span>
                                 @endif
                             </div>
-                            <div class="col-span-8 text-sm text-gray-700 flex flex-wrap gap-2">
+                            <div class="text-sm text-gray-700 flex flex-wrap gap-2">
                                 @foreach($scores as $score)
                                     <span class="inline-flex h-7 w-10 items-center justify-center rounded-lg bg-gray-100 text-sm font-semibold text-gray-800">{{ $score === '' ? '—' : $score }}</span>
                                 @endforeach
                             </div>
-                            <div class="col-span-2 text-right text-sm font-semibold text-gray-900">{{ $entry?->end_total ?? '—' }}</div>
+                            <div class="text-right text-sm font-semibold text-gray-900">{{ $entry?->end_total ?? '—' }}</div>
+                            <div class="text-center text-sm font-semibold text-gray-900">{{ $endStats['ten_plus'] ?? '—' }}</div>
+                            <div class="text-center text-sm font-semibold text-gray-900">{{ $endStats['x_count'] ?? '—' }}</div>
                         </button>
                     @endfor
                 @endforeach
-            </div>
 
-            <div class="border-t px-4 py-4">
-                <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
-                    <div class="rounded-2xl border bg-white px-4 py-3 shadow-sm">
-                        <p class="text-xs text-gray-500">目前總分</p>
-                        <p class="text-2xl font-bold text-gray-900">{{ $stats['total_score'] }}</p>
-                        <p class="text-[11px] text-gray-500">已紀錄 {{ $stats['recorded_arrows'] }} 支箭</p>
-                    </div>
-                    <div class="rounded-2xl border bg-white px-4 py-3 shadow-sm">
-                        <p class="text-xs text-gray-500">X + 10 總箭數</p>
-                        <p class="text-2xl font-bold text-gray-900">{{ $stats['ten_plus'] }}</p>
-                        <p class="text-[11px] text-gray-500">含 X 及 10 分箭</p>
-                    </div>
-                    <div class="rounded-2xl border bg-white px-4 py-3 shadow-sm">
-                        <p class="text-xs text-gray-500">X 的總箭數</p>
-                        <p class="text-2xl font-bold text-gray-900">{{ $stats['x_count'] }}</p>
-                        <p class="text-[11px] text-gray-500">僅計 X 箭</p>
-                    </div>
+                <div class="grid grid-cols-[120px_1fr_90px_80px_80px] items-center bg-gray-50 px-4 py-3 text-sm font-semibold text-gray-900">
+                    <div class="flex items-center gap-2">總計</div>
+                    <div></div>
+                    <div class="text-right">{{ $stats['total_score'] }}</div>
+                    <div class="text-center">{{ $stats['ten_plus'] }}</div>
+                    <div class="text-center">{{ $stats['x_count'] }}</div>
                 </div>
             </div>
 
