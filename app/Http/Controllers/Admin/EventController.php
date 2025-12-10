@@ -5,7 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Event;
 use App\Models\EventRegistration;
-use App\Models\Score;
+use App\Models\EventScoreEntry;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -136,9 +136,30 @@ class EventController extends Controller
         }
 
         $participants = $participantQuery
+            ->orderBy('event_group_id')
             ->orderBy('created_at', 'desc')
-            ->paginate(10)
-            ->withQueryString();
+            ->get();
+
+        $groupedParticipants = $event->groups
+            ->mapWithKeys(function ($group) use ($participants) {
+                $registrations = $participants->where('event_group_id', $group->id);
+
+                return [$group->name => $registrations];
+            })
+            ->filter(fn ($group) => $group->isNotEmpty());
+
+        $unassigned = $participants->whereNull('event_group_id');
+        if ($unassigned->isNotEmpty()) {
+            $groupedParticipants = $groupedParticipants->put('未指定組別', $unassigned)->sortKeys();
+        }
+
+        $groupStats = $groupedParticipants->map(function ($group) {
+            return [
+                'total'  => $group->count(),
+                'paid'   => $group->where('paid', true)->count(),
+                'unpaid' => $group->where('paid', false)->count(),
+            ];
+        });
 
         $statusCounts = EventRegistration::query()
             ->select('status', DB::raw('COUNT(*) as total'))
@@ -150,12 +171,19 @@ class EventController extends Controller
             'groups'        => $event->groups->count(),
             'registrations' => EventRegistration::where('event_id', $event->id)->count(),
             'checked_in'    => (int) ($statusCounts['checked_in'] ?? 0),
-            'score_entries' => Score::where('event_id', $event->id)->count(),
+            'score_entries' => EventScoreEntry::where('event_id', $event->id)->count(),
         ];
+
+        $scoreEntries = EventScoreEntry::query()
+            ->where('event_id', $event->id)
+            ->orderBy('user_id')
+            ->orderBy('end_number')
+            ->get()
+            ->groupBy('user_id');
 
         $statSort = $request->get('stat_sort', 'total_score');
         $statDir  = $request->get('stat_dir', 'desc');
-        $statSorts = ['total_score', 'x_count', 'ten_count', 'arrow_count', 'stdev', 'scored_at'];
+        $statSorts = ['total_score', 'ends_recorded', 'arrow_count', 'last_updated'];
         if (!in_array($statSort, $statSorts, true)) {
             $statSort = 'total_score';
         }
@@ -163,18 +191,40 @@ class EventController extends Controller
             $statDir = 'desc';
         }
 
-        $scores = Score::query()
-            ->with(['archer', 'round'])
-            ->where('event_id', $event->id)
-            ->orderBy($statSort, $statDir)
-            ->orderBy('total_score', 'desc')
-            ->orderBy('x_count', 'desc')
-            ->get();
+        $scoreboard = $participants->map(function (EventRegistration $registration) use ($scoreEntries) {
+            $entries = $scoreEntries->get($registration->user_id, collect());
 
-        $leaderboard = $scores->values()->map(function (Score $score, int $index) {
-            $score->rank_position = $index + 1;
+            $arrowCount = $entries->reduce(function (int $carry, EventScoreEntry $entry) {
+                return $carry + count($entry->scores ?? []);
+            }, 0);
 
-            return $score;
+            return [
+                'registration'  => $registration,
+                'entries'       => $entries,
+                'total_score'   => $entries->sum('end_total'),
+                'ends_recorded' => $entries->count(),
+                'arrow_count'   => $arrowCount,
+                'last_updated'  => $entries->max('updated_at'),
+            ];
+        })->filter(fn ($row) => $row['ends_recorded'] > 0)->sort(function ($a, $b) use ($statSort, $statDir) {
+            $normalize = function ($value) {
+                if ($value instanceof \Carbon\CarbonInterface) {
+                    return $value->getTimestamp();
+                }
+
+                return is_numeric($value) ? (float) $value : 0;
+            };
+
+            $aVal = $normalize($a[$statSort] ?? 0);
+            $bVal = $normalize($b[$statSort] ?? 0);
+
+            return $statDir === 'desc' ? $bVal <=> $aVal : $aVal <=> $bVal;
+        })->values();
+
+        $leaderboard = $scoreboard->map(function (array $row, int $index) {
+            $row['rank_position'] = $index + 1;
+
+            return $row;
         });
 
         $bracketSeeds = $leaderboard->take(8);
@@ -196,10 +246,28 @@ class EventController extends Controller
             'statusCounts'         => $statusCounts,
             'participantStatus'    => $request->participant_status,
             'leaderboard'          => $leaderboard,
+            'scoreboard'           => $scoreboard,
             'statSort'             => $statSort,
             'statDir'              => $statDir,
             'summary'              => $summary,
             'bracket'              => $bracket,
+            'groupedParticipants'  => $groupedParticipants,
+            'groupStats'           => $groupStats,
         ]);
+    }
+
+    public function updatePayment(Event $event, EventRegistration $registration, Request $request): RedirectResponse
+    {
+        if ($registration->event_id !== $event->id) {
+            return back()->with('error', '報名資料與賽事不符。');
+        }
+
+        $validated = $request->validate([
+            'paid' => ['required', 'boolean'],
+        ]);
+
+        $registration->update(['paid' => $validated['paid']]);
+
+        return back()->with('success', '繳費狀態已更新。');
     }
 }

@@ -4,6 +4,7 @@ use App\Http\Controllers\Admin\EventController as AdminEventController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\EventController;
 use App\Http\Controllers\EventRegistrationController;
+use App\Http\Controllers\MyEventController;
 use App\Http\Controllers\GoogleController;
 use App\Http\Controllers\LeaderBoardController;
 use App\Http\Controllers\LoginController;
@@ -40,6 +41,9 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->name('admin.')->group(fun
 
     Route::resource('events', AdminEventController::class)
         ->only(['index', 'create', 'store', 'show']);
+
+    Route::patch('events/{event}/registrations/{registration}/payment', [AdminEventController::class, 'updatePayment'])
+        ->name('events.registrations.payment');
 });
 
 //組隊報名相關
@@ -70,7 +74,15 @@ Route::middleware(['auth'])->group(function () {
     Route::resource('scores', \App\Http\Controllers\ScoreController::class);
 });
 
+Route::middleware(['auth', 'profile.completed'])->group(function () {
+    Route::get('/my-events', [MyEventController::class, 'index'])->name('my-events.index');
+    Route::get('/my-events/{event}/score', [MyEventController::class, 'score'])->name('my-events.score');
+    Route::post('/my-events/{event}/score', [MyEventController::class, 'storeScore'])->name('my-events.score.store');
+    Route::post('/my-events/{event}/submit', [MyEventController::class, 'submitAll'])->name('my-events.score.submit');
+});
+
 //快速報名
+Route::get('events/{event}/live', [EventController::class, 'live'])->name('events.live');
 Route::get('events/{event}', [EventController::class, 'show'])->name('events.show');
 Route::post('events/{event}/groups/{group}/quick-register', [EventRegistrationController::class, 'quickRegister'])
     ->middleware('auth')
