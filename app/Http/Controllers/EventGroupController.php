@@ -9,6 +9,11 @@ use Illuminate\Support\Facades\DB;
 
 class EventGroupController extends Controller
 {
+    public function __construct()
+    {
+        $this->middleware(['auth', 'admin']);
+    }
+
     //
     public function index(Event $event)
     {
@@ -33,6 +38,12 @@ class EventGroupController extends Controller
 
     public function store(Request $req, Event $event)
     {
+        $arrowRule = ['required','integer','min:6','max:180', function ($attribute, $value, $fail) {
+            if ($value % 6 !== 0) {
+                $fail('箭數需為 6 的倍數');
+            }
+        }];
+
         $data = $req->validate([
             'groups'                       => ['required','array','min:1'],
             'groups.*.name'                => ['required','string','max:100'],
@@ -40,6 +51,7 @@ class EventGroupController extends Controller
             'groups.*.gender'              => ['required','in:male,female,open'],
             'groups.*.age_class'           => ['nullable','string','max:50'],
             'groups.*.distance'            => ['nullable','string','max:50'],
+            'groups.*.arrow_count'         => $arrowRule,
             'groups.*.quota'               => ['nullable','integer','min:1'],
             'groups.*.fee'                 => ['nullable','integer','min:0'],
             'groups.*.is_team'             => ['boolean'],
@@ -65,12 +77,19 @@ class EventGroupController extends Controller
 
     public function update(Request $req, Event $event, EventGroup $group)
     {
+        $arrowRule = ['required','integer','min:6','max:180', function ($attribute, $value, $fail) {
+            if ($value % 6 !== 0) {
+                $fail('箭數需為 6 的倍數');
+            }
+        }];
+
         $g = $req->validate([
             'name'      => ['required','string','max:100'],
             'bow_type'  => ['nullable','in:recurve,compound,barebow'],
             'gender'    => ['required','in:male,female,open'],
             'age_class' => ['nullable','string','max:50'],
             'distance'  => ['nullable','string','max:50'],
+            'arrow_count' => $arrowRule,
             'quota'     => ['nullable','integer','min:1'],
             'fee'       => ['nullable','integer','min:0'],
             'is_team'   => ['boolean'],

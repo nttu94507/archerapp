@@ -28,6 +28,7 @@
                     <th class="px-3 py-2 text-left">名稱</th>
                     <th class="px-3 py-2 text-left hidden md:table-cell">弓種/性別/年齡</th>
                     <th class="px-3 py-2 text-left hidden lg:table-cell">距離</th>
+                    <th class="px-3 py-2 text-left hidden lg:table-cell">箭數</th>
                     <th class="px-3 py-2 text-left hidden lg:table-cell">名額</th>
                     <th class="px-3 py-2 text-left hidden xl:table-cell">報名費</th>
                     <th class="px-3 py-2 text-left">操作</th>
@@ -47,6 +48,10 @@
 
                         <td class="px-3 py-2 hidden lg:table-cell">
                             {{ $g->distance ?: '—' }}
+                        </td>
+
+                        <td class="px-3 py-2 hidden lg:table-cell">
+                            {{ $g->arrow_count ? ($g->arrow_count . ' 支') : '—' }}
                         </td>
 
                         <td class="px-3 py-2 hidden lg:table-cell">
@@ -71,7 +76,7 @@
                     </tr>
                 @empty
                     <tr>
-                        <td class="px-3 py-6 text-center text-gray-500" colspan="6">尚無組別</td>
+                        <td class="px-3 py-6 text-center text-gray-500" colspan="7">尚無組別</td>
                     </tr>
                 @endforelse
                 </tbody>

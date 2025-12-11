@@ -11,13 +11,19 @@ class EventRegistration extends Model
         'event_id','event_group_id','user_id',
         'name','email','phone','team_name',
         'status','withdraw_reason','withdrawn_at','withdrawn_by',
-        'paid',
+        'paid','score_submitted_at',
     ];
 
     protected $casts = [
         'paid'         => 'boolean',
         'withdrawn_at' => 'datetime',
+        'score_submitted_at' => 'datetime',
     ];
+
+    public function event()
+    {
+        return $this->belongsTo(Event::class);
+    }
 
     public function event_group(){
         return $this->belongsTo(EventGroup::class, 'event_group_id');

@@ -3,49 +3,99 @@
 namespace App\Http\Controllers;
 
 use App\Models\Event;
+use App\Models\EventGroup;
+use App\Models\EventRegistration;
+use App\Models\EventScoreEntry;
 use App\Models\EventStaff;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Collection;
 
 class EventController extends Controller
 {
+    public function __construct()
+    {
+        $this->middleware(['auth', 'admin'])->only([
+            'create',
+            'store',
+            'edit',
+        ]);
+    }
+
     public function index(Request $request)
     {
-        $query = Event::query();
+        $events = Event::query()
+            ->orderBy('start_date', 'desc')
+            ->get();
 
-        // 篩選條件
-        if ($request->filled('q')) {
-            $query->where(function($q) use ($request) {
-                $q->where('name', 'like', '%'.$request->q.'%')
-                    ->orWhere('organizer', 'like', '%'.$request->q.'%')
-                    ->orWhere('venue', 'like', '%'.$request->q.'%');
-            });
-        }
+        $now = Carbon::now();
 
-        if ($request->filled('mode')) {
-            $query->where('mode', $request->mode);
-        }
+        $ongoingEvents = $events
+            ->filter(function ($event) use ($now) {
+                if (!$event->start_date) {
+                    return false;
+                }
 
-        if ($request->filled('verified')) {
-            $query->where('verified', $request->verified);
-        }
+                $start = Carbon::parse($event->start_date)->startOfDay();
+                $end   = $event->end_date
+                    ? Carbon::parse($event->end_date)->endOfDay()
+                    : Carbon::parse($event->start_date)->endOfDay();
 
-        if ($request->filled('date_from')) {
-            $query->whereDate('start_date', '>=', $request->date_from);
-        }
-        if ($request->filled('date_to')) {
-            $query->whereDate('end_date', '<=', $request->date_to);
-        }
+                return $now->between($start, $end);
+            })
+            ->sortBy(function ($event) {
+                return Carbon::parse($event->start_date);
+            })
+            ->values();
 
-        // 排序
-        $sort = $request->get('sort', 'start_date');
-        $dir  = $request->get('dir', 'desc');
-        $query->orderBy($sort, $dir);
+        $openEvents = $events
+            ->filter(function ($event) use ($now) {
+                if (!$event->reg_start || !$event->reg_end) {
+                    return false;
+                }
 
-        // 這裡很重要：用 paginate，不要用 get()
-        $events = $query->paginate(15);
+                $regStart = Carbon::parse($event->reg_start);
+                $regEnd   = Carbon::parse($event->reg_end);
 
-        return view('events.index', compact('events'));
+                return $now->between($regStart, $regEnd);
+            })
+            ->sortBy(function ($event) {
+                return $event->reg_end ? Carbon::parse($event->reg_end) : Carbon::parse($event->start_date);
+            })
+            ->values();
+
+        $upcomingEvents = $events
+            ->filter(function ($event) use ($now) {
+                return $event->start_date && Carbon::parse($event->start_date)->isFuture();
+            })
+            ->sortBy(function ($event) {
+                return Carbon::parse($event->start_date);
+            })
+            ->values();
+
+        $pastEvents = $events
+            ->filter(function ($event) use ($now) {
+                $endDate = $event->end_date ? Carbon::parse($event->end_date) : null;
+                $startDate = $event->start_date ? Carbon::parse($event->start_date) : null;
+
+                if ($endDate) {
+                    return $endDate->lt($now->startOfDay());
+                }
+
+                return $startDate ? $startDate->lt($now->startOfDay()) : false;
+            })
+            ->sortByDesc(function ($event) {
+                return $event->end_date ? Carbon::parse($event->end_date) : Carbon::parse($event->start_date);
+            })
+            ->values();
+
+        return view('events.index', [
+            'ongoingEvents'  => $ongoingEvents,
+            'openEvents'     => $openEvents,
+            'upcomingEvents' => $upcomingEvents,
+            'pastEvents'     => $pastEvents,
+        ]);
     }
     /**
      * 儲存新賽事
@@ -133,6 +183,7 @@ class EventController extends Controller
 
         // 目前登入者已經報名哪些 group（有效狀態）
         $myGroupIds = [];
+        $myRegistrations = collect();
         if (auth()->check()) {
             $myGroupIds = \App\Models\EventRegistration::query()
                 ->where('event_id', $event->id)
@@ -140,14 +191,17 @@ class EventController extends Controller
                 ->whereIn('status', ['registered','checked_in'])
                 ->pluck('event_group_id')
                 ->all();
+
+            $myRegistrations = \App\Models\EventRegistration::query()
+                ->with('event_group')
+                ->where('event_id', $event->id)
+                ->where('user_id', auth()->id())
+                ->orderBy('created_at', 'desc')
+                ->get();
         }
 
         // 是否為本賽事工作人員
-        $canManage = auth()->check() && \App\Models\EventStaff::query()
-                ->where('event_id', $event->id)
-                ->where('user_id', auth()->id())
-                ->where('status', 'active')
-                ->exists();
+        $canManage = auth()->check() && auth()->user()->isAdmin();
 
         return view('events.show', [
             'event'      => $event,
@@ -160,7 +214,135 @@ class EventController extends Controller
             'regStatus'  => $regStatus,
             'canManage'  => $canManage,
             'myGroupIds' => $myGroupIds,
+            'myRegistrations' => $myRegistrations,
         ]);
+    }
+
+    public function live(Event $event)
+    {
+        $event->load('groups');
+
+        $registrations = EventRegistration::query()
+            ->with('event_group')
+            ->where('event_id', $event->id)
+            ->whereIn('status', ['registered', 'checked_in'])
+            ->get();
+
+        $scoreEntries = EventScoreEntry::query()
+            ->where('event_id', $event->id)
+            ->orderBy('end_number')
+            ->get()
+            ->groupBy('user_id');
+
+        $scoreboard = $registrations->map(function (EventRegistration $registration) use ($scoreEntries) {
+            $entries = $scoreEntries->get($registration->user_id, collect());
+
+            $arrowCount = $entries->reduce(function (int $carry, EventScoreEntry $entry) {
+                return $carry + count($entry->scores ?? []);
+            }, 0);
+
+            return [
+                'registration'  => $registration,
+                'entries'       => $entries,
+                'total_score'   => $entries->sum('end_total'),
+                'ends_recorded' => $entries->count(),
+                'arrow_count'   => $arrowCount,
+                'last_updated'  => $entries->max('updated_at'),
+                'group_id'      => $registration->event_group_id,
+            ];
+        });
+
+        $flatEntries = $scoreEntries->flatten(1);
+
+        $overallBoard = $scoreboard
+            ->filter(fn ($row) => $row['ends_recorded'] > 0)
+            ->sortByDesc('total_score')
+            ->values();
+
+        $overallSummary = [
+            'registrations'    => $registrations->count(),
+            'groups'           => $event->groups->count(),
+            'entry_records'    => $flatEntries->count(),
+            'arrows_recorded'  => $flatEntries->reduce(fn (int $carry, EventScoreEntry $entry) => $carry + count($entry->scores ?? []), 0),
+            'last_updated'     => $flatEntries->max('updated_at'),
+            'top_row'          => $overallBoard->first(),
+        ];
+
+        $groupedBoards = $scoreboard
+            ->groupBy('group_id')
+            ->map(function (Collection $rows) use ($event) {
+                $sorted = $rows->sortByDesc('total_score')->values()->map(function ($row, $idx) {
+                    $row['rank_position'] = $idx + 1;
+
+                    return $row;
+                });
+
+                $firstRow = $sorted->first();
+                /** @var EventGroup|null $group */
+                $group = $firstRow['registration']->event_group ?? null;
+                [$arrowsPerEnd, $totalArrows, $totalEnds] = $this->resolveGroupArrowSettings($event, $group);
+
+                $groupEntries = $sorted->flatMap(fn ($row) => $row['entries']);
+                $bestEnd = $groupEntries->sortByDesc('end_total')->first();
+
+                $analysis = [
+                    'average_total'   => $sorted->count() ? round($sorted->avg('total_score'), 1) : null,
+                    'completion_rate' => $sorted->count() && $totalEnds > 0
+                        ? round(($sorted->sum('ends_recorded') / ($sorted->count() * $totalEnds)) * 100)
+                        : null,
+                    'best_end'        => $bestEnd,
+                    'recent_update'   => $groupEntries->max('updated_at'),
+                    'total_ends'      => $totalEnds,
+                ];
+
+                return [
+                    'group'        => $group,
+                    'rows'         => $sorted,
+                    'analysis'     => $analysis,
+                    'totalEnds'    => $totalEnds,
+                    'arrowsPerEnd' => $arrowsPerEnd,
+                    'totalArrows'  => $totalArrows,
+                ];
+            })
+            ->sortBy(fn ($group) => $group['group']?->name ?? '未分組')
+            ->values();
+
+        $groupLeaders = $groupedBoards
+            ->map(function (array $board) {
+                $leader = $board['rows']->first();
+
+                if (!$leader) {
+                    return null;
+                }
+
+                return [
+                    'group'         => $board['group'],
+                    'registration'  => $leader['registration'],
+                    'total_score'   => $leader['total_score'],
+                    'ends_recorded' => $leader['ends_recorded'],
+                    'arrow_count'   => $leader['arrow_count'],
+                    'last_updated'  => $leader['last_updated'],
+                ];
+            })
+            ->filter()
+            ->values();
+
+        return view('events.live', [
+            'event'          => $event,
+            'groupsBoard'    => $groupedBoards,
+            'overallBoard'   => $overallBoard,
+            'overallSummary' => $overallSummary,
+            'groupLeaders'   => $groupLeaders,
+        ]);
+    }
+
+    private function resolveGroupArrowSettings(Event $event, ?EventGroup $group): array
+    {
+        $arrowsPerEnd = 6;
+        $defaultTotal = $event->mode === 'indoor' ? 30 : 36;
+        $totalArrows = $group?->arrow_count ?: $defaultTotal;
+
+        return [$arrowsPerEnd, $totalArrows, (int) ceil($totalArrows / $arrowsPerEnd)];
     }
 
     //
