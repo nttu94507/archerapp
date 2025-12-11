@@ -31,6 +31,24 @@ class EventController extends Controller
 
         $now = Carbon::now();
 
+        $ongoingEvents = $events
+            ->filter(function ($event) use ($now) {
+                if (!$event->start_date) {
+                    return false;
+                }
+
+                $start = Carbon::parse($event->start_date)->startOfDay();
+                $end   = $event->end_date
+                    ? Carbon::parse($event->end_date)->endOfDay()
+                    : Carbon::parse($event->start_date)->endOfDay();
+
+                return $now->between($start, $end);
+            })
+            ->sortBy(function ($event) {
+                return Carbon::parse($event->start_date);
+            })
+            ->values();
+
         $openEvents = $events
             ->filter(function ($event) use ($now) {
                 if (!$event->reg_start || !$event->reg_end) {
@@ -73,6 +91,7 @@ class EventController extends Controller
             ->values();
 
         return view('events.index', [
+            'ongoingEvents'  => $ongoingEvents,
             'openEvents'     => $openEvents,
             'upcomingEvents' => $upcomingEvents,
             'pastEvents'     => $pastEvents,
