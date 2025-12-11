@@ -27,8 +27,9 @@
 
             <div class="mt-3 flex flex-wrap gap-2">
                 <a href="{{ route('events.live', $event) }}"
-                   class="inline-flex items-center rounded-xl border border-indigo-100 bg-indigo-50 px-3 py-1.5 text-xs font-semibold text-indigo-800 hover:bg-indigo-100">
-                    即時戰況
+                   class="inline-flex items-center gap-2 rounded-2xl bg-gradient-to-r from-indigo-600 to-purple-600 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-indigo-200 hover:from-indigo-500 hover:to-purple-500 focus:outline-none focus:ring-2 focus:ring-indigo-300">
+                    <span class="inline-flex h-6 w-6 items-center justify-center rounded-full bg-white/20 text-[11px]">LIVE</span>
+                    <span>即時戰況</span>
                 </a>
                 {{-- 管理按鈕 --}}
                 @if($canManage)

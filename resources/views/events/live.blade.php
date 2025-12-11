@@ -39,6 +39,40 @@
             </div>
         </div>
 
+        @if(isset($groupLeaders) && $groupLeaders->isNotEmpty())
+            <div class="rounded-2xl border border-indigo-100 bg-gradient-to-r from-indigo-50 via-white to-indigo-50 p-4 shadow-sm">
+                <div class="flex flex-wrap items-center justify-between gap-2">
+                    <div class="flex items-center gap-2 text-indigo-700">
+                        <span class="inline-flex h-8 w-8 items-center justify-center rounded-full bg-white text-sm font-bold shadow-sm">★</span>
+                        <div>
+                            <p class="text-xs font-semibold uppercase tracking-widest">組別領先</p>
+                            <p class="text-sm text-indigo-700">左右滑動查看每個組別的即時領先者</p>
+                        </div>
+                    </div>
+                    <span class="text-xs text-indigo-500">像跑馬燈一樣側滑查看更多</span>
+                </div>
+
+                <div class="mt-3 overflow-x-auto pb-2">
+                    <div class="flex min-w-full items-stretch gap-3 snap-x snap-mandatory">
+                        @foreach($groupLeaders as $leader)
+                            <div class="min-w-[240px] snap-start rounded-xl bg-white/90 p-4 shadow-md ring-1 ring-indigo-100">
+                                <p class="text-[11px] font-semibold uppercase tracking-widest text-indigo-600">{{ optional($leader['group'])->name ?? '未分組' }}</p>
+                                <p class="mt-1 text-base font-semibold text-gray-900">{{ $leader['registration']->name ?? '未命名選手' }}</p>
+                                <p class="text-xs text-gray-500">{{ $leader['registration']->team_name ?? '未填隊伍' }}</p>
+                                <div class="mt-2 flex items-center justify-between">
+                                    <div>
+                                        <p class="text-2xl font-bold text-gray-900">{{ $leader['total_score'] }}</p>
+                                        <p class="text-[11px] text-gray-500">{{ $leader['ends_recorded'] }} 趟 · {{ $leader['arrow_count'] }} 支</p>
+                                    </div>
+                                    <div class="text-right text-[11px] text-gray-500">{{ optional($leader['last_updated'])->diffForHumans() ?? '—' }}</div>
+                                </div>
+                            </div>
+                        @endforeach
+                    </div>
+                </div>
+            </div>
+        @endif
+
         @if($overallSummary['top_row'] ?? false)
             <div class="rounded-2xl border border-amber-200 bg-amber-50 p-5 shadow-sm">
                 <p class="text-xs uppercase tracking-widest text-amber-700 font-semibold">當前領先</p>

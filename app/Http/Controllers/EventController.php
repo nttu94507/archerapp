@@ -31,6 +31,24 @@ class EventController extends Controller
 
         $now = Carbon::now();
 
+        $ongoingEvents = $events
+            ->filter(function ($event) use ($now) {
+                if (!$event->start_date) {
+                    return false;
+                }
+
+                $start = Carbon::parse($event->start_date)->startOfDay();
+                $end   = $event->end_date
+                    ? Carbon::parse($event->end_date)->endOfDay()
+                    : Carbon::parse($event->start_date)->endOfDay();
+
+                return $now->between($start, $end);
+            })
+            ->sortBy(function ($event) {
+                return Carbon::parse($event->start_date);
+            })
+            ->values();
+
         $openEvents = $events
             ->filter(function ($event) use ($now) {
                 if (!$event->reg_start || !$event->reg_end) {
@@ -73,6 +91,7 @@ class EventController extends Controller
             ->values();
 
         return view('events.index', [
+            'ongoingEvents'  => $ongoingEvents,
             'openEvents'     => $openEvents,
             'upcomingEvents' => $upcomingEvents,
             'pastEvents'     => $pastEvents,
@@ -288,11 +307,32 @@ class EventController extends Controller
             ->sortBy(fn ($group) => $group['group']?->name ?? '未分組')
             ->values();
 
+        $groupLeaders = $groupedBoards
+            ->map(function (array $board) {
+                $leader = $board['rows']->first();
+
+                if (!$leader) {
+                    return null;
+                }
+
+                return [
+                    'group'         => $board['group'],
+                    'registration'  => $leader['registration'],
+                    'total_score'   => $leader['total_score'],
+                    'ends_recorded' => $leader['ends_recorded'],
+                    'arrow_count'   => $leader['arrow_count'],
+                    'last_updated'  => $leader['last_updated'],
+                ];
+            })
+            ->filter()
+            ->values();
+
         return view('events.live', [
             'event'          => $event,
             'groupsBoard'    => $groupedBoards,
             'overallBoard'   => $overallBoard,
             'overallSummary' => $overallSummary,
+            'groupLeaders'   => $groupLeaders,
         ]);
     }
 
