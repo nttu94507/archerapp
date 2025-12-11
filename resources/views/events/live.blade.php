@@ -73,25 +73,6 @@
             </div>
         @endif
 
-        @if($overallSummary['top_row'] ?? false)
-            <div class="rounded-2xl border border-amber-200 bg-amber-50 p-5 shadow-sm">
-                <p class="text-xs uppercase tracking-widest text-amber-700 font-semibold">當前領先</p>
-                <div class="mt-2 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                    <div>
-                        <p class="text-lg font-semibold text-gray-900">{{ $overallSummary['top_row']['registration']->name ?? '未命名選手' }}</p>
-                        <p class="text-sm text-gray-600">{{ optional($overallSummary['top_row']['registration']->event_group)->name ?? '未分組' }}</p>
-                    </div>
-                    <div class="flex items-center gap-4">
-                        <div class="text-right">
-                            <p class="text-3xl font-bold text-gray-900">{{ $overallSummary['top_row']['total_score'] }}</p>
-                            <p class="text-xs text-gray-500">{{ $overallSummary['top_row']['ends_recorded'] }} 趟 · {{ $overallSummary['top_row']['arrow_count'] }} 支</p>
-                        </div>
-                        <div class="text-xs text-gray-500">更新：{{ optional($overallSummary['top_row']['last_updated'])->diffForHumans() ?? '—' }}</div>
-                    </div>
-                </div>
-            </div>
-        @endif
-
         <div class="space-y-8">
             @forelse($groupsBoard as $board)
                 <div class="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden">

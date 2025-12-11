@@ -265,7 +265,6 @@ class EventController extends Controller
             'entry_records'    => $flatEntries->count(),
             'arrows_recorded'  => $flatEntries->reduce(fn (int $carry, EventScoreEntry $entry) => $carry + count($entry->scores ?? []), 0),
             'last_updated'     => $flatEntries->max('updated_at'),
-            'top_row'          => $overallBoard->first(),
         ];
 
         $groupedBoards = $scoreboard
