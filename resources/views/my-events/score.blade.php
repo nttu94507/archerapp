@@ -74,21 +74,35 @@
                                         <span class="rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-medium text-emerald-700">已填</span>
                                     @endif
                                 </div>
-                                <div class="space-y-2">
-                                    <div class="grid grid-cols-3 gap-2 text-sm text-gray-700">
-                                        @foreach(array_chunk($scores, 3) as $chunk)
-                                            @foreach($chunk as $score)
-                                                <span class="inline-flex h-9 items-center justify-center rounded-lg bg-gray-100 text-base font-semibold text-gray-800">{{ $score === '' ? '—' : $score }}</span>
-                                            @endforeach
-                                            @if(count($chunk) < 3)
-                                                @for($i = 0; $i < 3 - count($chunk); $i++)
-                                                    <span class="inline-flex h-9 items-center justify-center rounded-lg bg-gray-50 text-base font-semibold text-gray-300">—</span>
-                                                @endfor
-                                            @endif
+                                <div class="hidden grid-cols-3 gap-2 text-sm text-gray-700 sm:grid">
+                                    @foreach(array_chunk($scores, 3) as $chunk)
+                                        @foreach($chunk as $score)
+                                            <span class="inline-flex h-9 items-center justify-center rounded-lg bg-gray-100 text-base font-semibold text-gray-800">{{ $score === '' ? '—' : $score }}</span>
                                         @endforeach
-                                    </div>
-                                    <div class="flex items-center justify-between text-xs text-gray-500 sm:hidden">
-                                        <div class="flex items-center gap-2 font-semibold text-gray-900">
+                                        @if(count($chunk) < 3)
+                                            @for($i = 0; $i < 3 - count($chunk); $i++)
+                                                <span class="inline-flex h-9 items-center justify-center rounded-lg bg-gray-50 text-base font-semibold text-gray-300">—</span>
+                                            @endfor
+                                        @endif
+                                    @endforeach
+                                </div>
+                                <div class="sm:hidden flex items-start gap-3">
+                                    <div class="flex-1 space-y-2">
+        
+                                        <div class="grid grid-cols-3 gap-2 text-sm text-gray-700">
+                                            @foreach(array_chunk($scores, 3) as $chunk)
+                                                @foreach($chunk as $score)
+                                                    <span class="inline-flex h-9 items-center justify-center rounded-lg bg-gray-100 text-base font-semibold text-gray-800">{{ $score === '' ? '—' : $score }}</span>
+                                                @endforeach
+                                                @if(count($chunk) < 3)
+                                                    @for($i = 0; $i < 3 - count($chunk); $i++)
+                                                        <span class="inline-flex h-9 items-center justify-center rounded-lg bg-gray-50 text-base font-semibold text-gray-300">—</span>
+                                                    @endfor
+                                                @endif
+                                            @endforeach
+                                        </div>
+        
+                                        <div class="flex items-center gap-2 text-xs font-semibold text-gray-900">
                                             <span class="rounded-full bg-gray-100 px-2 py-0.5 text-[11px]">#{{ $end }}</span>
                                             @if(!$entry)
                                                 <span class="rounded-full bg-orange-50 px-2 py-0.5 text-[11px] font-medium text-orange-700">未填</span>
@@ -96,11 +110,20 @@
                                                 <span class="rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-medium text-emerald-700">已填</span>
                                             @endif
                                         </div>
-                                        <div class="flex items-center gap-3 text-sm font-semibold text-gray-900">
-                                            <span>小計 {{ $entry?->end_total ?? '—' }}</span>
-                                            <span>X+10 {{ $endStats['ten_plus'] ?? '—' }}</span>
-                                            <span>X {{ $endStats['x_count'] ?? '—' }}</span>
-                                        </div>
+                                    </div>
+                                    <div class="flex flex-col items-end gap-2 text-xs font-semibold text-gray-900">
+                                        <span class="inline-flex items-center gap-1 rounded-full bg-gray-100 px-2.5 py-1 leading-none">
+                                            <span class="text-xs text-gray-600">小計</span>
+                                            <span class="text-base text-gray-900">{{ $entry?->end_total ?? '—' }}</span>
+                                        </span>
+                                        <span class="inline-flex items-center gap-1 rounded-full bg-indigo-50 px-2.5 py-1 leading-none text-indigo-700">
+                                            <span class="text-xs">X+10</span>
+                                            <span class="text-base">{{ $endStats['ten_plus'] ?? '—' }}</span>
+                                        </span>
+                                        <span class="inline-flex items-center gap-1 rounded-full bg-purple-50 px-2.5 py-1 leading-none text-purple-700">
+                                            <span class="text-xs">X</span>
+                                            <span class="text-base">{{ $endStats['x_count'] ?? '—' }}</span>
+                                        </span>
                                     </div>
                                 </div>
                                 <div class="hidden text-right text-sm font-semibold text-gray-900 sm:block">{{ $entry?->end_total ?? '—' }}</div>
