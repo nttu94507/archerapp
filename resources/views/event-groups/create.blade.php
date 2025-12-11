@@ -40,7 +40,7 @@
                 <button type="button" class="text-sm text-red-600 hover:underline remove-group">移除</button>
             </div>
 
-            <div class="grid grid-cols-1 md:grid-cols-6 gap-3">
+            <div class="grid grid-cols-1 md:grid-cols-7 gap-3">
                 <div class="md:col-span-2">
                     <label class="block text-xs text-gray-600 mb-1">名稱 *</label>
                     <input type="text" class="w-full rounded-lg border px-3 py-2 text-sm"
@@ -76,6 +76,20 @@
                     <label class="block text-xs text-gray-600 mb-1">距離</label>
                     <input type="text" class="w-full rounded-lg border px-3 py-2 text-sm"
                            name="groups[__INDEX__][distance]" placeholder="70m / 50m">
+                </div>
+
+                <div>
+                    <label class="block text-xs text-gray-600 mb-1">箭數 *</label>
+                    <div class="flex items-center gap-2">
+                        <select class="w-full rounded-lg border px-3 py-2 text-sm arrow-select">
+                            <option value="{{ $event->mode === 'indoor' ? 30 : 36 }}">{{ $event->mode === 'indoor' ? '30 支' : '36 支' }}</option>
+                            <option value="{{ $event->mode === 'indoor' ? 60 : 72 }}">{{ $event->mode === 'indoor' ? '60 支' : '72 支' }}</option>
+                            <option value="custom">自訂</option>
+                        </select>
+                        <input type="number" min="6" step="6" class="hidden w-28 rounded-lg border px-3 py-2 text-sm custom-arrow-input" placeholder="6 的倍數">
+                    </div>
+                    <input type="hidden" name="groups[__INDEX__][arrow_count]" class="arrow-count-field" value="{{ $event->mode === 'indoor' ? 30 : 36 }}">
+                    <p class="text-xs text-gray-500 mt-1">室{{ $event->mode === 'indoor' ? '內' : '外' }}預設 {{ $event->mode === 'indoor' ? '30/60' : '36/72' }} 箭，可改自訂（6 的倍數）。</p>
                 </div>
 
                 <div>
@@ -129,6 +143,33 @@
                     // 重新索引 name 屬性（確保連續 0..n-1）
                     rebuildIndexes();
                 });
+
+                const arrowSelect = node.querySelector('.arrow-select');
+                const arrowHidden = node.querySelector('.arrow-count-field');
+                const customInput = node.querySelector('.custom-arrow-input');
+
+                function syncArrowCount() {
+                    const value = arrowSelect.value;
+                    if (value === 'custom') {
+                        customInput.classList.remove('hidden');
+                        customInput.focus();
+                        if (customInput.value) {
+                            arrowHidden.value = customInput.value;
+                        }
+                    } else {
+                        customInput.classList.add('hidden');
+                        customInput.value = '';
+                        arrowHidden.value = value;
+                    }
+                }
+
+                arrowSelect.addEventListener('change', syncArrowCount);
+                customInput.addEventListener('input', () => {
+                    arrowHidden.value = customInput.value;
+                });
+
+                // 初始同步
+                syncArrowCount();
 
                 list.appendChild(node);
                 renumber();
