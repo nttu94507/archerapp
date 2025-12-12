@@ -64,7 +64,7 @@
                             <p class="text-xs uppercase tracking-widest text-gray-500">組別</p>
                             <h2 class="text-lg font-semibold text-gray-900">{{ optional($selectedBoard['group'])->name ?? '未分組' }}</h2>
                             <p class="text-sm text-gray-500">
-                                {{ optional($selectedBoard['group'])->distance ? optional($selectedBoard['group'])->distance.'m · ' : '' }}
+                                {{ optional($selectedBoard['group'])->distance ? optional($selectedBoard['group'])->distance : '' }}
                                 {{ $event->mode === 'indoor' ? '室內' : '室外' }} · 共 {{ $selectedBoard['totalArrows'] }} 支 / 每趟 {{ $selectedBoard['arrowsPerEnd'] }} 支
                             </p>
                         </div>
@@ -96,7 +96,7 @@
                                             <p class="text-lg font-bold text-gray-900">{{ $row['total_score'] }}</p>
                                             <p class="text-xs text-gray-500">{{ $row['ends_recorded'] }} / {{ $selectedBoard['totalEnds'] }} 趟</p>
                                         </div>
-                                        <div class="text-right text-xs text-gray-500 w-28">{{ optional($row['last_updated'])->diffForHumans() ?? '—' }}</div>
+{{--                                        <div class="text-right text-xs text-gray-500 w-28">{{ optional($row['last_updated'])->diffForHumans() ?? '—' }}</div>--}}
                                     </summary>
                                     <div class="bg-gray-50 px-4 pb-4 pt-2">
                                         <div class="flex flex-wrap gap-2 text-xs text-gray-600 mb-3">
@@ -116,16 +116,17 @@
                                             <table class="min-w-full text-sm text-gray-800">
                                                 <thead class="bg-gray-50 text-xs uppercase text-gray-500">
                                                 <tr>
-                                                    <th class="px-3 py-2 text-left">趟次</th>
+{{--                                                    <th class="px-3 py-2 text-left">趟次</th>--}}
                                                     @for($i = 1; $i <= $per; $i++)
                                                         <th class="px-2 py-2 text-center">A{{ $i }}</th>
                                                     @endfor
                                                     <th class="px-3 py-2 text-right">小計</th>
+                                                    <th class="px-3 py-2 text-right">累計</th>
                                                     <th class="px-3 py-2 text-right">X+10</th>
                                                     <th class="px-3 py-2 text-right">X</th>
                                                     <th class="px-3 py-2 text-right">每箭均值</th>
 
-                                                    <th class="px-3 py-2 text-right">累計</th>
+
                                                 </tr>
                                                 </thead>
                                                 <tbody>
@@ -145,30 +146,30 @@
                                                         }
                                                     @endphp
                                                     <tr class="border-t border-gray-100">
-                                                        <td class="px-3 py-2 text-xs text-gray-600">第 {{ $end }} 趟</td>
+{{--                                                        <td class="px-3 py-2 text-xs text-gray-600">第 {{ $end }} 趟</td>--}}
                                                         @for($shot = 0; $shot < $per; $shot++)
                                                             <td class="px-2 py-2 text-center font-semibold text-gray-900">
                                                                 {{ $scores[$shot] ?? '—' }}
                                                             </td>
                                                         @endfor
                                                         <td class="px-3 py-2 text-right font-semibold text-gray-900">{{ $hasEnd ? $endTotal : '—' }}</td>
+                                                        <td class="px-3 py-2 text-right text-gray-800">{{ $hasEnd ? $cumulative : '—' }}</td>
                                                         <td class="px-3 py-2 text-right font-semibold text-gray-900">{{ $hasEnd ? $endTenPlus : '—' }}</td>
                                                         <td class="px-3 py-2 text-right font-semibold text-gray-900">{{ $hasEnd ? $endX : '—' }}</td>
                                                         <td class="px-3 py-2 text-right text-gray-800">{{ $hasEnd && !is_null($endAvg) ? $endAvg : '—' }}</td>
-                                                        <td class="px-3 py-2 text-right text-gray-800">{{ $hasEnd ? $cumulative : '—' }}</td>
+
                                                     </tr>
                                                 @endfor
                                                 </tbody>
                                                 <tfoot class="bg-gray-50">
                                                     <tr class="border-t border-gray-100">
                                                         <td class="px-3 py-2 text-xs text-gray-600">總計</td>
-                                                        <td colspan="{{ $per }}" class="px-2 py-2 text-center text-[11px] text-gray-400">—</td>
-                                                        <td class="px-3 py-2 text-right font-semibold text-gray-900"></td>
+                                                        <td colspan="{{ $per }}" class="px-2 py-2 text-center text-[11px] text-gray-400"></td>
+                                                        <td class="px-3 py-2 text-right font-semibold text-gray-900">{{ $row['total_score'] }}</td>
                                                         <td class="px-3 py-2 text-right font-semibold text-gray-900">{{ $row['ten_plus'] }}</td>
                                                         <td class="px-3 py-2 text-right font-semibold text-gray-900">{{ $row['x_count'] }}</td>
                                                         <td class="px-3 py-2 text-right font-semibold text-gray-800">{{ $row['avg_per_arrow'] ?? '—' }}</td>
 
-                                                        <td class="px-3 py-2 text-right font-semibold text-gray-900">{{ $row['total_score'] }}</td>
                                                     </tr>
                                                 </tfoot>
                                             </table>
