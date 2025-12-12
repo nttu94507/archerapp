@@ -43,8 +43,8 @@
         {{-- Header --}}
         <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
             <div>
-                <p class="text-sm font-semibold text-indigo-600">賽事總覽</p>
-                <h1 class="text-2xl font-bold text-gray-900">進行中、可報名、即將舉辦與歷史賽事</h1>
+                <p class="text-sm font-semibold text-indigo-600">賽事情報站</p>
+                <h1 class="text-2xl font-bold text-gray-900">進行中、開放報名、預告與歷史賽事</h1>
                 <p class="mt-1 text-sm text-gray-600">依時間與報名狀態快速瀏覽所有賽事，一鍵進入報名組別。</p>
             </div>
             @auth
@@ -57,20 +57,16 @@
             @endauth
         </div>
 
-        {{-- Ongoing --}}
-        <section class="space-y-4">
-            <div class="flex items-center justify-between">
-                <div>
-                    <h2 class="text-lg font-semibold text-gray-900">正在進行的比賽</h2>
-                    <p class="text-sm text-gray-500">賽事進行中，可快速查看資訊或前往組別。</p>
+        {{-- Ongoing --}} 
+        @if($ongoingEvents->isNotEmpty())
+            <section class="space-y-4">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h2 class="text-lg font-semibold text-gray-900">現正開賽</h2>
+                        <p class="text-sm text-gray-500">賽事進行中，可快速查看資訊或前往組別。</p>
+                    </div>
                 </div>
-            </div>
 
-            @if($ongoingEvents->isEmpty())
-                <div class="rounded-2xl border border-dashed border-gray-200 bg-white p-6 text-center text-sm text-gray-500">
-                    目前沒有正在進行的賽事。
-                </div>
-            @else
                 <div class="grid gap-4 md:grid-cols-2">
                     @foreach($ongoingEvents as $event)
                         @php $status = $regStatus($event); @endphp
@@ -100,23 +96,19 @@
                         </a>
                     @endforeach
                 </div>
-            @endif
-        </section>
+            </section>
+        @endif
 
-        {{-- Open for registration --}}
-        <section class="space-y-4">
-            <div class="flex items-center justify-between">
-                <div>
-                    <h2 class="text-lg font-semibold text-gray-900">可報名的比賽</h2>
-                    <p class="text-sm text-gray-500">現在開放報名的場次，點擊可直接前往報名組別。</p>
+        {{-- Open for registration --}} 
+        @if($openEvents->isNotEmpty())
+            <section class="space-y-4">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h2 class="text-lg font-semibold text-gray-900">開放報名</h2>
+                        <p class="text-sm text-gray-500">現在開放報名的場次，點擊可直接前往報名組別。</p>
+                    </div>
                 </div>
-            </div>
 
-            @if($openEvents->isEmpty())
-                <div class="rounded-2xl border border-dashed border-gray-200 bg-white p-6 text-center text-sm text-gray-500">
-                    目前沒有開放報名的賽事。
-                </div>
-            @else
                 <div class="grid gap-4 md:grid-cols-2">
                     @foreach($openEvents as $event)
                         @php $status = $regStatus($event); @endphp
@@ -144,23 +136,19 @@
                         </a>
                     @endforeach
                 </div>
-            @endif
-        </section>
+            </section>
+        @endif
 
-        {{-- Upcoming --}}
-        <section class="space-y-4">
-            <div class="flex items-center justify-between">
-                <div>
-                    <h2 class="text-lg font-semibold text-gray-900">即將舉辦</h2>
-                    <p class="text-sm text-gray-500">最近的比賽行程，方便提前安排與準備。</p>
+        {{-- Upcoming --}} 
+        @if($upcomingEvents->isNotEmpty())
+            <section class="space-y-4">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h2 class="text-lg font-semibold text-gray-900">賽事預告</h2>
+                        <p class="text-sm text-gray-500">最近的比賽行程，方便提前安排與準備。</p>
+                    </div>
                 </div>
-            </div>
 
-            @if($upcomingEvents->isEmpty())
-                <div class="rounded-2xl border border-dashed border-gray-200 bg-white p-6 text-center text-sm text-gray-500">
-                    尚未有即將舉辦的賽事。
-                </div>
-            @else
                 <div class="grid gap-4 md:grid-cols-2">
                     @foreach($upcomingEvents as $event)
                         @php $status = $regStatus($event); @endphp
@@ -188,8 +176,8 @@
                         </a>
                     @endforeach
                 </div>
-            @endif
-        </section>
+            </section>
+        @endif
 
         {{-- Past --}}
         <section class="space-y-4">
