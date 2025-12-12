@@ -29,7 +29,9 @@
 
                 <div class="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
                     @foreach($groupsBoard as $board)
-                        @php($groupId = optional($board['group'])->id)
+                        @php
+                            $groupId = optional($board['group'])->id;
+                        @endphp
                         <a
                             href="{{ $groupId ? route('events.live', ['event' => $event, 'group' => $groupId]) : '#' }}"
                             class="group relative block rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 shadow-sm transition hover:-translate-y-0.5 hover:border-indigo-200 hover:bg-white hover:shadow-md"
