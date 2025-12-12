@@ -43,9 +43,9 @@
         {{-- Header --}}
         <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
             <div>
-                <p class="text-sm font-semibold text-indigo-600">賽事情報站</p>
-                <h1 class="text-2xl font-bold text-gray-900">進行中、開放報名、預告與歷史賽事</h1>
-                <p class="mt-1 text-sm text-gray-600">依時間與報名狀態快速瀏覽所有賽事，一鍵進入報名組別。</p>
+                <p class="text-sm font-semibold text-indigo-600">你想知道的賽事都在這裡</p>
+                <h1 class="text-2xl font-bold text-gray-900">賽事情報站</h1>
+{{--                <p class="mt-1 text-sm text-gray-600">依時間與報名狀態快速瀏覽所有賽事，一鍵進入報名組別。</p>--}}
             </div>
             @auth
                 @if(auth()->user()->isAdmin())
@@ -57,7 +57,7 @@
             @endauth
         </div>
 
-        {{-- Ongoing --}} 
+        {{-- Ongoing --}}
         @if($ongoingEvents->isNotEmpty())
             <section class="space-y-4">
                 <div class="flex items-center justify-between">
@@ -76,21 +76,14 @@
                                     <p class="text-xs font-semibold text-green-600">進行中</p>
                                     <div class="mt-1 flex items-center gap-2">
                                         <h3 class="text-lg font-semibold text-gray-900 group-hover:text-indigo-700">{{ $event->name }}</h3>
-                                        @if($status)
-                                            <span class="inline-flex rounded-full px-2 py-1 text-[11px] font-semibold {{ $status['class'] }}">{{ $status['label'] }}</span>
-                                        @endif
                                     </div>
-                                    <p class="text-sm text-gray-600">{{ $dateRange($event) }} ・ {{ $event->venue ?? '點未填寫'}}</p>
+                                    <p class="text-sm text-gray-600">{{ $event->venue ?? '點未填寫'}}・ {{ $dateRange($event) }} </p>
                                     <div class="mt-2 flex flex-wrap gap-2 text-xs text-gray-500">
-                                        <span class="inline-flex rounded-full bg-gray-100 px-2 py-1 font-medium">{{ $event->mode === 'indoor' ? '室內' : '室外' }}</span>
-                                        @if($event->level)
-                                            <span class="inline-flex rounded-full bg-gray-100 px-2 py-1 font-medium">{{ $event->level }}</span>
-                                        @endif
+
                                     </div>
                                 </div>
                                 <div class="flex flex-col items-end gap-2 text-right">
-                                    <span class="rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">立即前往組別</span>
-                                    <span class="text-xs text-gray-500">點擊整個卡片前往</span>
+
                                 </div>
                             </article>
                         </a>
@@ -99,7 +92,7 @@
             </section>
         @endif
 
-        {{-- Open for registration --}} 
+        {{-- Open for registration --}}
         @if($openEvents->isNotEmpty())
             <section class="space-y-4">
                 <div class="flex items-center justify-between">
@@ -117,7 +110,7 @@
                                 <div>
                                     <p class="text-xs font-semibold text-indigo-600">報名截止：{{ $event->reg_end ? \Carbon\Carbon::parse($event->reg_end)->format('Y-m-d H:i') : '—' }}</p>
                                     <h3 class="mt-1 text-lg font-semibold text-gray-900 group-hover:text-indigo-700">{{ $event->name }}</h3>
-                                    <p class="text-sm text-gray-600">{{ $dateRange($event) }} ・ {{ $event->venue ?? '點未填寫'}} </p>
+                                    <p class="text-sm text-gray-600">{{ $event->venue ?? '點未填寫'}} ・ {{ $dateRange($event) }} </p>
                                     <div class="mt-2 flex flex-wrap gap-2 text-xs text-gray-500">
                                         <span class="inline-flex rounded-full bg-gray-100 px-2 py-1 font-medium">{{ $event->mode === 'indoor' ? '室內' : '室外' }}</span>
                                         @if($event->level)
@@ -129,8 +122,6 @@
                                     </div>
                                 </div>
                                 <div class="flex items-center gap-2 text-sm text-gray-500 group-hover:text-indigo-600">
-                                    <span>點擊整個卡片前往報名組別</span>
-                                    <span aria-hidden="true">→</span>
                                 </div>
                             </article>
                         </a>
@@ -139,7 +130,7 @@
             </section>
         @endif
 
-        {{-- Upcoming --}} 
+        {{-- Upcoming --}}
         @if($upcomingEvents->isNotEmpty())
             <section class="space-y-4">
                 <div class="flex items-center justify-between">
@@ -157,7 +148,7 @@
                                 <div>
                                     <p class="text-xs text-gray-500">開始日期：{{ $event->start_date ? \Carbon\Carbon::parse($event->start_date)->format('Y-m-d') : '—' }}</p>
                                     <h3 class="mt-1 text-lg font-semibold text-gray-900 group-hover:text-indigo-700">{{ $event->name }}</h3>
-                                    <p class="text-sm text-gray-600">{{ $dateRange($event) }} ・ {{ $event->venue ?? '地點未填寫' }}</p>
+                                    <p class="text-sm text-gray-600">{{ $event->venue ?? '地點未填寫' }} ・ {{ $dateRange($event) }} ・ </p>
                                     <div class="mt-2 flex flex-wrap gap-2 text-xs text-gray-500">
                                         <span class="inline-flex rounded-full bg-gray-100 px-2 py-1 font-medium">{{ $event->mode === 'indoor' ? '室內' : '室外' }}</span>
                                         @if($event->level)
@@ -169,8 +160,6 @@
                                     </div>
                                 </div>
                                 <div class="flex flex-col items-end gap-2 text-right">
-                                    <span class="rounded-full bg-gray-100 px-3 py-1 text-xs font-semibold text-gray-700">查看組別與資訊</span>
-                                    <span class="text-xs text-gray-500">點擊卡片</span>
                                 </div>
                             </article>
                         </a>
@@ -202,7 +191,7 @@
                                     <h3 class="mt-1 text-lg font-semibold text-gray-900 group-hover:text-indigo-700">
                                         {{ $event->name }}
                                     </h3>
-                                    <p class="text-sm text-gray-600">{{ $dateRange($event) }} ・ {{ $event->venue ?? '地點未填寫' }}</p>
+                                    <p class="text-sm text-gray-600">{{ $event->venue ?? '地點未填寫' }} ・ {{ $dateRange($event) }}</p>
                                     <div class="mt-2 flex flex-wrap gap-2 text-xs text-gray-500">
                                         <span class="inline-flex rounded-full bg-gray-100 px-2 py-1 font-medium">{{ $event->mode === 'indoor' ? '室內' : '室外' }}</span>
                                         @if($event->level)
@@ -211,8 +200,6 @@
                                     </div>
                                 </div>
                                 <div class="flex flex-col items-end gap-2 text-right">
-                                    <span class="rounded-full bg-gray-100 px-3 py-1 text-xs font-semibold text-gray-700">查看詳情</span>
-                                    <span class="text-xs text-gray-500">點擊卡片</span>
                                 </div>
                             </article>
                         </a>
