@@ -294,6 +294,25 @@ class EventController extends Controller
                     'total_ends'      => $totalEnds,
                 ];
 
+                $maxEndsRecorded = $sorted->max('ends_recorded');
+                $status = 'not_started';
+
+                if ($totalEnds === 0 || $maxEndsRecorded === 0) {
+                    $status = 'not_started';
+                } elseif ($maxEndsRecorded < $totalEnds) {
+                    $status = 'in_progress';
+                } else {
+                    $status = 'finished';
+                }
+
+                $progress = $totalEnds > 0 ? round(min($maxEndsRecorded / $totalEnds, 1) * 100) : null;
+
+                $statusLabel = match ($status) {
+                    'in_progress' => '正在進行',
+                    'finished'    => '已結束',
+                    default       => '尚未開始',
+                };
+
                 return [
                     'group'        => $group,
                     'rows'         => $sorted,
@@ -301,6 +320,9 @@ class EventController extends Controller
                     'totalEnds'    => $totalEnds,
                     'arrowsPerEnd' => $arrowsPerEnd,
                     'totalArrows'  => $totalArrows,
+                    'status'       => $status,
+                    'status_label' => $statusLabel,
+                    'progress'     => $progress,
                 ];
             })
             ->sortBy(fn ($group) => $group['group']?->name ?? '未分組')
@@ -326,12 +348,28 @@ class EventController extends Controller
             ->filter()
             ->values();
 
+        $statusPriority = [
+            'finished'    => 0,
+            'not_started' => 1,
+            'in_progress' => 2,
+        ];
+
+        $activeGroup = $groupedBoards
+            ->sortByDesc(function ($group) use ($statusPriority) {
+                $priority = $statusPriority[$group['status']] ?? 0;
+                $recent   = optional($group['analysis']['recent_update'])->getTimestamp() ?? 0;
+
+                return ($priority * 1_000_000) + $recent;
+            })
+            ->first();
+
         return view('events.live', [
             'event'          => $event,
             'groupsBoard'    => $groupedBoards,
             'overallBoard'   => $overallBoard,
             'overallSummary' => $overallSummary,
             'groupLeaders'   => $groupLeaders,
+            'activeGroup'    => $activeGroup,
         ]);
     }
 

@@ -39,6 +39,65 @@
             </div>
         </div>
 
+        @if(isset($activeGroup))
+            <div class="rounded-2xl border border-indigo-100 bg-white shadow-sm ring-1 ring-indigo-50 p-5 space-y-4">
+                <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                    <div class="flex items-center gap-3">
+                        <span class="inline-flex h-10 w-10 items-center justify-center rounded-full bg-indigo-50 text-indigo-700 font-bold">⏱</span>
+                        <div>
+                            <p class="text-xs uppercase tracking-widest text-indigo-600">目前賽事</p>
+                            <p class="text-lg font-semibold text-gray-900">{{ optional($activeGroup['group'])->name ?? '未分組' }}</p>
+                            <p class="text-sm text-gray-500">{{ $activeGroup['status_label'] }} · 最近更新 {{ optional($activeGroup['analysis']['recent_update'])->diffForHumans() ?? '—' }}</p>
+                        </div>
+                    </div>
+                    <a href="#group-{{ optional($activeGroup['group'])->id ?? 'none' }}" class="inline-flex items-center gap-1 rounded-xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700">
+                        查看組別戰況
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="h-4 w-4">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+                        </svg>
+                    </a>
+                </div>
+                @if(!is_null($activeGroup['progress']))
+                    <div class="h-3 w-full rounded-full bg-indigo-50 overflow-hidden">
+                        <div class="h-full bg-indigo-500" style="width: {{ $activeGroup['progress'] }}%"></div>
+                    </div>
+                    <p class="text-xs text-gray-500">完成度 {{ $activeGroup['progress'] }}%</p>
+                @endif
+            </div>
+        @endif
+
+        @if(isset($groupsBoard) && $groupsBoard->isNotEmpty())
+            <div class="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+                <div class="flex items-center justify-between gap-2">
+                    <div>
+                        <p class="text-xs uppercase tracking-widest text-gray-500">組別清單</p>
+                        <h2 class="text-lg font-semibold text-gray-900">即時賽況總覽</h2>
+                    </div>
+                    <p class="text-xs text-gray-400">點擊組別即可跳轉至詳細排名與對抗賽紀錄</p>
+                </div>
+
+                <div class="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                    @foreach($groupsBoard as $board)
+                        <a href="#group-{{ optional($board['group'])->id ?? 'none' }}" class="group relative block rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 shadow-sm transition hover:-translate-y-0.5 hover:border-indigo-200 hover:bg-white hover:shadow-md">
+                            <div class="flex items-start justify-between gap-2">
+                                <div>
+                                    <p class="text-xs uppercase tracking-widest text-gray-500">組別</p>
+                                    <p class="text-base font-semibold text-gray-900 group-hover:text-indigo-700">{{ optional($board['group'])->name ?? '未分組' }}</p>
+                                    <p class="text-xs text-gray-500 mt-1">狀態：<span class="font-semibold text-gray-800">{{ $board['status_label'] }}</span></p>
+                                </div>
+                                <span class="inline-flex items-center rounded-full bg-white px-2 py-1 text-[11px] font-semibold text-indigo-700 shadow-sm">{{ $board['rows']->count() }} 位選手</span>
+                            </div>
+                            <div class="mt-3 h-2 w-full rounded-full bg-white">
+                                <div class="h-full rounded-full bg-indigo-500" style="width: {{ $board['progress'] ?? 0 }}%"></div>
+                            </div>
+                            <p class="mt-1 text-[11px] text-gray-500">完成度 {{ $board['progress'] ?? 0 }}%</p>
+                            <span class="absolute inset-0 rounded-xl ring-2 ring-transparent transition group-hover:ring-indigo-200"></span>
+                        </a>
+                    @endforeach
+                </div>
+            </div>
+        @endif
+
         @if(isset($groupLeaders) && $groupLeaders->isNotEmpty())
             <div class="rounded-2xl border border-indigo-100 bg-gradient-to-r from-indigo-50 via-white to-indigo-50 p-4 shadow-sm">
                 <div class="flex flex-wrap items-center justify-between gap-2">
@@ -75,7 +134,7 @@
 
         <div class="space-y-8">
             @forelse($groupsBoard as $board)
-                <div class="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden">
+                <div id="group-{{ optional($board['group'])->id ?? 'none' }}" class="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden">
                     <div class="flex flex-col gap-3 border-b border-gray-100 bg-gray-50 px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
                         <div>
                             <p class="text-xs uppercase tracking-widest text-gray-500">組別</p>
@@ -85,7 +144,11 @@
                                 {{ $event->mode === 'indoor' ? '室內' : '室外' }} · 共 {{ $board['totalArrows'] }} 支 / 每趟 {{ $board['arrowsPerEnd'] }} 支
                             </p>
                         </div>
-                        <div class="grid grid-cols-2 gap-2 text-xs sm:grid-cols-4">
+                        <div class="grid grid-cols-2 gap-2 text-xs sm:grid-cols-5">
+                            <div class="rounded-xl bg-white px-3 py-2 text-center shadow-sm">
+                                <p class="text-[11px] text-gray-500">狀態</p>
+                                <p class="text-base font-semibold text-gray-900">{{ $board['status_label'] }}</p>
+                            </div>
                             <div class="rounded-xl bg-white px-3 py-2 text-center shadow-sm">
                                 <p class="text-[11px] text-gray-500">選手數</p>
                                 <p class="text-base font-semibold text-gray-900">{{ $board['rows']->count() }}</p>
