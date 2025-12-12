@@ -203,6 +203,9 @@ class EventController extends Controller
         // 是否為本賽事工作人員
         $canManage = auth()->check() && auth()->user()->isAdmin();
 
+        $eventEndAt = $event->end_date ? Carbon::parse($event->end_date)->endOfDay() : null;
+        $isEventFinished = $eventEndAt ? $eventEndAt->lt($now) : false;
+
         return view('events.show', [
             'event'      => $event,
             'groups'     => $event->groups,
@@ -215,12 +218,16 @@ class EventController extends Controller
             'canManage'  => $canManage,
             'myGroupIds' => $myGroupIds,
             'myRegistrations' => $myRegistrations,
+            'isEventFinished' => $isEventFinished,
         ]);
     }
 
-    public function live(Event $event)
+    public function live(Request $request, Event $event)
     {
         $event->load('groups');
+        $now = Carbon::now();
+
+        $selectedGroupId = $request->input('group');
 
         $registrations = EventRegistration::query()
             ->with('event_group')
@@ -237,18 +244,36 @@ class EventController extends Controller
         $scoreboard = $registrations->map(function (EventRegistration $registration) use ($scoreEntries) {
             $entries = $scoreEntries->get($registration->user_id, collect());
 
-            $arrowCount = $entries->reduce(function (int $carry, EventScoreEntry $entry) {
-                return $carry + count($entry->scores ?? []);
-            }, 0);
+            $entriesWithStats = $entries->map(function (EventScoreEntry $entry) {
+                $stats = $this->tallyScores($entry->scores ?? []);
+
+                $entry->x_count = $stats['x_count'];
+                $entry->ten_plus = $stats['ten_plus'];
+                $entry->recorded_arrows = $stats['recorded_arrows'];
+                $entry->avg_per_arrow = $stats['recorded_arrows'] > 0
+                    ? round($stats['total_score'] / $stats['recorded_arrows'], 2)
+                    : null;
+
+                $entry->score_total = $stats['total_score'];
+
+                return $entry;
+            });
+
+            $scoreStats = $this->tallyScores($entriesWithStats->flatMap(fn (EventScoreEntry $entry) => $entry->scores ?? [])->all());
 
             return [
                 'registration'  => $registration,
-                'entries'       => $entries,
-                'total_score'   => $entries->sum('end_total'),
-                'ends_recorded' => $entries->count(),
-                'arrow_count'   => $arrowCount,
-                'last_updated'  => $entries->max('updated_at'),
+                'entries'       => $entriesWithStats,
+                'total_score'   => $entriesWithStats->sum('end_total'),
+                'ends_recorded' => $entriesWithStats->count(),
+                'arrow_count'   => $scoreStats['recorded_arrows'],
+                'last_updated'  => $entriesWithStats->max('updated_at'),
                 'group_id'      => $registration->event_group_id,
+                'x_count'       => $scoreStats['x_count'],
+                'ten_plus'      => $scoreStats['ten_plus'],
+                'avg_per_arrow' => $scoreStats['recorded_arrows'] > 0
+                    ? round($scoreStats['total_score'] / $scoreStats['recorded_arrows'], 2)
+                    : null,
             ];
         });
 
@@ -265,7 +290,6 @@ class EventController extends Controller
             'entry_records'    => $flatEntries->count(),
             'arrows_recorded'  => $flatEntries->reduce(fn (int $carry, EventScoreEntry $entry) => $carry + count($entry->scores ?? []), 0),
             'last_updated'     => $flatEntries->max('updated_at'),
-            'top_row'          => $overallBoard->first(),
         ];
 
         $groupedBoards = $scoreboard
@@ -295,6 +319,25 @@ class EventController extends Controller
                     'total_ends'      => $totalEnds,
                 ];
 
+                $maxEndsRecorded = $sorted->max('ends_recorded');
+                $status = 'not_started';
+
+                if ($totalEnds === 0 || $maxEndsRecorded === 0) {
+                    $status = 'not_started';
+                } elseif ($maxEndsRecorded < $totalEnds) {
+                    $status = 'in_progress';
+                } else {
+                    $status = 'finished';
+                }
+
+                $progress = $totalEnds > 0 ? round(min($maxEndsRecorded / $totalEnds, 1) * 100) : null;
+
+                $statusLabel = match ($status) {
+                    'in_progress' => '正在進行',
+                    'finished'    => '已結束',
+                    default       => '尚未開始',
+                };
+
                 return [
                     'group'        => $group,
                     'rows'         => $sorted,
@@ -302,10 +345,19 @@ class EventController extends Controller
                     'totalEnds'    => $totalEnds,
                     'arrowsPerEnd' => $arrowsPerEnd,
                     'totalArrows'  => $totalArrows,
+                    'status'       => $status,
+                    'status_label' => $statusLabel,
+                    'progress'     => $progress,
                 ];
             })
             ->sortBy(fn ($group) => $group['group']?->name ?? '未分組')
             ->values();
+
+        $eventEndAt = $event->end_date ? Carbon::parse($event->end_date)->endOfDay() : null;
+        $eventFinished = (
+            $groupedBoards->isNotEmpty() &&
+            $groupedBoards->every(fn ($group) => $group['status'] === 'finished')
+        ) || ($eventEndAt ? $now->gt($eventEndAt) : false);
 
         $groupLeaders = $groupedBoards
             ->map(function (array $board) {
@@ -327,12 +379,37 @@ class EventController extends Controller
             ->filter()
             ->values();
 
+        $statusPriority = [
+            'finished'    => 0,
+            'not_started' => 1,
+            'in_progress' => 2,
+        ];
+
+        $activeGroup = $groupedBoards
+            ->sortByDesc(function ($group) use ($statusPriority) {
+                $priority = $statusPriority[$group['status']] ?? 0;
+                $recent   = optional($group['analysis']['recent_update'])->getTimestamp() ?? 0;
+
+                return ($priority * 1_000_000) + $recent;
+            })
+            ->first();
+
+        $selectedBoard = $selectedGroupId
+            ? $groupedBoards->first(function ($board) use ($selectedGroupId) {
+                return optional($board['group'])->id == $selectedGroupId;
+            })
+            : null;
+
         return view('events.live', [
             'event'          => $event,
             'groupsBoard'    => $groupedBoards,
             'overallBoard'   => $overallBoard,
             'overallSummary' => $overallSummary,
             'groupLeaders'   => $groupLeaders,
+            'activeGroup'    => $activeGroup,
+            'selectedBoard'  => $selectedBoard,
+            'selectedGroupId' => $selectedGroupId,
+            'eventFinished'  => $eventFinished,
         ]);
     }
 
@@ -343,6 +420,50 @@ class EventController extends Controller
         $totalArrows = $group?->arrow_count ?: $defaultTotal;
 
         return [$arrowsPerEnd, $totalArrows, (int) ceil($totalArrows / $arrowsPerEnd)];
+    }
+
+    private function tallyScores(iterable $scores): array
+    {
+        $xCount = 0;
+        $tenPlus = 0;
+        $totalScore = 0;
+        $recorded = 0;
+
+        foreach ($scores as $score) {
+            $val = strtoupper((string)($score ?? ''));
+
+            if ($val === '') {
+                continue;
+            }
+
+            $recorded++;
+
+            if ($val === 'X') {
+                $xCount++;
+                $tenPlus++;
+                $totalScore += 10;
+                continue;
+            }
+
+            if ($val === 'M') {
+                continue;
+            }
+
+            $num = max(0, min(10, (int) $val));
+
+            if ($num === 10) {
+                $tenPlus++;
+            }
+
+            $totalScore += $num;
+        }
+
+        return [
+            'x_count' => $xCount,
+            'ten_plus' => $tenPlus,
+            'total_score' => $totalScore,
+            'recorded_arrows' => $recorded,
+        ];
     }
 
     //

@@ -1,5 +1,9 @@
 @extends('layouts.app')
 
+@php
+    $liveLabel = ($isEventFinished ?? false) ? '查詢戰積' : '即時戰況';
+@endphp
+
 @section('title', $event->name)
 
 @section('content')
@@ -28,8 +32,8 @@
             <div class="mt-3 flex flex-wrap gap-2">
                 <a href="{{ route('events.live', $event) }}"
                    class="inline-flex items-center gap-2 rounded-2xl bg-gradient-to-r from-indigo-600 to-purple-600 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-indigo-200 hover:from-indigo-500 hover:to-purple-500 focus:outline-none focus:ring-2 focus:ring-indigo-300">
-                    <span class="inline-flex h-6 w-6 items-center justify-center rounded-full bg-white/20 text-[11px]">LIVE</span>
-                    <span>即時戰況</span>
+                    <span class="inline-flex h-6 w-6 items-center justify-center rounded-full bg-white/20 text-[11px]">{{ ($isEventFinished ?? false) ? 'Result' : 'LIVE' }}</span>
+                    <span>{{ $liveLabel }}</span>
                 </a>
                 {{-- 管理按鈕 --}}
                 @if($canManage)
