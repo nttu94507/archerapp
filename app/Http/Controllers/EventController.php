@@ -218,9 +218,11 @@ class EventController extends Controller
         ]);
     }
 
-    public function live(Event $event)
+    public function live(Request $request, Event $event)
     {
         $event->load('groups');
+
+        $selectedGroupId = $request->input('group');
 
         $registrations = EventRegistration::query()
             ->with('event_group')
@@ -363,6 +365,12 @@ class EventController extends Controller
             })
             ->first();
 
+        $selectedBoard = $selectedGroupId
+            ? $groupedBoards->first(function ($board) use ($selectedGroupId) {
+                return optional($board['group'])->id == $selectedGroupId;
+            })
+            : null;
+
         return view('events.live', [
             'event'          => $event,
             'groupsBoard'    => $groupedBoards,
@@ -370,6 +378,8 @@ class EventController extends Controller
             'overallSummary' => $overallSummary,
             'groupLeaders'   => $groupLeaders,
             'activeGroup'    => $activeGroup,
+            'selectedBoard'  => $selectedBoard,
+            'selectedGroupId' => $selectedGroupId,
         ]);
     }
 
