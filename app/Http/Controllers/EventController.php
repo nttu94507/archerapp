@@ -203,6 +203,9 @@ class EventController extends Controller
         // 是否為本賽事工作人員
         $canManage = auth()->check() && auth()->user()->isAdmin();
 
+        $eventEndAt = $event->end_date ? Carbon::parse($event->end_date)->endOfDay() : null;
+        $isEventFinished = $eventEndAt ? $eventEndAt->lt($now) : false;
+
         return view('events.show', [
             'event'      => $event,
             'groups'     => $event->groups,
@@ -215,12 +218,14 @@ class EventController extends Controller
             'canManage'  => $canManage,
             'myGroupIds' => $myGroupIds,
             'myRegistrations' => $myRegistrations,
+            'isEventFinished' => $isEventFinished,
         ]);
     }
 
     public function live(Request $request, Event $event)
     {
         $event->load('groups');
+        $now = Carbon::now();
 
         $selectedGroupId = $request->input('group');
 
@@ -348,6 +353,12 @@ class EventController extends Controller
             ->sortBy(fn ($group) => $group['group']?->name ?? '未分組')
             ->values();
 
+        $eventEndAt = $event->end_date ? Carbon::parse($event->end_date)->endOfDay() : null;
+        $eventFinished = (
+            $groupedBoards->isNotEmpty() &&
+            $groupedBoards->every(fn ($group) => $group['status'] === 'finished')
+        ) || ($eventEndAt ? $now->gt($eventEndAt) : false);
+
         $groupLeaders = $groupedBoards
             ->map(function (array $board) {
                 $leader = $board['rows']->first();
@@ -398,6 +409,7 @@ class EventController extends Controller
             'activeGroup'    => $activeGroup,
             'selectedBoard'  => $selectedBoard,
             'selectedGroupId' => $selectedGroupId,
+            'eventFinished'  => $eventFinished,
         ]);
     }
 
