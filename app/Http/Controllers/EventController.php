@@ -239,15 +239,30 @@ class EventController extends Controller
         $scoreboard = $registrations->map(function (EventRegistration $registration) use ($scoreEntries) {
             $entries = $scoreEntries->get($registration->user_id, collect());
 
-            $scoreStats = $this->tallyScores($entries->flatMap(fn (EventScoreEntry $entry) => $entry->scores ?? [])->all());
+            $entriesWithStats = $entries->map(function (EventScoreEntry $entry) {
+                $stats = $this->tallyScores($entry->scores ?? []);
+
+                $entry->x_count = $stats['x_count'];
+                $entry->ten_plus = $stats['ten_plus'];
+                $entry->recorded_arrows = $stats['recorded_arrows'];
+                $entry->avg_per_arrow = $stats['recorded_arrows'] > 0
+                    ? round($stats['total_score'] / $stats['recorded_arrows'], 2)
+                    : null;
+
+                $entry->score_total = $stats['total_score'];
+
+                return $entry;
+            });
+
+            $scoreStats = $this->tallyScores($entriesWithStats->flatMap(fn (EventScoreEntry $entry) => $entry->scores ?? [])->all());
 
             return [
                 'registration'  => $registration,
-                'entries'       => $entries,
-                'total_score'   => $entries->sum('end_total'),
-                'ends_recorded' => $entries->count(),
+                'entries'       => $entriesWithStats,
+                'total_score'   => $entriesWithStats->sum('end_total'),
+                'ends_recorded' => $entriesWithStats->count(),
                 'arrow_count'   => $scoreStats['recorded_arrows'],
-                'last_updated'  => $entries->max('updated_at'),
+                'last_updated'  => $entriesWithStats->max('updated_at'),
                 'group_id'      => $registration->event_group_id,
                 'x_count'       => $scoreStats['x_count'],
                 'ten_plus'      => $scoreStats['ten_plus'],
