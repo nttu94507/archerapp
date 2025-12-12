@@ -1,7 +1,7 @@
 {{-- resources/views/events/index.blade.php --}}
 @extends('layouts.app')
 
-@section('title', '賽事列表')
+@section('title', '賽事情報')
 
 @section('content')
     @php
@@ -44,7 +44,7 @@
         <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
             <div>
                 <p class="text-sm font-semibold text-indigo-600">你想知道的賽事都在這裡</p>
-                <h1 class="text-2xl font-bold text-gray-900">賽事情報站</h1>
+                <h1 class="text-2xl font-bold text-gray-900">賽事情報</h1>
 {{--                <p class="mt-1 text-sm text-gray-600">依時間與報名狀態快速瀏覽所有賽事，一鍵進入報名組別。</p>--}}
             </div>
             @auth

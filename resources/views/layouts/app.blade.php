@@ -40,7 +40,7 @@
             </a>
             <a href="{{ route('events.index') }}"
                class="px-2 py-1 rounded-lg hover:bg-gray-100 {{ request()->routeIs('events.*') ? 'text-gray-900' : 'text-gray-600' }}">
-                賽事
+                賽事情報
             </a>
             @auth
                 <a href="{{ route('my-events.index') }}"
