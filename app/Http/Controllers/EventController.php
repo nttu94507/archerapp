@@ -239,18 +239,21 @@ class EventController extends Controller
         $scoreboard = $registrations->map(function (EventRegistration $registration) use ($scoreEntries) {
             $entries = $scoreEntries->get($registration->user_id, collect());
 
-            $arrowCount = $entries->reduce(function (int $carry, EventScoreEntry $entry) {
-                return $carry + count($entry->scores ?? []);
-            }, 0);
+            $scoreStats = $this->tallyScores($entries->flatMap(fn (EventScoreEntry $entry) => $entry->scores ?? [])->all());
 
             return [
                 'registration'  => $registration,
                 'entries'       => $entries,
                 'total_score'   => $entries->sum('end_total'),
                 'ends_recorded' => $entries->count(),
-                'arrow_count'   => $arrowCount,
+                'arrow_count'   => $scoreStats['recorded_arrows'],
                 'last_updated'  => $entries->max('updated_at'),
                 'group_id'      => $registration->event_group_id,
+                'x_count'       => $scoreStats['x_count'],
+                'ten_plus'      => $scoreStats['ten_plus'],
+                'avg_per_arrow' => $scoreStats['recorded_arrows'] > 0
+                    ? round($scoreStats['total_score'] / $scoreStats['recorded_arrows'], 2)
+                    : null,
             ];
         });
 
@@ -390,6 +393,50 @@ class EventController extends Controller
         $totalArrows = $group?->arrow_count ?: $defaultTotal;
 
         return [$arrowsPerEnd, $totalArrows, (int) ceil($totalArrows / $arrowsPerEnd)];
+    }
+
+    private function tallyScores(iterable $scores): array
+    {
+        $xCount = 0;
+        $tenPlus = 0;
+        $totalScore = 0;
+        $recorded = 0;
+
+        foreach ($scores as $score) {
+            $val = strtoupper((string)($score ?? ''));
+
+            if ($val === '') {
+                continue;
+            }
+
+            $recorded++;
+
+            if ($val === 'X') {
+                $xCount++;
+                $tenPlus++;
+                $totalScore += 10;
+                continue;
+            }
+
+            if ($val === 'M') {
+                continue;
+            }
+
+            $num = max(0, min(10, (int) $val));
+
+            if ($num === 10) {
+                $tenPlus++;
+            }
+
+            $totalScore += $num;
+        }
+
+        return [
+            'x_count' => $xCount,
+            'ten_plus' => $tenPlus,
+            'total_score' => $totalScore,
+            'recorded_arrows' => $recorded,
+        ];
     }
 
     //

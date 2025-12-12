@@ -110,25 +110,57 @@
                                         <div class="text-right text-xs text-gray-500 w-28">{{ optional($row['last_updated'])->diffForHumans() ?? '—' }}</div>
                                     </summary>
                                     <div class="bg-gray-50 px-4 pb-4 pt-2">
-                                        <div class="flex flex-wrap gap-2 text-xs text-gray-600 mb-2">
+                                        <div class="flex flex-wrap gap-2 text-xs text-gray-600 mb-3">
                                             <span class="inline-flex items-center rounded-full bg-white px-2 py-1 shadow-sm">箭數 {{ $row['arrow_count'] }}</span>
-                                            <span class="inline-flex items-center rounded-full bg-white px-2 py-1 shadow-sm">平均每趟 {{ $row['ends_recorded'] ? round($row['total_score'] / $row['ends_recorded'], 1) : '—' }} 分</span>
+                                            <span class="inline-flex items-center rounded-full bg-white px-2 py-1 shadow-sm">每箭均值 {{ $row['avg_per_arrow'] ?? '—' }}</span>
+                                            <span class="inline-flex items-center rounded-full bg-white px-2 py-1 shadow-sm">X+10 {{ $row['ten_plus'] }}</span>
+                                            <span class="inline-flex items-center rounded-full bg-white px-2 py-1 shadow-sm">X {{ $row['x_count'] }}</span>
+                                            <span class="inline-flex items-center rounded-full bg-white px-2 py-1 shadow-sm">完成 {{ $row['ends_recorded'] }} / {{ $selectedBoard['totalEnds'] }} 趟</span>
                                         </div>
-                                        <div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                                            @foreach($row['entries'] as $entry)
-                                                <div class="rounded-xl border border-gray-200 bg-white p-3">
-                                                    <div class="flex items-center justify-between text-xs text-gray-500">
-                                                        <span>第 {{ $entry->end_number }} 趟</span>
-                                                        <span>{{ optional($entry->updated_at)->format('m-d H:i') }}</span>
-                                                    </div>
-                                                    <div class="mt-2 flex flex-wrap gap-1">
-                                                        @foreach(($entry->scores ?? []) as $arrow)
-                                                            <span class="inline-flex h-7 w-8 items-center justify-center rounded-md bg-gray-100 text-[13px] font-semibold text-gray-800">{{ $arrow === '' ? '—' : $arrow }}</span>
-                                                        @endforeach
-                                                    </div>
-                                                    <p class="mt-2 text-sm font-semibold text-gray-900">小計：{{ $entry->end_total }}</p>
-                                                </div>
-                                            @endforeach
+
+                                        @php
+                                            $per = $selectedBoard['arrowsPerEnd'];
+                                            $totalEnds = $selectedBoard['totalEnds'];
+                                            $entriesByEnd = $row['entries']->keyBy('end_number');
+                                            $cumulative = 0;
+                                        @endphp
+
+                                        <div class="overflow-x-auto rounded-xl border border-gray-200 bg-white">
+                                            <table class="min-w-full text-sm text-gray-800">
+                                                <thead class="bg-gray-50 text-xs uppercase text-gray-500">
+                                                <tr>
+                                                    <th class="px-3 py-2 text-left">趟次</th>
+                                                    @for($i = 1; $i <= $per; $i++)
+                                                        <th class="px-2 py-2 text-center">A{{ $i }}</th>
+                                                    @endfor
+                                                    <th class="px-3 py-2 text-right">小計</th>
+                                                    <th class="px-3 py-2 text-right">累計</th>
+                                                </tr>
+                                                </thead>
+                                                <tbody>
+                                                @for($end = 1; $end <= $totalEnds; $end++)
+                                                    @php
+                                                        $entry = $entriesByEnd->get($end);
+                                                        $scores = $entry?->scores ?? [];
+                                                        $endTotal = $entry->end_total ?? null;
+                                                        $hasEnd = !is_null($endTotal);
+                                                        if ($hasEnd) {
+                                                            $cumulative += $endTotal;
+                                                        }
+                                                    @endphp
+                                                    <tr class="border-t border-gray-100">
+                                                        <td class="px-3 py-2 text-xs text-gray-600">第 {{ $end }} 趟</td>
+                                                        @for($shot = 0; $shot < $per; $shot++)
+                                                            <td class="px-2 py-2 text-center font-semibold text-gray-900">
+                                                                {{ $scores[$shot] ?? '—' }}
+                                                            </td>
+                                                        @endfor
+                                                        <td class="px-3 py-2 text-right font-semibold text-gray-900">{{ $hasEnd ? $endTotal : '—' }}</td>
+                                                        <td class="px-3 py-2 text-right text-gray-800">{{ $hasEnd ? $cumulative : '—' }}</td>
+                                                    </tr>
+                                                @endfor
+                                                </tbody>
+                                            </table>
                                         </div>
                                     </div>
                                 </details>
