@@ -22,9 +22,8 @@
                     <div>
                         <p class="text-xs uppercase tracking-widest text-gray-500">組別清單</p>
                         <h2 class="text-lg font-semibold text-gray-900">選擇組別查看戰況</h2>
-                        <p class="text-xs text-gray-500">初次進入僅顯示組別狀態，點擊後開啟詳情。</p>
+{{--                        <p class="text-xs text-gray-500">點擊組別後開啟詳情。</p>--}}
                     </div>
-                    <p class="text-xs text-gray-400">狀態：尚未開始 / 正在進行 / 已結束</p>
                 </div>
 
                 <div class="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
