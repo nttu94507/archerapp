@@ -38,16 +38,16 @@
                class="px-2 py-1 rounded-lg hover:bg-gray-100 {{ request()->routeIs('scores.*') ? 'text-gray-900' : 'text-gray-600' }}">
                 訓練紀錄
             </a>
-            <a href="{{ route('events.index') }}"
-               class="px-2 py-1 rounded-lg hover:bg-gray-100 {{ request()->routeIs('events.*') ? 'text-gray-900' : 'text-gray-600' }}">
-                賽事情報
-            </a>
-            @auth
-                <a href="{{ route('my-events.index') }}"
-                   class="px-2 py-1 rounded-lg hover:bg-gray-100 {{ request()->routeIs('my-events.*') ? 'text-gray-900' : 'text-gray-600' }}">
-                    我的賽事
-                </a>
-            @endauth
+{{--            <a href="{{ route('events.index') }}"--}}
+{{--               class="px-2 py-1 rounded-lg hover:bg-gray-100 {{ request()->routeIs('events.*') ? 'text-gray-900' : 'text-gray-600' }}">--}}
+{{--                賽事情報--}}
+{{--            </a>--}}
+{{--            @auth--}}
+{{--                <a href="{{ route('my-events.index') }}"--}}
+{{--                   class="px-2 py-1 rounded-lg hover:bg-gray-100 {{ request()->routeIs('my-events.*') ? 'text-gray-900' : 'text-gray-600' }}">--}}
+{{--                    我的賽事--}}
+{{--                </a>--}}
+{{--            @endauth--}}
             {{--            <a href="{{ route('leaderboards.index') }}"--}}
             {{--               class="px-2 py-1 rounded-lg hover:bg-gray-100 {{ request()->routeIs('leaderboards.*') ? 'text-gray-900' : 'text-gray-600' }}">--}}
             {{--                排行榜--}}
@@ -60,14 +60,14 @@
 {{--               class="px-2 py-1 rounded-lg hover:bg-gray-100 {{ request()->routeIs('events.*') ? 'text-gray-900' : 'text-gray-600' }}">--}}
 {{--                組隊區--}}
 {{--            </a>--}}
-            @auth
-                @if(auth()->user()->isAdmin())
-                    <a href="{{ route('admin.events.index') }}"
-                       class="px-2 py-1 rounded-lg hover:bg-gray-100 {{ request()->routeIs('admin.*') ? 'text-gray-900' : 'text-gray-600' }}">
-                        Admin
-                    </a>
-                @endif
-            @endauth
+{{--            @auth--}}
+{{--                @if(auth()->user()->isAdmin())--}}
+{{--                    <a href="{{ route('admin.events.index') }}"--}}
+{{--                       class="px-2 py-1 rounded-lg hover:bg-gray-100 {{ request()->routeIs('admin.*') ? 'text-gray-900' : 'text-gray-600' }}">--}}
+{{--                        Admin--}}
+{{--                    </a>--}}
+{{--                @endif--}}
+{{--            @endauth--}}
 
         </nav>
 
@@ -149,14 +149,14 @@
                class="flex items-center gap-2 rounded-lg px-3 py-2 hover:bg-gray-50 {{ request()->routeIs('scores.*') ? 'font-semibold text-gray-900' : 'text-gray-700' }}">
                 訓練紀錄
             </a>
-            <a href="{{ route('events.index') }}" class="flex items-center gap-2 rounded-lg px-3 py-2 hover:bg-gray-50 {{ request()->routeIs('events.*') ? 'font-semibold text-gray-900' : 'text-gray-700' }}">
-                賽事
-            </a>
-            @auth
-                <a href="{{ route('my-events.index') }}" class="flex items-center gap-2 rounded-lg px-3 py-2 hover:bg-gray-50 {{ request()->routeIs('my-events.*') ? 'font-semibold text-gray-900' : 'text-gray-700' }}">
-                    我的賽事
-                </a>
-            @endauth
+{{--            <a href="{{ route('events.index') }}" class="flex items-center gap-2 rounded-lg px-3 py-2 hover:bg-gray-50 {{ request()->routeIs('events.*') ? 'font-semibold text-gray-900' : 'text-gray-700' }}">--}}
+{{--                賽事--}}
+{{--            </a>--}}
+{{--            @auth--}}
+{{--                <a href="{{ route('my-events.index') }}" class="flex items-center gap-2 rounded-lg px-3 py-2 hover:bg-gray-50 {{ request()->routeIs('my-events.*') ? 'font-semibold text-gray-900' : 'text-gray-700' }}">--}}
+{{--                    我的賽事--}}
+{{--                </a>--}}
+{{--            @endauth--}}
             {{--            <a href="{{ route('leaderboards.index') }}" class="flex items-center gap-2 rounded-lg px-3 py-2 hover:bg-gray-50 {{ request()->routeIs('leaderboards.*') ? 'font-semibold text-gray-900' : 'text-gray-700' }}">--}}
             {{--                排行榜--}}
             {{--            </a>--}}
