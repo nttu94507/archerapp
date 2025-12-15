@@ -8,19 +8,18 @@
       .ring-fill { fill-opacity: 1; }
     </style>
   </defs>
-  <rect width="1220" height="1220" fill="#ffffff" />
   <g transform="translate(610 610)">
     <!-- 6 ring (inner blue) -->
-    <circle r="305" fill="#1877e6" class="stroke-light stroke-thin ring-fill" />
+    <circle r="610" fill="#1877e6" class="stroke-light stroke-thin ring-fill" />
     <!-- 7 ring (outer red) -->
-    <circle r="244" fill="#d61f26" class="stroke-dark stroke-thin ring-fill" />
+    <circle r="488" fill="#d61f26" class="stroke-dark stroke-thin ring-fill" />
     <!-- 8 ring (inner red) -->
-    <circle r="183" fill="#d61f26" class="stroke-dark stroke-thin ring-fill" />
+    <circle r="366" fill="#d61f26" class="stroke-dark stroke-thin ring-fill" />
     <!-- 9 ring (outer yellow) -->
-    <circle r="122" fill="#f6d01f" class="stroke-dark stroke-thin ring-fill" />
+    <circle r="244" fill="#f6d01f" class="stroke-dark stroke-thin ring-fill" />
     <!-- 10 ring (inner yellow) -->
-    <circle r="61" fill="#f6d01f" class="stroke-dark stroke-thinner ring-fill" />
+    <circle r="122" fill="#f6d01f" class="stroke-dark stroke-thinner ring-fill" />
     <!-- X ring (inner-most circle) -->
-    <circle r="30.5" fill="#f6d01f" class="stroke-dark stroke-thinner ring-fill" />
+    <circle r="61" fill="#f6d01f" class="stroke-dark stroke-thinner ring-fill" />
   </g>
 </svg>
