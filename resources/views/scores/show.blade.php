@@ -249,7 +249,7 @@
     {{-- 讓數字等寬更整齊 --}}
     <style>
         #score-table [class*="tabular-nums"] { font-variant-numeric: tabular-nums; }
-        :root { --target-image: url('/images/target-122.svg'); }
+        :root { --target-image: url('{{ ($session->target_face ?? 'ten-ring') === 'six-ring' ? '/images/target-6plus.svg' : '/images/target-122.svg' }}'); }
         .target-face {
             background: var(--target-image) center/contain no-repeat;
             background-color: #f8fafc;
@@ -269,6 +269,7 @@
                 distance: {{ (int)$session->distance_m }},
                 arrows_total: {{ (int)$session->arrows_total }},
                 arrows_per_end: per,
+                target_face: @json($session->target_face ?? 'ten-ring'),
                 created_at: @json($session->created_at?->toIso8601String()),
                 note: @json($session->note),
             };

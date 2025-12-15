@@ -56,6 +56,7 @@ class ScoreController extends Controller
             'distance' => (int)$request->input('distance', 18),
             'arrows_total' => (int)$request->input('arrows_total', 30),
             'arrows_per_end' => (int)$request->input('arrows_per_end', 6),
+            'target_face' => $request->string('target_face', 'ten-ring')->toString(),
         ];
 
         return view('scores.create', compact('defaults'));
@@ -84,18 +85,23 @@ class ScoreController extends Controller
         // 2) 驗基本欄位（bow/venue/distance/...）
         $bowWhitelist = ['recurve', 'compound', 'barebow', 'yumi', 'longbow'];
         $venueWhitelist = ['indoor', 'outdoor'];
+        $targetFaceWhitelist = ['ten-ring', 'six-ring'];
 
         $bow = $meta['bow'] ?? null;
         $venue = $meta['venue'] ?? null;
         $distance = (int)($meta['distance'] ?? 0);
         $arrowsTotal = (int)($meta['arrows_total'] ?? 0);
         $arrowsPerEnd = (int)($meta['arrows_per_end'] ?? 0);
+        $targetFace = $meta['target_face'] ?? 'ten-ring';
 
         if (!in_array($bow, $bowWhitelist, true)) {
             throw ValidationException::withMessages(['payload' => 'bow_type 不在允許清單']);
         }
         if (!in_array($venue, $venueWhitelist, true)) {
             throw ValidationException::withMessages(['payload' => 'venue 不在允許清單']);
+        }
+        if (!in_array($targetFace, $targetFaceWhitelist, true)) {
+            throw ValidationException::withMessages(['payload' => 'target_face 不在允許清單']);
         }
         if ($distance < 5 || $distance > 150) {
             throw ValidationException::withMessages(['payload' => 'distance 超出範圍']);
@@ -128,6 +134,7 @@ class ScoreController extends Controller
                 'distance_m' => $distance,
                 'arrows_total' => $arrowsTotal,
                 'arrows_per_end' => $arrowsPerEnd,
+                'target_face' => $targetFace,
                 'note' => $request->input('note'),
             ]);
 

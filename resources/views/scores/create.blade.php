@@ -11,6 +11,7 @@
             'distance'       => (int) request('distance', 18),
             'arrows_total'   => (int) request('arrows_total', 36),
             'arrows_per_end' => (int) request('arrows_per_end', 6),
+            'target_face'    => request('target_face', 'ten-ring'),
         ];
     @endphp
 
@@ -20,7 +21,8 @@
          data-venue="{{ $defaults['venue'] }}"
          data-distance="{{ $defaults['distance'] }}"
          data-arrows-total="{{ $defaults['arrows_total'] }}"
-         data-arrows-per-end="{{ $defaults['arrows_per_end'] }}">
+         data-arrows-per-end="{{ $defaults['arrows_per_end'] }}"
+         data-target-face="{{ $defaults['target_face'] }}">
     </div>
 
     <div class="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 py-8 pb-40 lg:pb-0">
@@ -56,6 +58,17 @@
                     </div>
                     <div class="text-xs text-gray-500 text-center">
                         點擊標示落點；拖曳可精調位置。系統會自動判定 X / 10 / Miss 並填入當前箭位。
+                    </div>
+                    <div class="flex flex-wrap items-center justify-center gap-2 text-xs text-gray-700">
+                        <span class="font-semibold text-gray-800">靶面：</span>
+                        <div class="inline-flex rounded-full border border-gray-200 bg-gray-50 p-1 shadow-sm">
+                            <button type="button" data-target-face="ten-ring" class="px-3 py-1 rounded-full text-xs font-medium">
+                                十分靶
+                            </button>
+                            <button type="button" data-target-face="six-ring" class="px-3 py-1 rounded-full text-xs font-medium">
+                                六分靶
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -185,7 +198,7 @@
 @section('js')
     {{-- 簡易樣式（沿用 Tailwind） --}}
     <style>
-        :root { --target-image: url('/images/target-122.svg'); }
+        :root { --target-image: url('{{ $defaults['target_face'] === 'six-ring' ? '/images/target-6plus.svg' : '/images/target-122.svg' }}'); }
         .target-face {
             background: var(--target-image) center/contain no-repeat;
             background-color: #f8fafc;
@@ -252,6 +265,7 @@
 
             const chips         = document.getElementById('chips-line');
             const totalPresets  = document.getElementById('total-presets');
+            const targetFaceButtons = Array.from(document.querySelectorAll('[data-target-face]'));
 
             const theadRow = document.getElementById('thead-row');
             const tbody    = document.getElementById('tbody');
@@ -271,6 +285,7 @@
                 dist  : parseInt((root?.dataset.distance)     || urlq.get('distance')       || '18', 10),
                 total : parseInt((root?.dataset.arrowsTotal)  || urlq.get('arrows_total')   || '36', 10),
                 per   : parseInt((root?.dataset.arrowsPerEnd) || urlq.get('arrows_per_end') || '6',  10),
+                targetFace: (root?.dataset.targetFace)       || urlq.get('target_face')    || 'ten-ring',
             };
 
 // 建立「表單元素的墊片」，讓後續程式可以用 .value
@@ -289,6 +304,37 @@
                 longbow: 'Longbow',
             };
             const VENUE_TEXT = { indoor: '室內', outdoor: '室外' };
+            const TARGET_FACE_TEXT = { 'ten-ring': '十分靶', 'six-ring': '六分靶' };
+
+            const TARGET_CONFIGS = {
+                'ten-ring': {
+                    image: "url('/images/target-122.svg')",
+                    rings: [
+                        { r: 0.05, score: 10, isX: true },
+                        { r: 0.10, score: 10, isX: false },
+                        { r: 0.20, score: 9,  isX: false },
+                        { r: 0.30, score: 8,  isX: false },
+                        { r: 0.40, score: 7,  isX: false },
+                        { r: 0.50, score: 6,  isX: false },
+                        { r: 0.60, score: 5,  isX: false },
+                        { r: 0.70, score: 4,  isX: false },
+                        { r: 0.80, score: 3,  isX: false },
+                        { r: 0.90, score: 2,  isX: false },
+                        { r: 1.00, score: 1,  isX: false },
+                    ],
+                },
+                'six-ring': {
+                    image: "url('/images/target-6plus.svg')",
+                    rings: [
+                        { r: 0.10, score: 10, isX: true },
+                        { r: 0.20, score: 10, isX: false },
+                        { r: 0.40, score: 9,  isX: false },
+                        { r: 0.60, score: 8,  isX: false },
+                        { r: 0.80, score: 7,  isX: false },
+                        { r: 1.00, score: 6,  isX: false },
+                    ],
+                },
+            };
 
 // 如果沒有 thead/tbody 就沒辦法生成
             if (!theadRow || !tbody) return;
@@ -318,6 +364,7 @@
                 let targetRect = null;
                 let isPointerDown = false;
                 let lastPointerCommitTs = 0;
+                let targetFace = TARGET_CONFIGS[FALLBACKS.targetFace] ? FALLBACKS.targetFace : 'ten-ring';
 
                 // ========== 表單 part（與 form-only 相同） ==========
                 function setActive(groupBtns, targetBtn) {
@@ -341,11 +388,25 @@
                         `距離：${distanceEl.value}m`,
                         `總箭數：${totalEl.value}`,
                         `每趟：${perEndEl.value}`,
+                        `靶面：${TARGET_FACE_TEXT[targetFace] || targetFace}`,
                     ];
                     chips.classList.remove('hidden');
                     chips.innerHTML = items
                         .map((t) => `<span class="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-1 text-xs text-gray-700">${t}</span>`)
                         .join(' ');
+                }
+
+                function renderMetaLine() {
+                    if (!metaLine) return;
+                    const totalArrows = parseInt(totalEl.value || '0', 10);
+                    const per = parseInt(perEndEl.value || '0', 10);
+                    metaLine.textContent =
+                        `弓種：${BOW_TEXT[bowEl.value] || bowEl.value}　` +
+                        `場地：${VENUE_TEXT[venueEl.value] || venueEl.value}　` +
+                        `距離：${distanceEl.value}m　` +
+                        `靶面：${TARGET_FACE_TEXT[targetFace] || targetFace}　` +
+                        `總箭數：${totalArrows}　` +
+                        `每趟：${per}`;
                 }
 
                 function renderTotalPresetButtons() {
@@ -372,10 +433,22 @@
                     setActive(perEndBtns, perEndBtns.find((b) => Number(b.dataset.perEnd) === Number(perEnd.value)) || null);
                 }
 
+                function updateTargetFaceStates() {
+                    if (!targetFaceButtons.length) return;
+                    setActive(targetFaceButtons, targetFaceButtons.find((b) => b.dataset.targetFace === targetFace) || null);
+                }
+
                 // [bow, distance, total, perEnd].forEach((el) => {
                 //     el.addEventListener('input', () => { updateActiveStates(); renderChips(); buildGrid(); });
                 //     el.addEventListener('change', () => { updateActiveStates(); renderChips(); buildGrid(); });
                 // });
+
+                targetFaceButtons.forEach((btn) => {
+                    btn.addEventListener('click', () => {
+                        applyTargetFace(btn.dataset.targetFace || 'ten-ring');
+                        updateGrid();
+                    });
+                });
 
                 // ========== 計分表 part ==========
                 function buildGrid() {
@@ -395,14 +468,7 @@
                     pendingDigit = null;
 
                     // Meta 行
-                    if (metaLine) {
-                        metaLine.textContent =
-                            `弓種：${BOW_TEXT[bowEl.value] || bowEl.value}　` +
-                            `場地：${VENUE_TEXT[venueEl.value] || venueEl.value}　` +
-                            `距離：${distanceEl.value}m　` +
-                            `總箭數：${totalArrows}　` +
-                            `每趟：${per}`;
-                    }
+                    renderMetaLine();
 
                     // thead
                     theadRow.innerHTML =
@@ -450,10 +516,34 @@
                     renderTarget();
                 }
 
+                function normalizeScore(val, miss = false, x = false) {
+                    const key = TARGET_CONFIGS[targetFace] ? targetFace : 'ten-ring';
+                    let nVal = val ?? null;
+                    let nMiss = !!miss;
+                    let nX = !!x;
+
+                    if (!Number.isNaN(parseInt(nVal, 10))) {
+                        nVal = clamp(parseInt(nVal, 10), 0, 11);
+                    }
+
+                    if (nX) nVal = 10;
+
+                    if (key === 'six-ring' && !nMiss) {
+                        if (nVal !== null && nVal < 6) {
+                            nMiss = true;
+                            nX = false;
+                            nVal = 0;
+                        }
+                    }
+
+                    return { val: nVal, miss: nMiss, x: nX };
+                }
+
                 function commitScore(val, miss = false, x = false, point = null, options = {}) {
-                    scores[active.end][active.idx] = val;
-                    isMiss[active.end][active.idx] = !!miss;
-                    isX[active.end][active.idx]    = !!x;
+                    const normalized = normalizeScore(val, miss, x);
+                    scores[active.end][active.idx] = normalized.val;
+                    isMiss[active.end][active.idx] = normalized.miss;
+                    isX[active.end][active.idx]    = normalized.x;
                     coords[active.end][active.idx] = point ? { x: point.x, y: point.y } : null;
                     moveNext(options);
                     updateGrid();
@@ -520,16 +610,17 @@
                     if (totalSpan) totalSpan.textContent = String(cumu);
 
                     if (payload) {
-                        payload.value = JSON.stringify({
-                            meta: {
-                                bow: bowEl.value,
-                                venue: venueEl.value,
-                                distance: parseInt(distanceEl.value || '0', 10),
-                                arrows_total: parseInt(totalEl.value || '0', 10),
-                                arrows_per_end: parseInt(perEndEl.value || '0', 10),
-                            },
-                            scores,
-                            isMiss,
+                            payload.value = JSON.stringify({
+                                meta: {
+                                    bow: bowEl.value,
+                                    venue: venueEl.value,
+                                    distance: parseInt(distanceEl.value || '0', 10),
+                                    arrows_total: parseInt(totalEl.value || '0', 10),
+                                    arrows_per_end: parseInt(perEndEl.value || '0', 10),
+                                    target_face: targetFace,
+                                },
+                                scores,
+                                isMiss,
                             isX,
                             coords,
                             createdAt: new Date().toISOString(),
@@ -678,27 +769,15 @@
                     setActiveCell(eIdx, iIdx);
                 });
 
-                // 依照落點自動計分（等寬 10 個環，中心同屬 10／X）
+                // 依照落點自動計分（依目前靶面設定）
                 function calcScoreFromPoint(x, y) {
                     const dist = Math.sqrt(x * x + y * y);
-                    // 提高邊界容忍度，落在線上給高分
-                    const EPS = 0.003;
-                    if (dist > 1 + EPS) return { score: 0, isMissFlag: true, isXFlag: false };
+                    const EPS = 0.003; // 提高邊界容忍度，落在線上給高分
+                    const config = TARGET_CONFIGS[targetFace] || TARGET_CONFIGS['ten-ring'];
+                    const rings = config.rings;
+                    const outer = rings[rings.length - 1]?.r || 1;
 
-                    // 與 122cm 靶一致的半徑（相對比例）：X 5%、10 10%、其餘等寬
-                    const rings = [
-                        { r: 0.05, score: 10, isX: true },
-                        { r: 0.10, score: 10, isX: false },
-                        { r: 0.20, score: 9,  isX: false },
-                        { r: 0.30, score: 8,  isX: false },
-                        { r: 0.40, score: 7,  isX: false },
-                        { r: 0.50, score: 6,  isX: false },
-                        { r: 0.60, score: 5,  isX: false },
-                        { r: 0.70, score: 4,  isX: false },
-                        { r: 0.80, score: 3,  isX: false },
-                        { r: 0.90, score: 2,  isX: false },
-                        { r: 1.00, score: 1,  isX: false },
-                    ];
+                    if (dist > outer + EPS) return { score: 0, isMissFlag: true, isXFlag: false };
 
                     for (const ring of rings) {
                         if (dist <= ring.r + EPS) {
@@ -754,7 +833,7 @@
 
                 const zoomEl = document.getElementById('target-zoom');
                 const zoomScoreEl = document.getElementById('zoom-score');
-                const targetImage = getComputedStyle(document.documentElement).getPropertyValue('--target-image').trim();
+                let targetImage = getComputedStyle(document.documentElement).getPropertyValue('--target-image').trim();
                 let zoomTimer = null;
 
                 function hideZoom(after = 0) {
@@ -817,6 +896,22 @@
                     zoomScoreEl.textContent = label;
                     zoomEl.classList.remove('opacity-0', 'scale-95');
                     if (persist) hideZoom(1100);
+                }
+
+                function applyTargetFace(face) {
+                    const key = TARGET_CONFIGS[face] ? face : 'ten-ring';
+                    targetFace = key;
+                    const image = TARGET_CONFIGS[key].image;
+                    document.documentElement.style.setProperty('--target-image', image);
+                    targetImage = image;
+                    const zoomBg = zoomEl?.querySelector('.target-zoom-bg');
+                    if (zoomEl && targetImage) zoomEl.style.backgroundImage = targetImage;
+                    if (zoomBg && targetImage) zoomBg.style.backgroundImage = targetImage;
+                    targetRect = null;
+                    updateTargetFaceStates();
+                    renderChips();
+                    renderMetaLine();
+                    renderTarget();
                 }
 
                 function handlePointer(evt, commit = false) {
@@ -935,6 +1030,7 @@
                 });
 
                 // ---- Init ----
+                updateTargetFaceStates();
                 renderChips();
                 buildGrid(); // 預設進頁就建表
             });
