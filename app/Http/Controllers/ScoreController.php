@@ -350,6 +350,21 @@ class ScoreController extends Controller
         ]);
     }
 
+    public function update(Request $request, ArcherySession $score)
+    {
+        if ($score->user_id !== $request->user()->id) {
+            abort(403);
+        }
+
+        $data = $request->validate([
+            'note' => ['nullable', 'string', 'max:255'],
+        ]);
+
+        $score->update(['note' => $data['note']]);
+
+        return back()->with('success', '備註已更新');
+    }
+
 
     public function setup()
     {

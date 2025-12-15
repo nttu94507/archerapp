@@ -50,6 +50,11 @@
                 @endif
             </div>
         </div>
+        @if (session('success'))
+            <div class="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+                {{ session('success') }}
+            </div>
+        @endif
         @php
             $tenTotal = $analysis['scoreDist'][10] ?? 0;   // 10 分（包含 X）
             $xOnly    = $analysis['xCount'] ?? 0;          // X 次數
@@ -59,6 +64,8 @@
             $xRate    = $analysis['xRate'] ?? ($total ? number_format($xOnly / $total * 100, 1) : '0.0');
         @endphp
         <div class=" space-y-4"> {{-- 原本 space-y-6 -> 4 --}}
+
+
 
             {{-- 指標卡片（更緊湊） --}}
             <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 items-stretch">
@@ -136,6 +143,10 @@
 
             {{-- 落點群集 & 靶面 --}}
             @php
+                $targetFaceKey = $session->target_face ?? 'ten-ring';
+                $targetImage = $targetFaceKey === 'six-ring' ? '/images/target-6plus.svg' : '/images/target-122.svg';
+                $targetFaceText = $targetFaceKey === 'six-ring' ? '六分靶' : '十分靶';
+
                 $shotPoints = ($shots ?? collect())
                     ->filter(fn($s) => !is_null($s->target_x) && !is_null($s->target_y))
                     ->map(fn($s) => [
@@ -151,12 +162,17 @@
             @if(($analysis['hasCoords'] ?? false) && $shotPoints->count())
                 <div class="rounded-2xl border overflow-hidden">
                     <div class="px-3 py-2 bg-gray-50 text-xs font-medium flex items-center justify-between">
-                        <span>落點圖</span>
+                        <div class="flex items-center gap-2">
+                            <span>落點圖</span>
+                            <span class="inline-flex items-center rounded-full bg-white px-2 py-0.5 text-[11px] font-medium text-gray-700 border">
+                                靶面：{{ $targetFaceText }}
+                            </span>
+                        </div>
                         <span class="text-gray-500">平均群集半徑 {{ $analysis['groupRadius'] ?? '—' }}，離中心 {{ $analysis['groupOffset'] ?? '—' }}</span>
                     </div>
                     <div class="p-4 flex flex-col items-center gap-2">
-                        <div class="relative w-full max-w-[420px] aspect-square">
-                            <div class="absolute inset-0 target-face"></div>
+                        <div class="relative w-full max-w-[420px] aspect-square" style="--target-image: url('{{ $targetImage }}');">
+                            <div class="absolute inset-0 target-face" aria-hidden="true"></div>
                             <canvas id="target-map" class="absolute inset-0"></canvas>
                         </div>
                         <div class="text-xs text-gray-500 text-center">色塊位置為實際記錄的落點，標示對應分值。</div>
@@ -191,7 +207,7 @@
                 高→低排序
             </button>
         </div>
-        <div class="overflow-x-auto rounded-2xl border">
+        <div class="overflow-x-auto rounded-2xl border mb-2">
             <table id="score-table" class="min-w-full text-sm table-fixed">
                 <thead class="bg-gray-50 text-xs uppercase text-gray-500 sticky top-0 z-10">
                 <tr id="thead-row">
@@ -246,10 +262,33 @@
             </table>
         </div>
 
+        {{-- 備註編輯 --}}
+        <div class="rounded-2xl border bg-white p-4 shadow-sm">
+            <div class="flex flex-col gap-1">
+                <div class="text-sm font-semibold text-gray-900">訓練備註</div>
+                <p class="text-xs text-gray-500">可以記錄心得、風況或當下狀態，計分後也能隨時更新。</p>
+            </div>
+            <form action="{{ route('scores.update', $session) }}" method="POST" class="mt-3 space-y-3">
+                @csrf
+                @method('PUT')
+                <textarea
+                    id="note"
+                    name="note"
+                    rows="3"
+                    maxlength="255"
+                    class="w-full rounded-xl border-gray-300 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                    placeholder="寫下這場訓練想記住的重點吧！">{{ old('note', $session->note) }}</textarea>
+                <div class="flex items-center justify-between">
+                    <span class="text-xs text-gray-500">最多 255 字元</span>
+                    <button type="submit" class="inline-flex items-center justify-center rounded-lg bg-indigo-600 px-4 py-2 text-xs font-medium text-white hover:bg-indigo-500">更新備註</button>
+                </div>
+            </form>
+        </div>
+
     {{-- 讓數字等寬更整齊 --}}
     <style>
         #score-table [class*="tabular-nums"] { font-variant-numeric: tabular-nums; }
-        :root { --target-image: url('{{ ($session->target_face ?? 'ten-ring') === 'six-ring' ? '/images/target-6plus.svg' : '/images/target-122.svg' }}'); }
+        :root { --target-image: url('{{ $targetImage }}'); }
         .target-face {
             background: var(--target-image) center/contain no-repeat;
             background-color: #f8fafc;
