@@ -65,28 +65,7 @@
         @endphp
         <div class=" space-y-4"> {{-- 原本 space-y-6 -> 4 --}}
 
-            {{-- 備註編輯 --}}
-            <div class="rounded-2xl border bg-white p-4 shadow-sm">
-                <div class="flex flex-col gap-1">
-                    <div class="text-sm font-semibold text-gray-900">訓練備註</div>
-                    <p class="text-xs text-gray-500">可以記錄心得、風況或當下狀態，計分後也能隨時更新。</p>
-                </div>
-                <form action="{{ route('scores.update', $session) }}" method="POST" class="mt-3 space-y-3">
-                    @csrf
-                    @method('PUT')
-                    <textarea
-                        id="note"
-                        name="note"
-                        rows="3"
-                        maxlength="255"
-                        class="w-full rounded-xl border-gray-300 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                        placeholder="寫下這場訓練想記住的重點吧！">{{ old('note', $session->note) }}</textarea>
-                    <div class="flex items-center justify-between">
-                        <span class="text-xs text-gray-500">最多 255 字元</span>
-                        <button type="submit" class="inline-flex items-center justify-center rounded-lg bg-indigo-600 px-4 py-2 text-xs font-medium text-white hover:bg-indigo-500">更新備註</button>
-                    </div>
-                </form>
-            </div>
+
 
             {{-- 指標卡片（更緊湊） --}}
             <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 items-stretch">
@@ -228,7 +207,7 @@
                 高→低排序
             </button>
         </div>
-        <div class="overflow-x-auto rounded-2xl border">
+        <div class="overflow-x-auto rounded-2xl border mb-2">
             <table id="score-table" class="min-w-full text-sm table-fixed">
                 <thead class="bg-gray-50 text-xs uppercase text-gray-500 sticky top-0 z-10">
                 <tr id="thead-row">
@@ -281,6 +260,29 @@
                 @endforelse
                 </tbody>
             </table>
+        </div>
+
+        {{-- 備註編輯 --}}
+        <div class="rounded-2xl border bg-white p-4 shadow-sm">
+            <div class="flex flex-col gap-1">
+                <div class="text-sm font-semibold text-gray-900">訓練備註</div>
+                <p class="text-xs text-gray-500">可以記錄心得、風況或當下狀態，計分後也能隨時更新。</p>
+            </div>
+            <form action="{{ route('scores.update', $session) }}" method="POST" class="mt-3 space-y-3">
+                @csrf
+                @method('PUT')
+                <textarea
+                    id="note"
+                    name="note"
+                    rows="3"
+                    maxlength="255"
+                    class="w-full rounded-xl border-gray-300 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                    placeholder="寫下這場訓練想記住的重點吧！">{{ old('note', $session->note) }}</textarea>
+                <div class="flex items-center justify-between">
+                    <span class="text-xs text-gray-500">最多 255 字元</span>
+                    <button type="submit" class="inline-flex items-center justify-center rounded-lg bg-indigo-600 px-4 py-2 text-xs font-medium text-white hover:bg-indigo-500">更新備註</button>
+                </div>
+            </form>
         </div>
 
     {{-- 讓數字等寬更整齊 --}}
