@@ -124,7 +124,7 @@ class ScoreController extends Controller
         // 4) 寫入 DB（transaction）
         $session = DB::transaction(function () use (
             $request, $bow, $venue, $distance, $arrowsTotal, $arrowsPerEnd,
-            $scores, $isMiss, $isX, $coords, $endsCount, &$scoreTotal, &$xCount, &$mCount
+            $scores, $isMiss, $isX, $coords, $endsCount, &$scoreTotal, &$xCount, &$mCount ,$targetFace
         ) {
             // 4-1) 建 session（先不填總分，最後再回寫）
             $session = ArcherySession::create([
