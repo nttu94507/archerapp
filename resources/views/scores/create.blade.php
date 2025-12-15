@@ -99,6 +99,17 @@
             <div class="p-4 border-t border-gray-100 flex flex-wrap items-center gap-2">
                 <form id="export-form" method="POST" action="{{ route('scores.store') }}" class="flex items-center gap-2">
                     @csrf
+                    <div class="flex flex-col gap-1">
+                        <label for="note" class="text-xs font-medium text-gray-700">備註（可寫下心得或當下狀態）</label>
+                        <textarea
+                            id="note"
+                            name="note"
+                            rows="2"
+                            maxlength="255"
+                            class="w-64 rounded-xl border-gray-300 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                            placeholder="今天的狀態、風況、想記住的重點..."
+                        ></textarea>
+                    </div>
                     <input type="hidden" name="payload" id="payload" />
                     <button type="submit" class="inline-flex items-center justify-center rounded-xl bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-500">結束計分</button>
                 </form>
