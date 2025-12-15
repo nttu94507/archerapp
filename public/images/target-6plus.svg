@@ -1,23 +1,26 @@
-<svg width="400" height="400" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="六分靶">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1220 1220" role="img" aria-label="六分靶">
   <defs>
-    <radialGradient id="center-glow" cx="50%" cy="50%" r="60%">
-      <stop offset="0%" stop-color="#fef9c3" stop-opacity="0.95" />
-      <stop offset="80%" stop-color="#facc15" stop-opacity="0.9" />
-      <stop offset="100%" stop-color="#eab308" stop-opacity="0.85" />
-    </radialGradient>
+    <style>
+      .stroke-dark { stroke: #0f172a; vector-effect: non-scaling-stroke; }
+      .stroke-light { stroke: #ffffff; vector-effect: non-scaling-stroke; }
+      .stroke-thin { stroke-width: 1.5; }
+      .stroke-thinner { stroke-width: 1; }
+      .ring-fill { fill-opacity: 1; }
+    </style>
   </defs>
-  <rect width="100" height="100" fill="#f8fafc" />
-  <!-- 6 ring -->
-  <circle cx="50" cy="50" r="50" fill="#2563eb" stroke="#0f172a" stroke-width="0.6" />
-  <!-- 7 ring -->
-  <circle cx="50" cy="50" r="40" fill="#ef4444" stroke="#0f172a" stroke-width="0.55" />
-  <!-- 8 ring -->
-  <circle cx="50" cy="50" r="30" fill="#f87171" stroke="#0f172a" stroke-width="0.5" />
-  <!-- 9 ring -->
-  <circle cx="50" cy="50" r="20" fill="#facc15" stroke="#0f172a" stroke-width="0.45" />
-  <!-- 10 ring -->
-  <circle cx="50" cy="50" r="10" fill="#facc15" stroke="#854d0e" stroke-width="0.4" />
-  <!-- X ring -->
-  <circle cx="50" cy="50" r="5" fill="url(#center-glow)" stroke="#854d0e" stroke-width="0.35" />
-  <circle cx="50" cy="50" r="1.6" fill="#111827" />
+  <rect width="1220" height="1220" fill="#ffffff" />
+  <g transform="translate(610 610)">
+    <!-- 6 ring (inner blue) -->
+    <circle r="305" fill="#1877e6" class="stroke-light stroke-thin ring-fill" />
+    <!-- 7 ring (outer red) -->
+    <circle r="244" fill="#d61f26" class="stroke-dark stroke-thin ring-fill" />
+    <!-- 8 ring (inner red) -->
+    <circle r="183" fill="#d61f26" class="stroke-dark stroke-thin ring-fill" />
+    <!-- 9 ring (outer yellow) -->
+    <circle r="122" fill="#f6d01f" class="stroke-dark stroke-thin ring-fill" />
+    <!-- 10 ring (inner yellow) -->
+    <circle r="61" fill="#f6d01f" class="stroke-dark stroke-thinner ring-fill" />
+    <!-- X ring (inner-most circle) -->
+    <circle r="30.5" fill="#f6d01f" class="stroke-dark stroke-thinner ring-fill" />
+  </g>
 </svg>
