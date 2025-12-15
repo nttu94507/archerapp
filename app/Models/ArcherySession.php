@@ -12,7 +12,7 @@ class ArcherySession extends Model
         'user_id',
         'bow_type', 'venue',
         'distance_m',
-        'arrows_total', 'arrows_per_end',
+        'arrows_total', 'arrows_per_end', 'target_face',
         'score_total', 'x_count', 'm_count',
         'note',
     ];
@@ -24,6 +24,7 @@ class ArcherySession extends Model
         'score_total'    => 'integer',
         'x_count'        => 'integer',
         'm_count'        => 'integer',
+        'target_face'    => 'string',
     ];
 
     public function shots(): HasMany
