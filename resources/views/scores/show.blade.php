@@ -136,6 +136,10 @@
 
             {{-- 落點群集 & 靶面 --}}
             @php
+                $targetFaceKey = $session->target_face ?? 'ten-ring';
+                $targetImage = $targetFaceKey === 'six-ring' ? '/images/target-6plus.svg' : '/images/target-122.svg';
+                $targetFaceText = $targetFaceKey === 'six-ring' ? '六分靶' : '十分靶';
+
                 $shotPoints = ($shots ?? collect())
                     ->filter(fn($s) => !is_null($s->target_x) && !is_null($s->target_y))
                     ->map(fn($s) => [
@@ -151,12 +155,17 @@
             @if(($analysis['hasCoords'] ?? false) && $shotPoints->count())
                 <div class="rounded-2xl border overflow-hidden">
                     <div class="px-3 py-2 bg-gray-50 text-xs font-medium flex items-center justify-between">
-                        <span>落點圖</span>
+                        <div class="flex items-center gap-2">
+                            <span>落點圖</span>
+                            <span class="inline-flex items-center rounded-full bg-white px-2 py-0.5 text-[11px] font-medium text-gray-700 border">
+                                靶面：{{ $targetFaceText }}
+                            </span>
+                        </div>
                         <span class="text-gray-500">平均群集半徑 {{ $analysis['groupRadius'] ?? '—' }}，離中心 {{ $analysis['groupOffset'] ?? '—' }}</span>
                     </div>
                     <div class="p-4 flex flex-col items-center gap-2">
-                        <div class="relative w-full max-w-[420px] aspect-square">
-                            <div class="absolute inset-0 target-face"></div>
+                        <div class="relative w-full max-w-[420px] aspect-square" style="--target-image: url('{{ $targetImage }}');">
+                            <div class="absolute inset-0 target-face" aria-hidden="true"></div>
                             <canvas id="target-map" class="absolute inset-0"></canvas>
                         </div>
                         <div class="text-xs text-gray-500 text-center">色塊位置為實際記錄的落點，標示對應分值。</div>
@@ -249,7 +258,7 @@
     {{-- 讓數字等寬更整齊 --}}
     <style>
         #score-table [class*="tabular-nums"] { font-variant-numeric: tabular-nums; }
-        :root { --target-image: url('{{ ($session->target_face ?? 'ten-ring') === 'six-ring' ? '/images/target-6plus.svg' : '/images/target-122.svg' }}'); }
+        :root { --target-image: url('{{ $targetImage }}'); }
         .target-face {
             background: var(--target-image) center/contain no-repeat;
             background-color: #f8fafc;
