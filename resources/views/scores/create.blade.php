@@ -438,25 +438,28 @@
                 return audioCtx;
             };
 
-            const playTone = (times = 1, freq = 880, duration = 0.12) => {
+            const playTone = (times = 1, freq = 880, duration = 0.12, endFreq = null, volume = 0.4) => {
                 const ctx = ensureCtx();
                 for (let i = 0; i < times; i++) {
                     const osc = ctx.createOscillator();
                     const gain = ctx.createGain();
-                    osc.type = 'sine';
+                    osc.type = 'triangle';
                     osc.frequency.value = freq;
                     const start = ctx.currentTime + i * (duration + 0.08);
                     osc.connect(gain);
                     gain.connect(ctx.destination);
-                    gain.gain.setValueAtTime(0.4, start);
+                    gain.gain.setValueAtTime(volume, start);
                     gain.gain.exponentialRampToValueAtTime(0.001, start + duration);
+                    if (endFreq) {
+                        osc.frequency.exponentialRampToValueAtTime(endFreq, start + duration * 0.7);
+                    }
                     osc.start(start);
                     osc.stop(start + duration + 0.02);
                 }
             };
 
-            const tickBeep = () => playTone(1, 920, 0.08);
-            const whistle = (times = 1) => playTone(times, 1180, 0.16);
+            const tickBeep = () => playTone(1, 940, 0.14, 1260, 0.48);
+            const whistle = (times = 1) => playTone(times, 1080, 0.32, 1480, 0.55);
 
             const clearTimer = () => {
                 if (timerId) {
