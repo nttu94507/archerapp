@@ -6,19 +6,45 @@
     <div class="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8 py-8">
         {{-- Header --}}
         <div class="mb-6">
-            <h1 class="text-2xl font-semibold tracking-tight">選擇計分模式</h1>
-            <p class="text-sm text-gray-500 mt-1">先選擇「訓練」或「比賽」。選訓練後可預先設定場地與距離等參數。</p>
+            <div class="rounded-3xl border border-indigo-100 bg-gradient-to-r from-indigo-50 via-white to-purple-50 p-6 shadow-sm">
+                <p class="text-xs font-semibold uppercase tracking-[0.2em] text-indigo-700">Score Setup</p>
+                <div class="mt-2 flex items-start justify-between gap-4">
+                    <div>
+                        <h1 class="text-2xl font-semibold tracking-tight text-gray-900">選擇計分模式</h1>
+                        <p class="text-sm text-gray-600 mt-1">先選擇「訓練」或「比賽」。選訓練後可預先設定場地與距離等參數。</p>
+                    </div>
+                    <div class="hidden sm:flex items-center gap-2 rounded-2xl bg-white/70 px-3 py-2 text-xs font-medium text-gray-700 shadow-inner">
+                        <span class="inline-flex h-6 w-6 items-center justify-center rounded-full bg-indigo-600 text-white">1</span>
+                        <span>選擇模式</span>
+                        <span class="text-gray-400">→</span>
+                        <span class="inline-flex h-6 w-6 items-center justify-center rounded-full bg-indigo-50 text-indigo-700">2</span>
+                        <span class="text-indigo-700">帶入設定</span>
+                    </div>
+                </div>
+            </div>
         </div>
 
         {{-- Step 1: 模式選擇 --}}
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3" id="mode-cards">
             <button type="button" data-mode="training"
-                    class="group rounded-2xl border p-4 text-left hover:border-indigo-400 hover:shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-300">
-                <div class="flex items-center justify-between">
-                    <div class="text-base font-medium text-gray-900">訓練計分</div>
-                    <span class="inline-flex items-center rounded-full bg-indigo-50 px-2 py-0.5 text-xs text-indigo-700">推薦</span>
+                    class="group relative overflow-hidden rounded-2xl border border-indigo-100 bg-white p-5 text-left transition-all hover:-translate-y-0.5 hover:border-indigo-400 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-indigo-300">
+                <div class="absolute right-0 top-0 h-20 w-20 rounded-bl-3xl bg-indigo-50/80"></div>
+                <div class="relative flex items-center justify-between">
+                    <div class="flex items-center gap-2">
+                        <span class="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-indigo-100 text-lg">🏹</span>
+                        <div>
+                            <div class="text-base font-semibold text-gray-900">訓練計分</div>
+                            <p class="text-xs text-gray-500">自由練習 • 彈性設定</p>
+                        </div>
+                    </div>
+                    <span class="inline-flex items-center rounded-full bg-indigo-100 px-3 py-1 text-xs font-semibold text-indigo-700">推薦</span>
                 </div>
-                <p class="mt-1.5 text-sm text-gray-600">自由練習用。可自訂場地、距離、總箭數與每趟箭數。</p>
+                <p class="relative mt-3 text-sm leading-6 text-gray-600">可自訂場地、距離、總箭數與每趟箭數，立即生成計分表。</p>
+                <div class="relative mt-3 flex flex-wrap gap-2 text-xs text-gray-700">
+                    <span class="inline-flex items-center gap-1 rounded-full bg-gray-100 px-3 py-1">🎯 熱門距離快捷</span>
+                    <span class="inline-flex items-center gap-1 rounded-full bg-gray-100 px-3 py-1">🗒️ 帶出上次設定</span>
+                    <span class="inline-flex items-center gap-1 rounded-full bg-gray-100 px-3 py-1">⚡️ 即刻開始</span>
+                </div>
             </button>
 
 {{--            <a href="{{ route('event.setup') }}"--}}
@@ -30,12 +56,15 @@
 
         {{-- Step 2: 訓練設定（選訓練後顯示） --}}
         <div id="training-form-wrap" class="mt-6 hidden">
-            <div class="mb-3">
-                <h2 class="text-lg font-semibold">訓練設定</h2>
-                <p class="text-sm text-gray-500">這些設定將帶到計分頁並自動生成計分表。</p>
+            <div class="mb-3 flex items-center justify-between">
+                <div>
+                    <h2 class="text-lg font-semibold">訓練設定</h2>
+                    <p class="text-sm text-gray-500">這些設定將帶到計分頁並自動生成計分表。</p>
+                </div>
+                <span class="hidden sm:inline-flex items-center gap-2 rounded-full bg-green-50 px-3 py-1 text-xs font-semibold text-green-700">已選擇訓練模式</span>
             </div>
 
-            <form id="training-form" class="space-y-4" method="GET" action="{{ route('scores.create') }}">
+            <form id="training-form" class="space-y-4 rounded-3xl border bg-white/80 p-5 shadow-sm backdrop-blur" method="GET" action="{{ route('scores.create') }}">
                 {{-- 場地 --}}
                 <div>
                     <label for="venue" class="block text-xs font-medium text-gray-600 mb-1">場地</label>
@@ -141,6 +170,10 @@
                 const btn = e.target.closest('[data-mode="training"]');
                 if (!btn) return;
                 e.preventDefault();
+                modeCards.querySelectorAll('[data-mode]').forEach(el => {
+                    el.classList.remove('ring-2','ring-indigo-300','border-indigo-400','shadow-lg','bg-indigo-50/60');
+                });
+                btn.classList.add('ring-2','ring-indigo-300','border-indigo-400','shadow-lg','bg-indigo-50/60');
                 wrap?.classList.remove('hidden');
                 // 滑到設定區
                 wrap?.scrollIntoView({behavior:'smooth', block:'start'});
