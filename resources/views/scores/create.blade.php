@@ -34,23 +34,23 @@
         </div>
 
         <div id="timer-card" data-phase="idle" data-collapsed="0"
-             class="fixed right-3 top-20 sm:top-24 z-40 w-[calc(100%-1.5rem)] sm:w-96 rounded-2xl border border-rose-200 bg-rose-50 shadow-lg overflow-hidden transition-colors duration-200 mb-6">
-            <div id="timer-header" class="px-4 py-3 border-b border-gray-100 flex items-center justify-between gap-3 flex-wrap">
+             class="fixed right-3 top-20 sm:top-24 z-40 w-[calc(100%-1.5rem)] sm:w-96 rounded-2xl border border-gray-800 bg-black text-gray-100 shadow-lg overflow-hidden transition-colors duration-200 mb-6">
+            <div id="timer-header" class="px-4 py-3 border-b border-gray-800 flex items-center justify-between gap-3 flex-wrap">
                 <div class="flex items-center gap-3">
                     <div>
-                        <h2 class="text-lg font-semibold text-gray-900">訓練計時模式</h2>
-                        <p class="text-xs text-gray-500">提供循環與計分兩種倒數模式，並附提示音。</p>
+                        <h2 class="text-lg font-semibold text-white">訓練計時模式</h2>
+                        <p class="text-xs text-gray-400">提供循環與計分兩種倒數模式，並附提示音。</p>
                     </div>
                 </div>
                 <div class="flex items-center gap-2">
-                    <div class="inline-flex rounded-full border border-gray-200 bg-white shadow-sm p-1 text-xs font-medium" id="timer-mode-tabs">
+                    <div class="inline-flex rounded-full border border-gray-700 bg-gray-900/80 shadow-sm p-1 text-xs font-medium" id="timer-mode-tabs">
                         <button type="button" data-timer-mode="loop"
-                                class="px-3 py-1 rounded-full bg-gray-900 text-white">循環模式</button>
+                                class="px-3 py-1 rounded-full bg-white text-gray-900">循環模式</button>
                         <button type="button" data-timer-mode="scoring"
-                                class="px-3 py-1 rounded-full text-gray-700">計分模式</button>
+                                class="px-3 py-1 rounded-full text-gray-300 bg-transparent">計分模式</button>
                     </div>
                     <button type="button" id="timer-collapse"
-                            class="rounded-full border border-gray-300 bg-white px-2.5 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50">
+                            class="rounded-full border border-gray-700 bg-gray-900/80 px-2.5 py-1 text-xs font-medium text-gray-100 hover:bg-gray-800">
                         收合
                     </button>
                 </div>
@@ -74,18 +74,18 @@
             <div id="timer-body" class="p-4 space-y-4">
                 <div class="flex items-end justify-between gap-4 flex-wrap">
                     <div>
-                        <div class="text-xs text-gray-500">目前狀態</div>
-                        <div class="text-5xl font-mono font-semibold text-gray-900" id="timer-display">00:00</div>
-                        <div class="text-sm text-gray-700" id="timer-status">待機</div>
-                        <div class="text-xs text-gray-500" id="timer-progress"></div>
+                        <div class="text-xs text-gray-400">目前狀態</div>
+                        <div class="text-5xl font-mono font-semibold text-white" id="timer-display">00:00</div>
+                        <div class="text-sm text-gray-200" id="timer-status">待機</div>
+                        <div class="text-xs text-gray-400" id="timer-progress"></div>
                     </div>
                     <div class="flex items-center gap-2">
                         <button type="button" id="timer-start"
-                                class="rounded-xl bg-indigo-600 text-white px-4 py-2 text-sm font-medium hover:bg-indigo-500">開始</button>
+                                class="rounded-xl bg-emerald-500 text-black px-4 py-2 text-sm font-semibold hover:bg-emerald-400">開始</button>
                         <button type="button" id="timer-stop"
-                                class="rounded-xl border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">停止</button>
+                                class="rounded-xl border border-gray-600 px-4 py-2 text-sm font-semibold text-red-200 hover:bg-gray-800">停止</button>
                         <button type="button" id="timer-toggle-settings"
-                                class="rounded-xl border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">設定</button>
+                                class="rounded-xl border border-gray-600 px-4 py-2 text-sm font-semibold text-gray-100 hover:bg-gray-800">設定</button>
                     </div>
                 </div>
 
@@ -307,10 +307,22 @@
 @section('js')
     {{-- 簡易樣式（沿用 Tailwind） --}}
     <style>
-        #timer-card { transition: background-color 150ms ease, border-color 150ms ease; }
-        #timer-card[data-phase="idle"] { background-color: #fef2f2; border-color: #fecdd3; }
-        #timer-card[data-phase="countdown"] { background-color: #fef9c3; border-color: #fde68a; }
-        #timer-card[data-phase="shooting"] { background-color: #ecfdf3; border-color: #bbf7d0; }
+        #timer-card { transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease; }
+        #timer-card[data-phase="idle"] #timer-display,
+        #timer-card[data-phase="idle"] #timer-status,
+        #timer-card[data-phase="idle"] #timer-progress,
+        #timer-card[data-phase="idle"] #timer-compact-time,
+        #timer-card[data-phase="idle"] #timer-compact-status { color: #f87171; }
+        #timer-card[data-phase="countdown"] #timer-display,
+        #timer-card[data-phase="countdown"] #timer-status,
+        #timer-card[data-phase="countdown"] #timer-progress,
+        #timer-card[data-phase="countdown"] #timer-compact-time,
+        #timer-card[data-phase="countdown"] #timer-compact-status { color: #fefefe; }
+        #timer-card[data-phase="shooting"] #timer-display,
+        #timer-card[data-phase="shooting"] #timer-status,
+        #timer-card[data-phase="shooting"] #timer-progress,
+        #timer-card[data-phase="shooting"] #timer-compact-time,
+        #timer-card[data-phase="shooting"] #timer-compact-status { color: #34d399; }
         #timer-card.collapsed { cursor: pointer; width: auto; min-width: 0; border-radius: 9999px; padding: 6px; }
         #timer-card.collapsed #timer-body { display: none; }
         #timer-card.collapsed #timer-compact { display: block; }
@@ -479,9 +491,11 @@
                 activeMode = mode;
                 modeTabs.forEach((btn) => {
                     const isActive = btn.dataset.timerMode === mode;
-                    btn.classList.toggle('bg-gray-900', isActive);
-                    btn.classList.toggle('text-white', isActive);
-                    btn.classList.toggle('text-gray-700', !isActive);
+                    btn.classList.toggle('bg-white', isActive);
+                    btn.classList.toggle('text-gray-900', isActive);
+                    btn.classList.toggle('shadow', isActive);
+                    btn.classList.toggle('bg-transparent', !isActive);
+                    btn.classList.toggle('text-gray-300', !isActive);
                 });
                 loopSettings.classList.toggle('hidden', mode !== 'loop');
                 scoringSettings.classList.toggle('hidden', mode !== 'scoring');
