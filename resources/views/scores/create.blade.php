@@ -399,7 +399,7 @@
                     const start = ctx.currentTime + i * (duration + 0.08);
                     osc.connect(gain);
                     gain.connect(ctx.destination);
-                    gain.gain.setValueAtTime(0.2, start);
+                    gain.gain.setValueAtTime(0.4, start);
                     gain.gain.exponentialRampToValueAtTime(0.001, start + duration);
                     osc.start(start);
                     osc.stop(start + duration + 0.02);
