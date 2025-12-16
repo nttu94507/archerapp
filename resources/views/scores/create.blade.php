@@ -35,7 +35,7 @@
 
         <div id="timer-card" data-phase="idle" data-collapsed="0"
              class="fixed right-3 top-20 sm:top-24 z-40 w-[calc(100%-1.5rem)] sm:w-96 rounded-2xl border border-rose-200 bg-rose-50 shadow-lg overflow-hidden transition-colors duration-200 mb-6">
-            <div class="px-4 py-3 border-b border-gray-100 flex items-center justify-between gap-3 flex-wrap">
+            <div id="timer-header" class="px-4 py-3 border-b border-gray-100 flex items-center justify-between gap-3 flex-wrap">
                 <div class="flex items-center gap-3">
                     <div>
                         <h2 class="text-lg font-semibold text-gray-900">訓練計時模式</h2>
@@ -56,11 +56,19 @@
                 </div>
             </div>
 
-            <div id="timer-compact" class="hidden px-4 pb-3">
-                <div class="flex items-center justify-between text-sm font-medium text-gray-700">
-                    <span id="timer-compact-status">待機</span>
-                    <span id="timer-compact-time" class="font-mono font-semibold text-gray-900">00:00</span>
-                </div>
+            <div id="timer-compact" class="hidden px-3 py-2">
+                <button type="button" id="timer-expand"
+                        class="flex items-center gap-2 rounded-full bg-gray-900 text-white px-3 py-2 text-xs shadow-md hover:bg-gray-800">
+                    <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"
+                         stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <circle cx="12" cy="12" r="9"></circle>
+                        <path d="M12 7v6l3 2"></path>
+                    </svg>
+                    <div class="flex flex-col text-left leading-tight">
+                        <span id="timer-compact-status" class="text-[11px] text-gray-200">待機</span>
+                        <span id="timer-compact-time" class="font-mono font-semibold text-sm">00:00</span>
+                    </div>
+                </button>
             </div>
 
             <div id="timer-body" class="p-4 space-y-4">
@@ -303,9 +311,10 @@
         #timer-card[data-phase="idle"] { background-color: #fef2f2; border-color: #fecdd3; }
         #timer-card[data-phase="countdown"] { background-color: #fef9c3; border-color: #fde68a; }
         #timer-card[data-phase="shooting"] { background-color: #ecfdf3; border-color: #bbf7d0; }
-        #timer-card.collapsed { cursor: pointer; }
+        #timer-card.collapsed { cursor: pointer; width: auto; min-width: 0; border-radius: 9999px; padding: 6px; }
         #timer-card.collapsed #timer-body { display: none; }
         #timer-card.collapsed #timer-compact { display: block; }
+        #timer-card.collapsed #timer-header { display: none; }
         #timer-card.collapsed .border-b { border-bottom: none; }
         @media (min-width: 1024px) {
             #timer-card { right: 1.75rem; top: 5.5rem; }
@@ -386,6 +395,7 @@
             const btnStop = $('timer-stop');
             const btnToggleSettings = $('timer-toggle-settings');
             const btnCollapse = $('timer-collapse');
+            const btnExpand = $('timer-expand');
 
             const loopTrain = $('loop-train');
             const loopRest = $('loop-rest');
@@ -558,6 +568,11 @@
             btnCollapse?.addEventListener('click', (event) => {
                 event.stopPropagation();
                 setCollapsed(card.dataset.collapsed !== '1');
+            });
+
+            btnExpand?.addEventListener('click', (event) => {
+                event.stopPropagation();
+                setCollapsed(false);
             });
 
             card?.addEventListener('click', () => {
