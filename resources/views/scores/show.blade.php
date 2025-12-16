@@ -63,7 +63,7 @@
             $tenRate  = $total ? number_format($tenTotal / $total * 100, 1) : '0.0';
             $xRate    = $analysis['xRate'] ?? ($total ? number_format($xOnly / $total * 100, 1) : '0.0');
         @endphp
-        <div class=" space-y-4"> {{-- 原本 space-y-6 -> 4 --}}
+        <div class=" space-y-4 mb-2"> {{-- 原本 space-y-6 -> 4 --}}
 
 
 
@@ -179,87 +179,86 @@
                     </div>
                 </div>
             @endif
+            {{-- Scoring Table --}}
+            @php
+                // 將 shots 依 end_seq 群組
+                $grouped = ($shots ?? collect())->groupBy('end_seq')->sortKeys();
+                $per = (int) $session->arrows_per_end;
+                $cumu = 0;
+
+                // 安全：確保有集合
+                if (!($grouped instanceof \Illuminate\Support\Collection)) {
+                    $grouped = collect($grouped);
+                }
+            @endphp
+            {{-- 排序控制列（新增） --}}
+            <div class="flex justify-end items-center mb-2">
+                <button id="toggle-sort-desc" class="text-xs px-2 py-1 rounded-lg border hover:bg-white/60">
+                    高→低排序
+                </button>
+            </div>
+            <div class="overflow-x-auto rounded-2xl border mb-2">
+                <table id="score-table" class="min-w-full text-sm table-fixed">
+                    <thead class="bg-gray-50 text-xs uppercase text-gray-500 sticky top-0 z-10">
+                    <tr id="thead-row">
+                        @for($i=1; $i<=$per; $i++)
+                            <th class="px-3 py-2 text-center w-14 sm:w-16 whitespace-nowrap">A{{ $i }}</th>
+                        @endfor
+                        <th class="px-2 sm:px-3 py-2 text-right w-20 sm:w-24">小計</th>
+                        <th class="px-2 sm:px-3 py-2 text-right w-20 sm:w-24">累計</th>
+                    </tr>
+                    </thead>
+                    <tbody id="tbody" class="divide-y">
+                    @forelse($grouped as $endSeq => $rows)
+                        @php
+                            // 以 shot_seq 排序
+                            $rows = $rows->sortBy('shot_seq')->values();
+                            // 計算 end 合計（X=10, M=0）
+                            $endSum = $rows->sum('score');
+                            $cumu += $endSum;
+                        @endphp
+                        <tr class="{{ $loop->even ? 'bg-white' : 'bg-gray-50/50' }}" data-end-seq="{{ $endSeq }}">
+                            {{-- 每箭 --}}
+                            @for($i=1; $i<=$per; $i++)
+                                @php
+                                    $shot = $rows->firstWhere('shot_seq', $i);
+                                    $txt  = '';
+                                    if ($shot) {
+                                        if ($shot->is_x && (int)$shot->score === 10)      $txt = 'X';
+                                        elseif ($shot->is_miss && (int)$shot->score === 0) $txt = 'M';
+                                        else $txt = (string) $shot->score;
+                                    }
+                                @endphp
+                                <td class="p-0">
+                                    <div class="w-full px-3 sm:px-4 py-2 text-center text-sm leading-5 min-h-9
+                                            font-variant-numeric tabular-nums">
+                                        {{ $txt }}
+                                    </div>
+                                </td>
+                            @endfor
+
+                            {{-- 合計／累計 --}}
+                            <td class="px-2 sm:px-4 py-2 text-right font-medium font-mono tabular-nums">{{ $endSum }}</td>
+                            <td class="px-2 sm:px-4 py-2 text-right font-semibold font-mono tabular-nums">{{ $cumu }}</td>
+                        </tr>
+                    @empty
+                        <tr>
+                            <td colspan="{{ 2 + $per }}" class="px-4 py-12">
+                                <div class="text-center text-gray-600">尚無箭資料</div>
+                            </td>
+                        </tr>
+                    @endforelse
+                    </tbody>
+                </table>
+            </div>
 
             {{-- 分布圖（更緊湊） --}}
-            <div class="rounded-2xl border overflow-hidden">
+            <div class="rounded-2xl border overflow-hidden ">
                 <div class="px-3 py-2 bg-gray-50 text-xs font-medium">分值分布圖</div>
                 <div class="p-3">
                     <canvas id="scoreDistChart" height="84"></canvas> {{-- 原 120 -> 84 --}}
                 </div>
             </div>
-        </div>
-
-        {{-- Scoring Table --}}
-        @php
-            // 將 shots 依 end_seq 群組
-            $grouped = ($shots ?? collect())->groupBy('end_seq')->sortKeys();
-            $per = (int) $session->arrows_per_end;
-            $cumu = 0;
-
-            // 安全：確保有集合
-            if (!($grouped instanceof \Illuminate\Support\Collection)) {
-                $grouped = collect($grouped);
-            }
-        @endphp
-        {{-- 排序控制列（新增） --}}
-        <div class="flex justify-end items-center mb-2">
-            <button id="toggle-sort-desc" class="text-xs px-2 py-1 rounded-lg border hover:bg-white/60">
-                高→低排序
-            </button>
-        </div>
-        <div class="overflow-x-auto rounded-2xl border mb-2">
-            <table id="score-table" class="min-w-full text-sm table-fixed">
-                <thead class="bg-gray-50 text-xs uppercase text-gray-500 sticky top-0 z-10">
-                <tr id="thead-row">
-                    @for($i=1; $i<=$per; $i++)
-                        <th class="px-3 py-2 text-center w-14 sm:w-16 whitespace-nowrap">A{{ $i }}</th>
-                    @endfor
-                    <th class="px-2 sm:px-3 py-2 text-right w-20 sm:w-24">小計</th>
-                    <th class="px-2 sm:px-3 py-2 text-right w-20 sm:w-24">累計</th>
-                </tr>
-                </thead>
-                <tbody id="tbody" class="divide-y">
-                @forelse($grouped as $endSeq => $rows)
-                    @php
-                        // 以 shot_seq 排序
-                        $rows = $rows->sortBy('shot_seq')->values();
-                        // 計算 end 合計（X=10, M=0）
-                        $endSum = $rows->sum('score');
-                        $cumu += $endSum;
-                    @endphp
-                    <tr class="{{ $loop->even ? 'bg-white' : 'bg-gray-50/50' }}" data-end-seq="{{ $endSeq }}">
-                        {{-- 每箭 --}}
-                        @for($i=1; $i<=$per; $i++)
-                            @php
-                                $shot = $rows->firstWhere('shot_seq', $i);
-                                $txt  = '';
-                                if ($shot) {
-                                    if ($shot->is_x && (int)$shot->score === 10)      $txt = 'X';
-                                    elseif ($shot->is_miss && (int)$shot->score === 0) $txt = 'M';
-                                    else $txt = (string) $shot->score;
-                                }
-                            @endphp
-                            <td class="p-0">
-                                <div class="w-full px-3 sm:px-4 py-2 text-center text-sm leading-5 min-h-9
-                                            font-variant-numeric tabular-nums">
-                                    {{ $txt }}
-                                </div>
-                            </td>
-                        @endfor
-
-                        {{-- 合計／累計 --}}
-                        <td class="px-2 sm:px-4 py-2 text-right font-medium font-mono tabular-nums">{{ $endSum }}</td>
-                        <td class="px-2 sm:px-4 py-2 text-right font-semibold font-mono tabular-nums">{{ $cumu }}</td>
-                    </tr>
-                @empty
-                    <tr>
-                        <td colspan="{{ 2 + $per }}" class="px-4 py-12">
-                            <div class="text-center text-gray-600">尚無箭資料</div>
-                        </td>
-                    </tr>
-                @endforelse
-                </tbody>
-            </table>
         </div>
 
         {{-- 備註編輯 --}}
