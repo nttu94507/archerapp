@@ -227,7 +227,7 @@
                         $endSum = $rows->sum('score');
                         $cumu += $endSum;
                     @endphp
-                    <tr class="{{ $loop->even ? 'bg-white' : 'bg-gray-50/50' }}">
+                    <tr class="{{ $loop->even ? 'bg-white' : 'bg-gray-50/50' }}" data-end-seq="{{ $endSeq }}">
                         {{-- 每箭 --}}
                         @for($i=1; $i<=$per; $i++)
                             @php
@@ -294,6 +294,11 @@
             background-color: #f8fafc;
             border-radius: 9999px;
             box-shadow: inset 0 0 0 2px #0f172a;
+        }
+        .end-selected {
+            outline: 2px solid #6366f1;
+            outline-offset: -2px;
+            background-color: #eef2ff !important;
         }
     </style>
 @endsection
@@ -423,9 +428,12 @@
 
             const shotPoints = @json($shotPoints ?? []);
             const mapCanvas = document.getElementById('target-map');
+            const scoreTableBody = document.getElementById('tbody');
             if (mapCanvas && Array.isArray(shotPoints) && shotPoints.length) {
                 const ctxMap = mapCanvas.getContext('2d');
                 const wrapper = mapCanvas.parentElement;
+                let activeEnd = null;
+                let filteredPoints = shotPoints;
 
                 function resizeMap() {
                     const rect = wrapper.getBoundingClientRect();
@@ -440,7 +448,7 @@
                     ctxMap.clearRect(0, 0, mapCanvas.width, mapCanvas.height);
                     const halfW = mapCanvas.width / 2;
                     const halfH = mapCanvas.height / 2;
-                    shotPoints.forEach((pt) => {
+                    filteredPoints.forEach((pt) => {
                         const cx = halfW + pt.x * halfW;
                         const cy = halfH + pt.y * halfH;
                         ctxMap.beginPath();
@@ -454,7 +462,42 @@
                     });
                 }
 
+                function updateRowHighlight() {
+                    if (!scoreTableBody) return;
+                    const rows = Array.from(scoreTableBody.querySelectorAll('tr'));
+                    rows.forEach((tr) => {
+                        const endSeq = parseInt(tr.dataset.endSeq, 10);
+                        const isActive = Number.isInteger(endSeq) && activeEnd === endSeq;
+                        tr.classList.toggle('end-selected', isActive);
+                    });
+                }
+
+                function selectEnd(endSeq) {
+                    if (Number.isInteger(endSeq)) {
+                        activeEnd = endSeq;
+                        filteredPoints = shotPoints.filter((pt) => pt.end_seq === endSeq);
+                    } else {
+                        activeEnd = null;
+                        filteredPoints = shotPoints;
+                    }
+                    updateRowHighlight();
+                    renderMap();
+                }
+
+                document.addEventListener('click', (evt) => {
+                    const row = evt.target.closest('#score-table tbody tr');
+                    if (row) {
+                        const endSeq = parseInt(row.dataset.endSeq, 10);
+                        selectEnd(Number.isInteger(endSeq) ? endSeq : null);
+                        return;
+                    }
+                    if (!evt.target.closest('#score-table')) {
+                        selectEnd(null);
+                    }
+                });
+
                 resizeMap();
+                updateRowHighlight();
                 window.addEventListener('resize', resizeMap);
             }
         });
