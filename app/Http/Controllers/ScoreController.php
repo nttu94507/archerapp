@@ -365,6 +365,19 @@ class ScoreController extends Controller
         return back()->with('success', '備註已更新');
     }
 
+    public function destroy(Request $request, ArcherySession $score)
+    {
+        if ($score->user_id !== $request->user()->id) {
+            abort(403);
+        }
+
+        $score->delete();
+
+        return redirect()
+            ->route('scores.index')
+            ->with('success', '訓練紀錄已刪除');
+    }
+
 
     public function setup()
     {
