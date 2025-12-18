@@ -49,6 +49,17 @@
                     </div>
                 @endif
             </div>
+            <div class="flex items-center gap-2">
+                <form action="{{ route('scores.destroy', $session) }}" method="POST"
+                      onsubmit="return confirm('確定要刪除此訓練紀錄嗎？此動作可在資料庫保留紀錄但不再顯示。');">
+                    @csrf
+                    @method('DELETE')
+                    <button type="submit"
+                            class="inline-flex items-center justify-center rounded-lg bg-rose-600 px-3 py-2 text-xs font-medium text-white shadow-sm hover:bg-rose-500">
+                        刪除此紀錄
+                    </button>
+                </form>
+            </div>
         </div>
         @if (session('success'))
             <div class="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
