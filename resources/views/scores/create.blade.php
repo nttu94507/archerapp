@@ -960,6 +960,8 @@
                     }
                 }
 
+                let lastPointerEvent = null;
+
                 (function bindTargetSurface() {
                     const surface = document.getElementById('target-surface');
                     if (!surface) return;
@@ -967,27 +969,32 @@
                     surface.addEventListener('pointerdown', (e) => {
                         isPointerDown = true;
                         surface.setPointerCapture(e.pointerId);
+                        lastPointerEvent = { clientX: e.clientX, clientY: e.clientY };
                         // 先預覽落點，不立即計分，避免點擊觸發兩次
                         handlePointer(e, false);
                     });
                     surface.addEventListener('pointermove', (e) => {
                         if (!isPointerDown) return;
+                        lastPointerEvent = { clientX: e.clientX, clientY: e.clientY };
                         handlePointer(e, false);
                     });
                     surface.addEventListener('pointerup', (e) => {
                         if (!isPointerDown) return;
                         isPointerDown = false;
                         surface.releasePointerCapture(e.pointerId);
-                        handlePointer(e, true);
+                        const commitEvent = lastPointerEvent ? { ...lastPointerEvent } : e;
+                        handlePointer(commitEvent, true);
                         lastPointerCommitTs = performance.now();
                     });
                     surface.addEventListener('pointerleave', () => {
                         isPointerDown = false;
+                        lastPointerEvent = null;
                         renderTarget();
                         hideZoom();
                     });
                     surface.addEventListener('pointercancel', () => {
                         isPointerDown = false;
+                        lastPointerEvent = null;
                         hideZoom();
                     });
 
