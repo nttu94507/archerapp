@@ -49,7 +49,23 @@
                     </div>
                 @endif
             </div>
+            <div class="flex items-center gap-2">
+                <form action="{{ route('scores.destroy', $session) }}" method="POST"
+                      onsubmit="return confirm('確定要刪除此訓練紀錄嗎？');">
+                    @csrf
+                    @method('DELETE')
+                    <button type="submit"
+                            class="inline-flex items-center justify-center rounded-lg bg-rose-600 px-3 py-2 text-xs font-medium text-white shadow-sm hover:bg-rose-500">
+                        刪除紀錄
+                    </button>
+                </form>
+            </div>
         </div>
+        @if (session('success'))
+            <div class="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+                {{ session('success') }}
+            </div>
+        @endif
         @php
             $tenTotal = $analysis['scoreDist'][10] ?? 0;   // 10 分（包含 X）
             $xOnly    = $analysis['xCount'] ?? 0;          // X 次數
@@ -58,7 +74,9 @@
             $tenRate  = $total ? number_format($tenTotal / $total * 100, 1) : '0.0';
             $xRate    = $analysis['xRate'] ?? ($total ? number_format($xOnly / $total * 100, 1) : '0.0');
         @endphp
-        <div class=" space-y-4"> {{-- 原本 space-y-6 -> 4 --}}
+        <div class=" space-y-4 mb-2"> {{-- 原本 space-y-6 -> 4 --}}
+
+
 
             {{-- 指標卡片（更緊湊） --}}
             <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 items-stretch">
@@ -136,6 +154,10 @@
 
             {{-- 落點群集 & 靶面 --}}
             @php
+                $targetFaceKey = $session->target_face ?? 'ten-ring';
+                $targetImage = $targetFaceKey === 'six-ring' ? '/images/target-6plus.svg' : '/images/target-122.svg';
+                $targetFaceText = $targetFaceKey === 'six-ring' ? '六分靶' : '十分靶';
+
                 $shotPoints = ($shots ?? collect())
                     ->filter(fn($s) => !is_null($s->target_x) && !is_null($s->target_y))
                     ->map(fn($s) => [
@@ -151,21 +173,98 @@
             @if(($analysis['hasCoords'] ?? false) && $shotPoints->count())
                 <div class="rounded-2xl border overflow-hidden">
                     <div class="px-3 py-2 bg-gray-50 text-xs font-medium flex items-center justify-between">
-                        <span>落點圖</span>
+                        <div class="flex items-center gap-2">
+                            <span>落點圖</span>
+                            <span class="inline-flex items-center rounded-full bg-white px-2 py-0.5 text-[11px] font-medium text-gray-700 border">
+                                靶面：{{ $targetFaceText }}
+                            </span>
+                        </div>
                         <span class="text-gray-500">平均群集半徑 {{ $analysis['groupRadius'] ?? '—' }}，離中心 {{ $analysis['groupOffset'] ?? '—' }}</span>
                     </div>
                     <div class="p-4 flex flex-col items-center gap-2">
-                        <div class="relative w-full max-w-[420px] aspect-square">
-                            <div class="absolute inset-0 target-face"></div>
+                        <div class="relative w-full max-w-[420px] aspect-square" style="--target-image: url('{{ $targetImage }}');">
+                            <div class="absolute inset-0 target-face" aria-hidden="true"></div>
                             <canvas id="target-map" class="absolute inset-0"></canvas>
                         </div>
                         <div class="text-xs text-gray-500 text-center">色塊位置為實際記錄的落點，標示對應分值。</div>
                     </div>
                 </div>
             @endif
+            {{-- Scoring Table --}}
+            @php
+                // 將 shots 依 end_seq 群組
+                $grouped = ($shots ?? collect())->groupBy('end_seq')->sortKeys();
+                $per = (int) $session->arrows_per_end;
+                $cumu = 0;
+
+                // 安全：確保有集合
+                if (!($grouped instanceof \Illuminate\Support\Collection)) {
+                    $grouped = collect($grouped);
+                }
+            @endphp
+            {{-- 排序控制列（新增） --}}
+            <div class="flex justify-end items-center mb-2">
+                <button id="toggle-sort-desc" class="text-xs px-2 py-1 rounded-lg border hover:bg-white/60">
+                    高→低排序
+                </button>
+            </div>
+            <div class="overflow-x-auto rounded-2xl border mb-2">
+                <table id="score-table" class="min-w-full text-sm table-fixed">
+                    <thead class="bg-gray-50 text-xs uppercase text-gray-500 sticky top-0 z-10">
+                    <tr id="thead-row">
+                        @for($i=1; $i<=$per; $i++)
+                            <th class="px-3 py-2 text-center w-14 sm:w-16 whitespace-nowrap">A{{ $i }}</th>
+                        @endfor
+                        <th class="px-2 sm:px-3 py-2 text-right w-20 sm:w-24">小計</th>
+                        <th class="px-2 sm:px-3 py-2 text-right w-20 sm:w-24">累計</th>
+                    </tr>
+                    </thead>
+                    <tbody id="tbody" class="divide-y">
+                    @forelse($grouped as $endSeq => $rows)
+                        @php
+                            // 以 shot_seq 排序
+                            $rows = $rows->sortBy('shot_seq')->values();
+                            // 計算 end 合計（X=10, M=0）
+                            $endSum = $rows->sum('score');
+                            $cumu += $endSum;
+                        @endphp
+                        <tr class="{{ $loop->even ? 'bg-white' : 'bg-gray-50/50' }}" data-end-seq="{{ $endSeq }}">
+                            {{-- 每箭 --}}
+                            @for($i=1; $i<=$per; $i++)
+                                @php
+                                    $shot = $rows->firstWhere('shot_seq', $i);
+                                    $txt  = '';
+                                    if ($shot) {
+                                        if ($shot->is_x && (int)$shot->score === 10)      $txt = 'X';
+                                        elseif ($shot->is_miss && (int)$shot->score === 0) $txt = 'M';
+                                        else $txt = (string) $shot->score;
+                                    }
+                                @endphp
+                                <td class="p-0">
+                                    <div class="w-full px-3 sm:px-4 py-2 text-center text-sm leading-5 min-h-9
+                                            font-variant-numeric tabular-nums">
+                                        {{ $txt }}
+                                    </div>
+                                </td>
+                            @endfor
+
+                            {{-- 合計／累計 --}}
+                            <td class="px-2 sm:px-4 py-2 text-right font-medium font-mono tabular-nums">{{ $endSum }}</td>
+                            <td class="px-2 sm:px-4 py-2 text-right font-semibold font-mono tabular-nums">{{ $cumu }}</td>
+                        </tr>
+                    @empty
+                        <tr>
+                            <td colspan="{{ 2 + $per }}" class="px-4 py-12">
+                                <div class="text-center text-gray-600">尚無箭資料</div>
+                            </td>
+                        </tr>
+                    @endforelse
+                    </tbody>
+                </table>
+            </div>
 
             {{-- 分布圖（更緊湊） --}}
-            <div class="rounded-2xl border overflow-hidden">
+            <div class="rounded-2xl border overflow-hidden ">
                 <div class="px-3 py-2 bg-gray-50 text-xs font-medium">分值分布圖</div>
                 <div class="p-3">
                     <canvas id="scoreDistChart" height="84"></canvas> {{-- 原 120 -> 84 --}}
@@ -173,88 +272,43 @@
             </div>
         </div>
 
-        {{-- Scoring Table --}}
-        @php
-            // 將 shots 依 end_seq 群組
-            $grouped = ($shots ?? collect())->groupBy('end_seq')->sortKeys();
-            $per = (int) $session->arrows_per_end;
-            $cumu = 0;
-
-            // 安全：確保有集合
-            if (!($grouped instanceof \Illuminate\Support\Collection)) {
-                $grouped = collect($grouped);
-            }
-        @endphp
-        {{-- 排序控制列（新增） --}}
-        <div class="flex justify-end items-center mb-2">
-            <button id="toggle-sort-desc" class="text-xs px-2 py-1 rounded-lg border hover:bg-white/60">
-                高→低排序
-            </button>
-        </div>
-        <div class="overflow-x-auto rounded-2xl border">
-            <table id="score-table" class="min-w-full text-sm table-fixed">
-                <thead class="bg-gray-50 text-xs uppercase text-gray-500 sticky top-0 z-10">
-                <tr id="thead-row">
-                    @for($i=1; $i<=$per; $i++)
-                        <th class="px-3 py-2 text-center w-14 sm:w-16 whitespace-nowrap">A{{ $i }}</th>
-                    @endfor
-                    <th class="px-2 sm:px-3 py-2 text-right w-20 sm:w-24">小計</th>
-                    <th class="px-2 sm:px-3 py-2 text-right w-20 sm:w-24">累計</th>
-                </tr>
-                </thead>
-                <tbody id="tbody" class="divide-y">
-                @forelse($grouped as $endSeq => $rows)
-                    @php
-                        // 以 shot_seq 排序
-                        $rows = $rows->sortBy('shot_seq')->values();
-                        // 計算 end 合計（X=10, M=0）
-                        $endSum = $rows->sum('score');
-                        $cumu += $endSum;
-                    @endphp
-                    <tr class="{{ $loop->even ? 'bg-white' : 'bg-gray-50/50' }}">
-                        {{-- 每箭 --}}
-                        @for($i=1; $i<=$per; $i++)
-                            @php
-                                $shot = $rows->firstWhere('shot_seq', $i);
-                                $txt  = '';
-                                if ($shot) {
-                                    if ($shot->is_x && (int)$shot->score === 10)      $txt = 'X';
-                                    elseif ($shot->is_miss && (int)$shot->score === 0) $txt = 'M';
-                                    else $txt = (string) $shot->score;
-                                }
-                            @endphp
-                            <td class="p-0">
-                                <div class="w-full px-3 sm:px-4 py-2 text-center text-sm leading-5 min-h-9
-                                            font-variant-numeric tabular-nums">
-                                    {{ $txt }}
-                                </div>
-                            </td>
-                        @endfor
-
-                        {{-- 合計／累計 --}}
-                        <td class="px-2 sm:px-4 py-2 text-right font-medium font-mono tabular-nums">{{ $endSum }}</td>
-                        <td class="px-2 sm:px-4 py-2 text-right font-semibold font-mono tabular-nums">{{ $cumu }}</td>
-                    </tr>
-                @empty
-                    <tr>
-                        <td colspan="{{ 2 + $per }}" class="px-4 py-12">
-                            <div class="text-center text-gray-600">尚無箭資料</div>
-                        </td>
-                    </tr>
-                @endforelse
-                </tbody>
-            </table>
+        {{-- 備註編輯 --}}
+        <div class="rounded-2xl border bg-white p-4 shadow-sm">
+            <div class="flex flex-col gap-1">
+                <div class="text-sm font-semibold text-gray-900">訓練備註</div>
+                <p class="text-xs text-gray-500">可以記錄心得、風況或當下狀態，計分後也能隨時更新。</p>
+            </div>
+            <form action="{{ route('scores.update', $session) }}" method="POST" class="mt-3 space-y-3">
+                @csrf
+                @method('PUT')
+                <textarea
+                    id="note"
+                    name="note"
+                    rows="3"
+                    maxlength="255"
+                    class="w-full rounded-xl border-gray-300 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                    placeholder="寫下這場訓練想記住的重點吧！">{{ old('note', $session->note) }}</textarea>
+                <div class="flex items-center justify-between">
+                    <span class="text-xs text-gray-500">最多 255 字元</span>
+                    <button type="submit" class="inline-flex items-center justify-center rounded-lg bg-indigo-600 px-4 py-2 text-xs font-medium text-white hover:bg-indigo-500">更新備註</button>
+                </div>
+            </form>
         </div>
 
     {{-- 讓數字等寬更整齊 --}}
     <style>
         #score-table [class*="tabular-nums"] { font-variant-numeric: tabular-nums; }
-        :root { --target-image: url('{{ ($session->target_face ?? 'ten-ring') === 'six-ring' ? '/images/target-6plus.svg' : '/images/target-122.svg' }}'); }
+        :root { --target-image: url('{{ $targetImage }}'); }
         .target-face {
             background: var(--target-image) center/contain no-repeat;
             background-color: #f8fafc;
             border-radius: 9999px;
             box-shadow: inset 0 0 0 2px #0f172a;
+        }
+        .end-selected {
+            outline: 2px solid #6366f1;
+            outline-offset: -2px;
+            background-color: #eef2ff !important;
         }
     </style>
 @endsection
@@ -384,9 +438,12 @@
 
             const shotPoints = @json($shotPoints ?? []);
             const mapCanvas = document.getElementById('target-map');
+            const scoreTableBody = document.getElementById('tbody');
             if (mapCanvas && Array.isArray(shotPoints) && shotPoints.length) {
                 const ctxMap = mapCanvas.getContext('2d');
                 const wrapper = mapCanvas.parentElement;
+                let activeEnd = null;
+                let filteredPoints = shotPoints;
 
                 function resizeMap() {
                     const rect = wrapper.getBoundingClientRect();
@@ -401,7 +458,7 @@
                     ctxMap.clearRect(0, 0, mapCanvas.width, mapCanvas.height);
                     const halfW = mapCanvas.width / 2;
                     const halfH = mapCanvas.height / 2;
-                    shotPoints.forEach((pt) => {
+                    filteredPoints.forEach((pt) => {
                         const cx = halfW + pt.x * halfW;
                         const cy = halfH + pt.y * halfH;
                         ctxMap.beginPath();
@@ -415,7 +472,42 @@
                     });
                 }
 
+                function updateRowHighlight() {
+                    if (!scoreTableBody) return;
+                    const rows = Array.from(scoreTableBody.querySelectorAll('tr'));
+                    rows.forEach((tr) => {
+                        const endSeq = parseInt(tr.dataset.endSeq, 10);
+                        const isActive = Number.isInteger(endSeq) && activeEnd === endSeq;
+                        tr.classList.toggle('end-selected', isActive);
+                    });
+                }
+
+                function selectEnd(endSeq) {
+                    if (Number.isInteger(endSeq)) {
+                        activeEnd = endSeq;
+                        filteredPoints = shotPoints.filter((pt) => pt.end_seq === endSeq);
+                    } else {
+                        activeEnd = null;
+                        filteredPoints = shotPoints;
+                    }
+                    updateRowHighlight();
+                    renderMap();
+                }
+
+                document.addEventListener('click', (evt) => {
+                    const row = evt.target.closest('#score-table tbody tr');
+                    if (row) {
+                        const endSeq = parseInt(row.dataset.endSeq, 10);
+                        selectEnd(Number.isInteger(endSeq) ? endSeq : null);
+                        return;
+                    }
+                    if (!evt.target.closest('#score-table')) {
+                        selectEnd(null);
+                    }
+                });
+
                 resizeMap();
+                updateRowHighlight();
                 window.addEventListener('resize', resizeMap);
             }
         });
