@@ -26,75 +26,66 @@
             </div>
         @endif
 
-        <div class="rounded-2xl border bg-white shadow-sm overflow-hidden">
-            <table class="min-w-full divide-y divide-gray-200">
-                <thead class="bg-gray-50 text-xs text-gray-500 uppercase">
-                <tr>
-                    <th class="px-3 py-2 text-left">名稱</th>
-                    <th class="px-3 py-2 text-left hidden md:table-cell">弓種/性別/年齡</th>
-                    <th class="px-3 py-2 text-left hidden lg:table-cell">距離</th>
-                    <th class="px-3 py-2 text-left hidden lg:table-cell">箭數</th>
-                    <th class="px-3 py-2 text-left hidden lg:table-cell">名額</th>
-                    <th class="px-3 py-2 text-left hidden xl:table-cell">報名費</th>
-                    <th class="px-3 py-2 text-left">操作</th>
-                </tr>
-                </thead>
+        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            @forelse ($groupsAll as $g)
+                <div class="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
+                    <div class="flex items-start justify-between">
+                        <div>
+                            <h2 class="text-lg font-semibold text-gray-900">
+                                <a href="{{ route('events.groups.show', [$event, $g]) }}" class="hover:text-indigo-600">
+                                    {{ $g->name }}
+                                </a>
+                            </h2>
+                            <p class="text-xs text-gray-500 mt-1">
+                                {{ $g->bow_type ?: '—' }} /
+                                {{ $g->gender ?: '—' }} /
+                                {{ $g->age_class ?: '—' }}
+                            </p>
+                        </div>
+                        <span class="inline-flex items-center rounded-full bg-indigo-50 px-2.5 py-1 text-xs font-medium text-indigo-700">
+                            {{ $g->registrations_count ?? 0 }} / {{ $g->quota ?: '—' }}
+                        </span>
+                    </div>
 
-                <tbody class="divide-y divide-gray-100 text-sm">
-                @forelse ($groupsAll as $g)
-                    <tr >
-                        <td class="px-3 py-2 font-medium">
-                            <a href="{{ route('events.groups.show', [$event, $g]) }}" class="text-gray-900 hover:text-indigo-600">
-                                {{ $g->name }}
-                            </a>
-                        </td>
+                    <div class="mt-4 grid grid-cols-2 gap-3 text-sm text-gray-600">
+                        <div>
+                            <p class="text-xs text-gray-400">距離</p>
+                            <p class="font-medium text-gray-800">{{ $g->distance ?: '—' }}</p>
+                        </div>
+                        <div>
+                            <p class="text-xs text-gray-400">箭數</p>
+                            <p class="font-medium text-gray-800">{{ $g->arrow_count ? ($g->arrow_count . ' 支') : '—' }}</p>
+                        </div>
+                        <div>
+                            <p class="text-xs text-gray-400">報名費</p>
+                            <p class="font-medium text-gray-800">{{ $g->fee ? number_format($g->fee) : '—' }}</p>
+                        </div>
+                        <div>
+                            <p class="text-xs text-gray-400">名額</p>
+                            <p class="font-medium text-gray-800">{{ $g->quota ?: '—' }}</p>
+                        </div>
+                    </div>
 
-                        <td class="px-3 py-2 hidden md:table-cell">
-                            {{ $g->bow_type ?: '—' }} /
-                            {{ $g->gender ?: '—' }} /
-                            {{ $g->age_class ?: '—' }}
-                        </td>
+                    <div class="mt-4 flex flex-wrap gap-3 text-sm">
+                        <a href="{{ route('events.groups.show', [$event, $g]) }}" class="text-gray-700 hover:underline">查看</a>
+                        <a href="{{ route('events.groups.edit', [$event, $g]) }}" class="text-indigo-600 hover:underline">編輯</a>
+                        <form method="POST" action="{{ route('events.groups.destroy', [$event, $g]) }}"
+                              onsubmit="return confirm('確定刪除？')">
+                            @csrf @method('DELETE')
+                            <button class="text-red-600 hover:underline">刪除</button>
+                        </form>
+                    </div>
+                </div>
+            @empty
+                <div class="rounded-2xl border border-dashed border-gray-200 bg-white p-8 text-center text-sm text-gray-500">
+                    尚無組別
+                </div>
+            @endforelse
+        </div>
 
-                        <td class="px-3 py-2 hidden lg:table-cell">
-                            {{ $g->distance ?: '—' }}
-                        </td>
-
-                        <td class="px-3 py-2 hidden lg:table-cell">
-                            {{ $g->arrow_count ? ($g->arrow_count . ' 支') : '—' }}
-                        </td>
-
-                        <td class="px-3 py-2 hidden lg:table-cell">
-                            {{-- 已報名 / 名額上限 --}}
-                            {{ $g->registrations_count ?? 0 }} / {{ $g->quota}}
-                        </td>
-
-                        <td class="px-3 py-2 hidden xl:table-cell">
-                            {{ $g->fee ? number_format($g->fee) : '—' }}
-                        </td>
-
-                        <td class="px-3 py-2">
-                            <div class="flex gap-2">
-                                <a href="{{ route('events.groups.show', [$event, $g]) }}" class="text-gray-700 hover:underline">查看</a>
-                                <a href="{{ route('events.groups.edit', [$event, $g]) }}" class="text-indigo-600 hover:underline">編輯</a>
-                                <form method="POST" action="{{ route('events.groups.destroy', [$event, $g]) }}"
-                                      onsubmit="return confirm('確定刪除？')">
-                                    @csrf @method('DELETE')
-                                    <button class="text-red-600 hover:underline">刪除</button>
-                                </form>
-                            </div>
-                        </td>
-                    </tr>
-                @empty
-                    <tr>
-                        <td class="px-3 py-6 text-center text-gray-500" colspan="7">尚無組別</td>
-                    </tr>
-                @endforelse
-                </tbody>
-            </table>
-
+        <div class="mt-6">
             {{-- 分頁 --}}
             {{ $groupsAll->withQueryString()->links() }}
-
         </div>
 
 {{--        <div class="mt-4">{{ $groupsAll->links() }}</div>--}}
