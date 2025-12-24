@@ -17,17 +17,18 @@
                     <p class="text-sm text-gray-500">賽事：{{ $event->name }}</p>
                 </div>
                 <form method="POST" action="{{ route('events.groups.destroy', [$event, $group]) }}"
+                      class="w-full sm:w-auto"
                       onsubmit="return confirm('確定刪除這個組別？')">
                     @csrf
                     @method('DELETE')
-                    <button class="inline-flex items-center rounded-xl bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-500">
+                    <button class="inline-flex w-full items-center justify-center rounded-xl bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-500 sm:w-auto">
                         刪除組別
                     </button>
                 </form>
             </div>
         </div>
 
-        <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
+        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3">
             <div class="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
                 <p class="text-xs text-gray-500">報名人數</p>
                 <p class="text-2xl font-semibold text-gray-900">{{ $participants->count() }}</p>
@@ -80,7 +81,26 @@
             <div class="border-b border-gray-100 px-5 py-4">
                 <h2 class="text-sm font-semibold text-gray-900">參賽名單</h2>
             </div>
-            <div class="overflow-x-auto">
+            <div class="block sm:hidden">
+                <ul class="divide-y divide-gray-100 text-sm">
+                    @forelse ($participants as $participant)
+                        <li class="px-5 py-4">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <p class="font-medium text-gray-900">{{ $participant->name }}</p>
+                                    <p class="text-xs text-gray-500">{{ $genderLabels[$group->gender] ?? '—' }}</p>
+                                </div>
+                                <span class="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium {{ $participant->paid ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700' }}">
+                                    {{ $participant->paid ? '已繳費' : '未繳費' }}
+                                </span>
+                            </div>
+                        </li>
+                    @empty
+                        <li class="px-5 py-8 text-center text-sm text-gray-500">目前尚無報名資料。</li>
+                    @endforelse
+                </ul>
+            </div>
+            <div class="hidden sm:block overflow-x-auto">
                 <table class="min-w-full divide-y divide-gray-100 text-sm">
                     <thead class="bg-gray-50 text-xs uppercase tracking-widest text-gray-500">
                     <tr>
