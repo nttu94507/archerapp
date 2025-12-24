@@ -129,9 +129,19 @@
                                         靶位 {{ $participant->target_number ? $participant->target_number.$participant->target_letter : '—' }}
                                     </p>
                                 </div>
-                                <span class="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium {{ $participant->paid ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700' }}">
-                                    {{ $participant->paid ? '已繳費' : '未繳費' }}
-                                </span>
+                                <div class="flex flex-col items-end gap-2">
+                                    <span class="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium {{ $participant->paid ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700' }}">
+                                        {{ $participant->paid ? '已繳費' : '未繳費' }}
+                                    </span>
+                                    <form method="POST" action="{{ route('admin.events.registrations.payment', [$event, $participant]) }}">
+                                        @csrf
+                                        @method('PATCH')
+                                        <input type="hidden" name="paid" value="{{ $participant->paid ? 0 : 1 }}">
+                                        <button class="text-xs font-medium text-indigo-600 hover:underline">
+                                            {{ $participant->paid ? '改為未繳費' : '標記已繳費' }}
+                                        </button>
+                                    </form>
+                                </div>
                             </div>
                         </li>
                     @empty
@@ -160,9 +170,19 @@
                                 {{ $participant->target_number ? $participant->target_number.$participant->target_letter : '—' }}
                             </td>
                             <td class="px-5 py-3">
-                                <span class="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium {{ $participant->paid ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700' }}">
-                                    {{ $participant->paid ? '已繳費' : '未繳費' }}
-                                </span>
+                                <div class="flex items-center gap-3">
+                                    <span class="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium {{ $participant->paid ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700' }}">
+                                        {{ $participant->paid ? '已繳費' : '未繳費' }}
+                                    </span>
+                                    <form method="POST" action="{{ route('admin.events.registrations.payment', [$event, $participant]) }}">
+                                        @csrf
+                                        @method('PATCH')
+                                        <input type="hidden" name="paid" value="{{ $participant->paid ? 0 : 1 }}">
+                                        <button class="text-xs font-medium text-indigo-600 hover:underline">
+                                            {{ $participant->paid ? '改為未繳費' : '標記已繳費' }}
+                                        </button>
+                                    </form>
+                                </div>
                             </td>
                         </tr>
                     @empty
