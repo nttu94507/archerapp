@@ -11,11 +11,12 @@ class EventGroup extends Model
 
     protected $fillable = [
         'event_id','name','bow_type','gender','age_class','distance','arrow_count',
-        'quota','fee','is_team',
+        'quota','fee','is_team','target_slots','registration_closed',
     ];
 
     protected $casts = [
         'is_team'   => 'boolean',
+        'registration_closed' => 'boolean',
     ];
 
     public function event() {

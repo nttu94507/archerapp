@@ -14,19 +14,48 @@
                 <div>
                     <p class="text-xs uppercase tracking-widest text-indigo-600 font-semibold">Group</p>
                     <h1 class="text-2xl font-bold text-gray-900">{{ $group->name }}</h1>
-                    <p class="text-sm text-gray-500">賽事：{{ $event->name }}</p>
+                    <div class="mt-1 flex flex-wrap items-center gap-2 text-sm text-gray-500">
+                        <span>賽事：{{ $event->name }}</span>
+                        <span class="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium {{ $group->registration_closed ? 'bg-gray-200 text-gray-700' : 'bg-emerald-100 text-emerald-700' }}">
+                            {{ $group->registration_closed ? '報名已截止' : '報名中' }}
+                        </span>
+                    </div>
                 </div>
-                <form method="POST" action="{{ route('events.groups.destroy', [$event, $group]) }}"
-                      class="w-full sm:w-auto"
-                      onsubmit="return confirm('確定刪除這個組別？')">
-                    @csrf
-                    @method('DELETE')
-                    <button class="inline-flex w-full items-center justify-center rounded-xl bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-500 sm:w-auto">
-                        刪除組別
-                    </button>
-                </form>
+                <div class="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
+                    @if(!$group->registration_closed)
+                        <form method="POST" action="{{ route('events.groups.close', [$event, $group]) }}"
+                              class="w-full sm:w-auto"
+                              onsubmit="return confirm('確定要結束報名並進行靶位分配嗎？')">
+                            @csrf
+                            @method('PATCH')
+                            <button class="inline-flex w-full items-center justify-center rounded-xl bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800 sm:w-auto">
+                                結束報名
+                            </button>
+                        </form>
+                    @endif
+                    <form method="POST" action="{{ route('events.groups.destroy', [$event, $group]) }}"
+                          class="w-full sm:w-auto"
+                          onsubmit="return confirm('確定刪除這個組別？')">
+                        @csrf
+                        @method('DELETE')
+                        <button class="inline-flex w-full items-center justify-center rounded-xl bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-500 sm:w-auto">
+                            刪除組別
+                        </button>
+                    </form>
+                </div>
             </div>
         </div>
+
+        @if(session('success'))
+            <div class="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+                {{ session('success') }}
+            </div>
+        @endif
+        @if(session('error'))
+            <div class="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                {{ session('error') }}
+            </div>
+        @endif
 
         <div class="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
             <div class="grid grid-cols-3 gap-3 text-center">
@@ -76,6 +105,10 @@
                     <p class="text-xs text-gray-400">報名費</p>
                     <p class="font-medium text-gray-800">{{ $group->fee ? number_format($group->fee) : '—' }}</p>
                 </div>
+                <div>
+                    <p class="text-xs text-gray-400">靶位數量</p>
+                    <p class="font-medium text-gray-800">{{ $group->target_slots ? $group->target_slots : '—' }}</p>
+                </div>
             </div>
         </div>
 
@@ -90,7 +123,11 @@
                             <div class="flex items-center justify-between">
                                 <div>
                                     <p class="font-medium text-gray-900">{{ $participant->name }}</p>
-                                    <p class="text-xs text-gray-500">{{ $genderLabels[$group->gender] ?? '—' }}</p>
+                                    <p class="text-xs text-gray-500">
+                                        {{ $genderLabels[$group->gender] ?? '—' }}
+                                        <span class="mx-1">·</span>
+                                        靶位 {{ $participant->target_number ? $participant->target_number.$participant->target_letter : '—' }}
+                                    </p>
                                 </div>
                                 <span class="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium {{ $participant->paid ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700' }}">
                                     {{ $participant->paid ? '已繳費' : '未繳費' }}
@@ -108,6 +145,7 @@
                     <tr>
                         <th class="px-5 py-3 text-left font-semibold">姓名</th>
                         <th class="px-5 py-3 text-left font-semibold">性別</th>
+                        <th class="px-5 py-3 text-left font-semibold">靶位</th>
                         <th class="px-5 py-3 text-left font-semibold">繳費狀態</th>
                     </tr>
                     </thead>
@@ -118,6 +156,9 @@
                             <td class="px-5 py-3 text-gray-600">
                                 {{ $genderLabels[$group->gender] ?? '—' }}
                             </td>
+                            <td class="px-5 py-3 text-gray-600">
+                                {{ $participant->target_number ? $participant->target_number.$participant->target_letter : '—' }}
+                            </td>
                             <td class="px-5 py-3">
                                 <span class="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium {{ $participant->paid ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700' }}">
                                     {{ $participant->paid ? '已繳費' : '未繳費' }}
@@ -126,7 +167,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="3" class="px-5 py-8 text-center text-sm text-gray-500">
+                            <td colspan="4" class="px-5 py-8 text-center text-sm text-gray-500">
                                 目前尚無報名資料。
                             </td>
                         </tr>
