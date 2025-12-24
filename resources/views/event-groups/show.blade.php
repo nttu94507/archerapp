@@ -28,24 +28,26 @@
             </div>
         </div>
 
-        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3">
-            <div class="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
-                <p class="text-xs text-gray-500">報名人數</p>
-                <p class="text-2xl font-semibold text-gray-900">{{ $participants->count() }}</p>
-            </div>
-            <div class="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
-                <p class="text-xs text-gray-500">已繳費</p>
-                <p class="text-2xl font-semibold text-emerald-600">{{ $participants->where('paid', true)->count() }}</p>
-            </div>
-            <div class="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
-                <p class="text-xs text-gray-500">未繳費</p>
-                <p class="text-2xl font-semibold text-amber-600">{{ $participants->where('paid', false)->count() }}</p>
+        <div class="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
+            <div class="grid grid-cols-3 gap-3 text-center">
+                <div>
+                    <p class="text-xs text-gray-500">報名人數</p>
+                    <p class="text-2xl font-semibold text-gray-900">{{ $participants->count() }}</p>
+                </div>
+                <div class="border-l border-gray-100 pl-3">
+                    <p class="text-xs text-gray-500">已繳費</p>
+                    <p class="text-2xl font-semibold text-emerald-600">{{ $participants->where('paid', true)->count() }}</p>
+                </div>
+                <div class="border-l border-gray-100 pl-3">
+                    <p class="text-xs text-gray-500">未繳費</p>
+                    <p class="text-2xl font-semibold text-amber-600">{{ $participants->where('paid', false)->count() }}</p>
+                </div>
             </div>
         </div>
 
         <div class="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
             <h2 class="text-sm font-semibold text-gray-900">組別資訊</h2>
-            <div class="mt-4 grid grid-cols-1 gap-4 text-sm text-gray-600 sm:grid-cols-2 lg:grid-cols-3">
+            <div class="mt-4 grid grid-cols-2 gap-4 text-sm text-gray-600 sm:grid-cols-3 lg:grid-cols-4">
                 <div>
                     <p class="text-xs text-gray-400">弓種</p>
                     <p class="font-medium text-gray-800">{{ $group->bow_type ?: '—' }}</p>
