@@ -68,7 +68,6 @@
 
                     <div class="mt-4 flex flex-wrap gap-3 text-sm">
                         <a href="{{ route('events.groups.show', [$event, $g]) }}" class="text-gray-700 hover:underline">查看</a>
-                        <a href="{{ route('events.groups.edit', [$event, $g]) }}" class="text-indigo-600 hover:underline">編輯</a>
                         <form method="POST" action="{{ route('events.groups.destroy', [$event, $g]) }}"
                               onsubmit="return confirm('確定刪除？')">
                             @csrf @method('DELETE')

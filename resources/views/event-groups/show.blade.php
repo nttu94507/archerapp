@@ -16,20 +16,14 @@
                     <h1 class="text-2xl font-bold text-gray-900">{{ $group->name }}</h1>
                     <p class="text-sm text-gray-500">賽事：{{ $event->name }}</p>
                 </div>
-                <div class="flex gap-2">
-                    <a href="{{ route('events.groups.edit', [$event, $group]) }}"
-                       class="inline-flex items-center rounded-xl border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
-                        編輯組別
-                    </a>
-                    <form method="POST" action="{{ route('events.groups.destroy', [$event, $group]) }}"
-                          onsubmit="return confirm('確定刪除這個組別？')">
-                        @csrf
-                        @method('DELETE')
-                        <button class="inline-flex items-center rounded-xl bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-500">
-                            刪除組別
-                        </button>
-                    </form>
-                </div>
+                <form method="POST" action="{{ route('events.groups.destroy', [$event, $group]) }}"
+                      onsubmit="return confirm('確定刪除這個組別？')">
+                    @csrf
+                    @method('DELETE')
+                    <button class="inline-flex items-center rounded-xl bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-500">
+                        刪除組別
+                    </button>
+                </form>
             </div>
         </div>
 

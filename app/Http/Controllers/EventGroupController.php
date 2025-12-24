@@ -83,38 +83,6 @@ class EventGroupController extends Controller
             ->with('success', '已新增組別');
     }
 
-    public function edit(Event $event, EventGroup $group)
-    {
-        return view('event-groups.edit', compact('event','group'));
-    }
-
-    public function update(Request $req, Event $event, EventGroup $group)
-    {
-        $arrowRule = ['required','integer','min:6','max:180', function ($attribute, $value, $fail) {
-            if ($value % 6 !== 0) {
-                $fail('箭數需為 6 的倍數');
-            }
-        }];
-
-        $g = $req->validate([
-            'name'      => ['required','string','max:100'],
-            'bow_type'  => ['nullable','in:recurve,compound,barebow'],
-            'gender'    => ['required','in:male,female,open'],
-            'age_class' => ['nullable','string','max:50'],
-            'distance'  => ['nullable','string','max:50'],
-            'arrow_count' => $arrowRule,
-            'quota'     => ['nullable','integer','min:1'],
-            'fee'       => ['nullable','integer','min:0'],
-            'is_team'   => ['boolean'],
-            'reg_start' => ['nullable','date'],
-            'reg_end'   => ['nullable','date','after_or_equal:reg_start'],
-        ]);
-
-        $group->update($g);
-
-        return back()->with('success', '已更新組別');
-    }
-
     public function destroy(Event $event, EventGroup $group)
     {
         $group->delete();
