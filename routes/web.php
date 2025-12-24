@@ -70,7 +70,9 @@ Route::middleware(['auth', 'admin'])->group(function () {
     Route::post('events', [EventController::class, 'store'])->name('events.store');
     Route::get('events/{event}/edit', [EventController::class, 'edit'])->name('events.edit');
 
-    Route::resource('events.groups', \App\Http\Controllers\EventGroupController::class)->except(['show']);
+    Route::resource('events.groups', \App\Http\Controllers\EventGroupController::class)->except(['edit', 'update']);
+    Route::patch('events/{event}/groups/{group}/close', [\App\Http\Controllers\EventGroupController::class, 'closeRegistration'])
+        ->name('events.groups.close');
 });
 
 Route::middleware(['auth'])->group(function () {
