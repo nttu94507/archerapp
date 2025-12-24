@@ -16,8 +16,24 @@
             </a>
         </div>
 
-        <div class="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
-            <form method="GET" class="grid grid-cols-1 md:grid-cols-6 gap-4">
+        <div class="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm"
+             x-data="{ open: {{ request()->except('page') ? 'true' : 'false' }} }">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-xs uppercase tracking-widest text-gray-400">搜尋與篩選</p>
+                    <p class="text-sm text-gray-600">快速收合篩選條件</p>
+                </div>
+                <button type="button"
+                        class="inline-flex items-center gap-2 rounded-xl border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                        @click="open = !open"
+                        :aria-expanded="open.toString()">
+                    <span x-text="open ? '收起' : '展開'"></span>
+                    <svg class="h-4 w-4 transition-transform" :class="{ 'rotate-180': open }" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 0 1 1.06.02L10 11.292l3.71-4.06a.75.75 0 1 1 1.08 1.04l-4.25 4.65a.75.75 0 0 1-1.08 0l-4.25-4.65a.75.75 0 0 1 .02-1.06Z" clip-rule="evenodd" />
+                    </svg>
+                </button>
+            </div>
+            <form method="GET" class="mt-4 grid grid-cols-1 md:grid-cols-6 gap-4" x-show="open" x-transition>
                 <div class="md:col-span-2">
                     <label for="q" class="text-xs font-medium text-gray-600">關鍵字</label>
                     <input type="text" id="q" name="q" value="{{ request('q') }}"
