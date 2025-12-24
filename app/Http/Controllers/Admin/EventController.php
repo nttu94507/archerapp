@@ -5,7 +5,6 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Event;
 use App\Models\EventRegistration;
-use App\Models\EventScoreEntry;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -16,6 +15,12 @@ class EventController extends Controller
     public function index(Request $request): View
     {
         $query = Event::query();
+        $user = $request->user();
+
+        $query->whereHas('staff', function ($q) use ($user) {
+            $q->where('user_id', $user->id)
+                ->where('status', 'active');
+        });
 
         if ($request->filled('q')) {
             $query->where(function ($q) use ($request) {
@@ -107,153 +112,9 @@ class EventController extends Controller
             ->with('success', '賽事已建立，您可以在此頁面管理報名與成績。');
     }
 
-    public function show(Event $event, Request $request): View
+    public function show(Event $event): RedirectResponse
     {
-        $event->load('groups');
-
-        $participantStatuses = [
-            'pending'    => '待處理',
-            'registered' => '已報名',
-            'checked_in' => '已報到',
-            'withdrawn'  => '已退出',
-        ];
-
-        $participantQuery = EventRegistration::query()
-            ->with('event_group')
-            ->where('event_id', $event->id);
-
-        if ($request->filled('participant_q')) {
-            $participantQuery->where(function ($q) use ($request) {
-                $q->where('name', 'like', '%'.$request->participant_q.'%')
-                    ->orWhere('email', 'like', '%'.$request->participant_q.'%')
-                    ->orWhere('phone', 'like', '%'.$request->participant_q.'%')
-                    ->orWhere('team_name', 'like', '%'.$request->participant_q.'%');
-            });
-        }
-
-        if ($request->filled('participant_status') && isset($participantStatuses[$request->participant_status])) {
-            $participantQuery->where('status', $request->participant_status);
-        }
-
-        $participants = $participantQuery
-            ->orderBy('event_group_id')
-            ->orderBy('created_at', 'desc')
-            ->get();
-
-        $groupedParticipants = $event->groups
-            ->mapWithKeys(function ($group) use ($participants) {
-                $registrations = $participants->where('event_group_id', $group->id);
-
-                return [$group->name => $registrations];
-            })
-            ->filter(fn ($group) => $group->isNotEmpty());
-
-        $unassigned = $participants->whereNull('event_group_id');
-        if ($unassigned->isNotEmpty()) {
-            $groupedParticipants = $groupedParticipants->put('未指定組別', $unassigned)->sortKeys();
-        }
-
-        $groupStats = $groupedParticipants->map(function ($group) {
-            return [
-                'total'  => $group->count(),
-                'paid'   => $group->where('paid', true)->count(),
-                'unpaid' => $group->where('paid', false)->count(),
-            ];
-        });
-
-        $statusCounts = EventRegistration::query()
-            ->select('status', DB::raw('COUNT(*) as total'))
-            ->where('event_id', $event->id)
-            ->groupBy('status')
-            ->pluck('total', 'status');
-
-        $summary = [
-            'groups'        => $event->groups->count(),
-            'registrations' => EventRegistration::where('event_id', $event->id)->count(),
-            'checked_in'    => (int) ($statusCounts['checked_in'] ?? 0),
-            'score_entries' => EventScoreEntry::where('event_id', $event->id)->count(),
-        ];
-
-        $scoreEntries = EventScoreEntry::query()
-            ->where('event_id', $event->id)
-            ->orderBy('user_id')
-            ->orderBy('end_number')
-            ->get()
-            ->groupBy('user_id');
-
-        $statSort = $request->get('stat_sort', 'total_score');
-        $statDir  = $request->get('stat_dir', 'desc');
-        $statSorts = ['total_score', 'ends_recorded', 'arrow_count', 'last_updated'];
-        if (!in_array($statSort, $statSorts, true)) {
-            $statSort = 'total_score';
-        }
-        if (!in_array($statDir, ['asc', 'desc'], true)) {
-            $statDir = 'desc';
-        }
-
-        $scoreboard = $participants->map(function (EventRegistration $registration) use ($scoreEntries) {
-            $entries = $scoreEntries->get($registration->user_id, collect());
-
-            $arrowCount = $entries->reduce(function (int $carry, EventScoreEntry $entry) {
-                return $carry + count($entry->scores ?? []);
-            }, 0);
-
-            return [
-                'registration'  => $registration,
-                'entries'       => $entries,
-                'total_score'   => $entries->sum('end_total'),
-                'ends_recorded' => $entries->count(),
-                'arrow_count'   => $arrowCount,
-                'last_updated'  => $entries->max('updated_at'),
-            ];
-        })->filter(fn ($row) => $row['ends_recorded'] > 0)->sort(function ($a, $b) use ($statSort, $statDir) {
-            $normalize = function ($value) {
-                if ($value instanceof \Carbon\CarbonInterface) {
-                    return $value->getTimestamp();
-                }
-
-                return is_numeric($value) ? (float) $value : 0;
-            };
-
-            $aVal = $normalize($a[$statSort] ?? 0);
-            $bVal = $normalize($b[$statSort] ?? 0);
-
-            return $statDir === 'desc' ? $bVal <=> $aVal : $aVal <=> $bVal;
-        })->values();
-
-        $leaderboard = $scoreboard->map(function (array $row, int $index) {
-            $row['rank_position'] = $index + 1;
-
-            return $row;
-        });
-
-        $bracketSeeds = $leaderboard->take(8);
-        if ($bracketSeeds->count() % 2 === 1) {
-            $bracketSeeds = $bracketSeeds->slice(0, $bracketSeeds->count() - 1);
-        }
-        $bracket = $bracketSeeds->chunk(2)->map(function ($pair, $idx) {
-            return [
-                'match' => $idx + 1,
-                'a'     => $pair->get(0),
-                'b'     => $pair->get(1),
-            ];
-        });
-
-        return view('admin.events.show', [
-            'event'                => $event,
-            'participants'         => $participants,
-            'participantStatuses'  => $participantStatuses,
-            'statusCounts'         => $statusCounts,
-            'participantStatus'    => $request->participant_status,
-            'leaderboard'          => $leaderboard,
-            'scoreboard'           => $scoreboard,
-            'statSort'             => $statSort,
-            'statDir'              => $statDir,
-            'summary'              => $summary,
-            'bracket'              => $bracket,
-            'groupedParticipants'  => $groupedParticipants,
-            'groupStats'           => $groupStats,
-        ]);
+        return redirect()->route('events.groups.index', $event);
     }
 
     public function updatePayment(Event $event, EventRegistration $registration, Request $request): RedirectResponse

@@ -4,15 +4,20 @@
 
 @section('content')
     <div class="mx-auto max-w-6xl px-4 py-8">
-        <div class="mb-4 flex items-start justify-between">
-            <div>
-                <h1 class="text-2xl font-bold">組別管理 — {{ $event->name }}</h1>
-                <p class="text-sm text-gray-500 mt-1">共 {{ $groupsAll->total() }} 個組別</p>
-            </div>
-            <a href="{{ route('events.groups.create', $event) }}"
-               class="rounded-xl bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-500">
-                新增組別
+        <div class="mb-4 space-y-2">
+            <a href="{{ route('admin.events.index') }}" class="text-xs font-medium text-gray-500 hover:text-gray-700">
+                ← 返回可管理賽事
             </a>
+            <div class="flex items-start justify-between">
+                <div>
+                    <h1 class="text-2xl font-bold">組別管理 — {{ $event->name }}</h1>
+                    <p class="text-sm text-gray-500 mt-1">共 {{ $groupsAll->total() }} 個組別</p>
+                </div>
+                <a href="{{ route('events.groups.create', $event) }}"
+                   class="rounded-xl bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-500">
+                    新增組別
+                </a>
+            </div>
         </div>
 
         @if(session('success'))
@@ -38,7 +43,11 @@
                 <tbody class="divide-y divide-gray-100 text-sm">
                 @forelse ($groupsAll as $g)
                     <tr >
-                        <td class="px-3 py-2 font-medium">{{ $g->name }}</td>
+                        <td class="px-3 py-2 font-medium">
+                            <a href="{{ route('events.groups.show', [$event, $g]) }}" class="text-gray-900 hover:text-indigo-600">
+                                {{ $g->name }}
+                            </a>
+                        </td>
 
                         <td class="px-3 py-2 hidden md:table-cell">
                             {{ $g->bow_type ?: '—' }} /
@@ -65,6 +74,7 @@
 
                         <td class="px-3 py-2">
                             <div class="flex gap-2">
+                                <a href="{{ route('events.groups.show', [$event, $g]) }}" class="text-gray-700 hover:underline">查看</a>
                                 <a href="{{ route('events.groups.edit', [$event, $g]) }}" class="text-indigo-600 hover:underline">編輯</a>
                                 <form method="POST" action="{{ route('events.groups.destroy', [$event, $g]) }}"
                                       onsubmit="return confirm('確定刪除？')">

@@ -70,7 +70,7 @@ Route::middleware(['auth', 'admin'])->group(function () {
     Route::post('events', [EventController::class, 'store'])->name('events.store');
     Route::get('events/{event}/edit', [EventController::class, 'edit'])->name('events.edit');
 
-    Route::resource('events.groups', \App\Http\Controllers\EventGroupController::class)->except(['show']);
+    Route::resource('events.groups', \App\Http\Controllers\EventGroupController::class);
 });
 
 Route::middleware(['auth'])->group(function () {

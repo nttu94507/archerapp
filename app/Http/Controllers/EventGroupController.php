@@ -36,6 +36,19 @@ class EventGroupController extends Controller
         return view('event-groups.create', ['event' => $event]);
     }
 
+    public function show(Event $event, EventGroup $group)
+    {
+        if ($group->event_id !== $event->id) {
+            abort(404);
+        }
+
+        return view('event-groups.show', [
+            'event'        => $event,
+            'group'        => $group,
+            'participants' => $group->registrations()->orderBy('created_at', 'desc')->get(),
+        ]);
+    }
+
     public function store(Request $req, Event $event)
     {
         $arrowRule = ['required','integer','min:6','max:180', function ($attribute, $value, $fail) {
