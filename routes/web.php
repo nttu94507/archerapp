@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\EventController as AdminEventController;
+use App\Http\Controllers\Admin\UserController as AdminUserController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\EventController;
 use App\Http\Controllers\EventRegistrationController;
@@ -41,6 +42,8 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->name('admin.')->group(fun
 
     Route::resource('events', AdminEventController::class)
         ->only(['index', 'create', 'store', 'show']);
+
+    Route::get('users', [AdminUserController::class, 'index'])->name('users.index');
 
     Route::patch('events/{event}/registrations/{registration}/payment', [AdminEventController::class, 'updatePayment'])
         ->name('events.registrations.payment');

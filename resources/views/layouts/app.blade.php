@@ -105,6 +105,12 @@
                                class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50" role="menuitem">
                                 個人資料
                             </a>
+                            @if(auth()->user()->isAdmin())
+                                <a href="{{ route('admin.users.index') }}"
+                                   class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50" role="menuitem">
+                                    使用者列表
+                                </a>
+                            @endif
                             <form method="POST" action="{{ route('logout') }}" class="mt-1" role="none">
                                 @csrf
                                 <button type="submit"
@@ -170,8 +176,12 @@
             @auth
                 @if(auth()->user()->isAdmin())
                     <a href="{{ route('admin.events.index') }}"
-                       class="flex items-center gap-2 rounded-lg px-3 py-2 hover:bg-gray-50 {{ request()->routeIs('admin.*') ? 'font-semibold text-gray-900' : 'text-gray-700' }}">
-                        Admin 控制台
+                       class="flex items-center gap-2 rounded-lg px-3 py-2 hover:bg-gray-50 {{ request()->routeIs('admin.events.*') ? 'font-semibold text-gray-900' : 'text-gray-700' }}">
+                        賽事管理
+                    </a>
+                    <a href="{{ route('admin.users.index') }}"
+                       class="flex items-center gap-2 rounded-lg px-3 py-2 hover:bg-gray-50 {{ request()->routeIs('admin.users.*') ? 'font-semibold text-gray-900' : 'text-gray-700' }}">
+                        使用者列表
                     </a>
                 @endif
             @endauth
