@@ -5,59 +5,8 @@
 
 @section('content')
     @php
-        // ======== 假資料（之後用 Controller 填入真資料） ========
-        $user = [
-            'name' => 'Alex',
-            'bow_type' => 'Recurve',
-        ];
-        $stats = [
-            'first_session_at' => '2023/08/12',
-            'days_since_start' => 432,
-            'active_days_this_month' => 9,
-            'hours_this_month' => 12.8,
-            'arrows_this_month' => 1140,
-            'avg_score_per_arrow' => 8.23,
-            'streak_days' => 4,
-            'best_end' => 58, // 單趟 6 箭
-            'best_36' => 321,
-            'gold_rate' => 0.34,
-            'red_rate' => 0.47,
-            'last_active' => '2 天前',
-        ];
-        $weeklyTrend = [
-            ['week' => 'W35', 'arrows' => 420, 'avg' => 8.1, 'mins' => 340],
-            ['week' => 'W36', 'arrows' => 360, 'avg' => 8.0, 'mins' => 300],
-            ['week' => 'W37', 'arrows' => 510, 'avg' => 8.3, 'mins' => 390],
-            ['week' => 'W38', 'arrows' => 480, 'avg' => 8.4, 'mins' => 370],
-            ['week' => 'W39', 'arrows' => 600, 'avg' => 8.5, 'mins' => 420],
-            ['week' => 'W40', 'arrows' => 540, 'avg' => 8.6, 'mins' => 410],
-            ['week' => 'W41', 'arrows' => 450, 'avg' => 8.2, 'mins' => 360],
-            ['week' => 'W42', 'arrows' => 510, 'avg' => 8.3, 'mins' => 380],
-        ];
-        $recentSessions = [
-            ['date' => '2025/10/15', 'location' => 'Indoor A', 'arrows' => 180, 'avg' => 8.4, 'score' => 1510, 'wind' => '—', 'notes' => '專注呼吸節奏'],
-            ['date' => '2025/10/12', 'location' => 'Outdoor 30m', 'arrows' => 144, 'avg' => 8.1, 'score' => 1167, 'wind' => '2.3 m/s', 'notes' => '順風左飄，調整瞄準'],
-            ['date' => '2025/10/10', 'location' => 'Indoor B', 'arrows' => 120, 'avg' => 8.6, 'score' => 1032, 'wind' => '—', 'notes' => '拉弓穩定度提升'],
-            ['date' => '2025/10/07', 'location' => 'Outdoor 50m', 'arrows' => 90,  'avg' => 7.9, 'score' => 711,  'wind' => '3.1 m/s', 'notes' => '注意扳指角度'],
-        ];
-        $goals = [
-            ['title' => '36 箭 ≥ 330', 'progress' => 0.74, 'due' => '2025/12/31'],
-            ['title' => '連續訓練 14 天', 'progress' => $stats['streak_days'] / 14, 'due' => '—'],
-            ['title' => 'X% ≥ 38%', 'progress' => $stats['gold_rate'] < 0.38 ? $stats['gold_rate']/0.38 : 1, 'due' => '2026/03/31'],
-        ];
-        $notes = [
-            ['tag' => '站姿', 'text' => '腳尖對準靶心微內扣，骨架撐住重心。'],
-            ['tag' => '放箭', 'text' => '放鬆後臂，手肘沿線後移，不要側甩。'],
-            ['tag' => '瞄準', 'text' => '呼吸停在第二拍，穩住 0.8 秒再放。'],
-        ];
-        $badges = [
-            ['icon' => '🔥', 'title' => '7-Day Streak'],
-            ['icon' => '🎯', 'title' => '1000 Arrows a Day'],
-            ['icon' => '🏆', 'title' => 'Best End 58'],
-        ];
-        // ======== /假資料 ========
-
-        $pct = fn($v) => number_format($v*100, 0) . '%';
+        $fmtNum = fn($v, $dec = 0) => is_null($v) ? '—' : number_format((float) $v, $dec);
+        $pct = fn($v, $dec = 0) => is_null($v) ? '—' : number_format((float) $v * 100, $dec) . '%';
     @endphp
 
     {{-- 放在 @section('content') 裡面，建議把原本內容包成 @auth ... @endauth --}}
@@ -146,7 +95,7 @@
                                 <div class="text-xl font-bold">7</div>
                                 <div class="mt-1 text-[10px] text-gray-500">天</div>
                             </div>
-                            <div class="col-span-3 rounded-xl border p-3">
+                            <div class="col-span-3 rounded-2xl border p-3">
                                 <div class="text-[10px] text-gray-500 mb-1">最近 8 週</div>
                                 <div class="h-24 w-full bg-[linear-gradient(180deg,#000_2px,transparent_2px)] bg-[length:100%_24px]">
                                     <div class="flex items-end gap-2 h-full">
@@ -248,65 +197,65 @@
     @endguest
 
     @auth()
-    <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
+    <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8 space-y-8">
         {{-- Page Header --}}
-        <div class="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
             <div>
-                <h1 class="text-2xl font-semibold tracking-tight">
-                    @auth
-                        歡迎回來，{{ auth()->user()->name ?? '夥伴' }}
-                    @else
-                        嗨嗨！神射手
-                    @endauth
-                </h1>
+                <p class="text-xs uppercase tracking-[0.2em] text-gray-500">Overview</p>
+                <h1 class="text-2xl font-semibold tracking-tight">歡迎回來，{{ auth()->user()->name ?? '夥伴' }}</h1>
+                <p class="mt-1 text-sm text-gray-500">用數據重新設計你的訓練節奏與穩定度。</p>
             </div>
             <div class="flex gap-2">
-                <a href="{{route('scores.setup')}}" class="inline-flex items-center rounded-xl bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800">＋開始訓練</a>
+                <a href="{{route('scores.setup')}}" class="inline-flex items-center rounded-xl bg-gray-900 px-4 py-2 text-sm font-medium text-white shadow hover:bg-gray-800">＋開始訓練</a>
             </div>
         </div>
 
-        {{-- ===== 月結指標 ===== --}}
-        @php
-            // 安全換算
-            $fmtNum = function($v, $dec=0){ return number_format((float)$v, $dec); };
-            $pct    = function($v){ return number_format($v*100, 1) . '%'; };
+        {{-- Hero Quick Stats --}}
+        <div class="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-3 sm:gap-4">
+            @foreach($heroStats as $card)
+                <div class="rounded-2xl border p-4 bg-gradient-to-b from-white to-gray-50">
+                    <div class="text-xs text-gray-500">{{ $card['label'] }}</div>
+                    <div class="mt-1 flex items-baseline gap-1 text-2xl font-semibold">
+                        <span>{{ is_null($card['value']) ? '—' : number_format($card['value'], is_int($card['value']) ? 0 : 2) }}</span>
+                        <span class="text-xs font-medium text-gray-500">{{ $card['suffix'] }}</span>
+                    </div>
+                    <div class="mt-1 text-xs text-gray-500">{{ $card['hint'] }}</div>
+                </div>
+            @endforeach
+        </div>
 
-            /**
-             * 回傳：
-             * - textMain：主數字（cur）
-             * - textDelta：變化字串（↑/↓ + % 或 百分點或 絕對值）
-             * - cls：顏色（漲→emerald、跌→rose、持平→gray）
-             */
+        {{-- ===== 月結指標：保留原始指標 ===== --}}
+        @php
+            $fmtNum = fn($v, $dec=0) => is_null($v) ? '—' : number_format((float)$v, $dec);
+            $pct    = fn($v, $dec=1) => is_null($v) ? '—' : number_format((float)$v*100, $dec) . '%';
+
             function month_delta($cur, $prev, $mode='pct', $invert=false, $fmt=0) {
                 $cur  = (float)$cur; $prev = (float)$prev;
                 $delta = $cur - $prev;
                 $dir = $delta == 0 ? 0 : ($delta > 0 ? 1 : -1);
-                // 對於 invert（如 σ 越低越好），方向顛倒
                 $good = $invert ? -$dir : $dir;
 
                 $cls = $dir === 0 ? 'text-gray-600' : ($good > 0 ? 'text-emerald-700' : 'text-rose-700');
                 $arrow = $dir === 0 ? '—' : ($dir > 0 ? '↑' : '↓');
 
-                $main = number_format($cur, $fmt);
-
                 if ($mode === 'pct') {
                     $pct = $prev == 0 ? null : ($delta / max(abs($prev), 1e-9) * 100);
                     $deltaText = is_null($pct) ? '—' : $arrow . number_format(abs($pct), 1) . '%';
-                } elseif ($mode === 'pp') { // 百分點（for 率）
+                } elseif ($mode === 'pp') {
                     $pp = ($cur - $prev) * 100;
                     $deltaText = $arrow . number_format(abs($pp), 1) . ' pp';
-                } elseif ($mode === 'both') { // 同時顯示絕對與 %
+                } elseif ($mode === 'both') {
                     $pct = $prev == 0 ? null : ($delta / max(abs($prev), 1e-9) * 100);
                     $deltaText = ($arrow . number_format(abs($delta), $fmt)) . (is_null($pct) ? '' : '｜' . number_format(abs($pct),1) . '%');
-                } else { // abs
+                } else {
                     $deltaText = $arrow . number_format(abs($delta), $fmt);
                 }
-                return compact('main','deltaText','cls');
+                return ['deltaText' => $deltaText, 'cls' => $cls];
             }
         @endphp
 
         @if(!empty($monthlyIndex) && is_array($monthlyIndex))
-            <div class="mb-2 flex items-center justify-between">
+            <div class="flex items-center justify-between">
                 <h2 class="text-sm font-semibold">月指標</h2>
                 <div class="text-xs text-gray-500">
                     @php
@@ -317,87 +266,118 @@
                 </div>
             </div>
 
-            <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4 mb-6">
-                @foreach($monthlyIndex as $key => $row)
+            <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
+                @foreach($monthlyIndex as $row)
                     @php
                         $res = month_delta($row['cur'] ?? 0, $row['prev'] ?? 0, $row['mode'] ?? 'pct', $row['invert'] ?? false, $row['fmt'] ?? 0);
-                        $subtitle = match($row['mode'] ?? 'pct') {
-                            'pct'  => '月增率',
-                            'pp'   => '變動（百分點）',
-                            'both' => '本月｜月增率',
-                            default=> '本月變動'
-                        };
                         $valueText = ($row['mode'] ?? 'pct') === 'pp'
-                                    ? number_format(($row['cur'] ?? 0)*100, 1) . '%'
-                                    : number_format($row['cur'] ?? 0, $row['fmt'] ?? 0);
+                                    ? $fmtNum(($row['cur'] ?? 0) * 100, 1) . '%'
+                                    : $fmtNum($row['cur'] ?? 0, $row['fmt'] ?? 0);
                     @endphp
-                    <div class="rounded-2xl border p-4">
+                    <div class="rounded-2xl border p-4 bg-white">
                         <div class="text-xs text-gray-500">{{ $row['label'] }}</div>
                         <div class="mt-1 text-xl font-semibold">{{ $valueText }}</div>
-                        <div class="mt-1 text-xs">
-                            <span class="text-gray-500">{{ $subtitle }}：</span>
-                            <span class="{{ $res['cls'] }}">{{ $res['deltaText'] }}</span>
-                        </div>
+                        <div class="mt-1 text-xs text-gray-500">{{ $res['deltaText'] }} · 與上月</div>
+                        @if(($row['label'] ?? '') === 'σ（穩定度）')
+                            <div class="mt-2 h-1.5 w-full rounded-full bg-gray-100">
+                                <div class="h-1.5 rounded-full bg-emerald-500" style="width: {{ max(0,min(100,(3-($row['cur'] ?? 0))/3*100)) }}%"></div>
+                            </div>
+                        @endif
                     </div>
                 @endforeach
             </div>
         @endif
-        {{-- ===== /月結指標 ===== --}}
 
+        {{-- Trend + Insights --}}
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
-            {{-- Trend Chart (fake) --}}
             <div class="rounded-2xl border p-4 lg:col-span-2">
-                <div class="flex items-center justify-between mb-3">
-                    <h2 class="text-sm font-semibold">最近 8 週趨勢</h2>
-                    <div class="text-xs text-gray-500">箭數 / 平均分 / 時長</div>
+                @php $latestRange = empty($weeklyTrend) ? '—' : ($weeklyTrend[count($weeklyTrend)-1]['range'] ?? '—'); @endphp
+                <div class="flex items-start justify-between gap-3 mb-4">
+                    <div>
+                        <h2 class="text-sm font-semibold">8 週訓練趨勢</h2>
+                        <p class="text-xs text-gray-500">箭數（柱）、平均分（黑線）、σ（彩色帶）、X%（標籤）</p>
+                    </div>
+                    <div class="text-right text-xs text-gray-500">最新：{{ $latestRange }}</div>
                 </div>
-                {{-- 無外部圖表庫：以純 CSS 長條 + 線條模擬 --}}
                 <div class="overflow-x-auto">
-                    <div class="min-w-[640px] grid grid-cols-8 gap-3">
-                        @foreach($weeklyTrend as $w)
+                    <div class="min-w-[720px] grid grid-cols-8 gap-3">
+                        @forelse($weeklyTrend as $w)
                             @php
-                                $hArrows = min(200, $w['arrows'] / 3);  // 600 arrows -> 200px
-                                $hMins   = min(200, $w['mins']   / 2);  // 400 mins -> 200px
-                                $posAvg  = 200 - ($w['avg'] * 20);      // 10 -> top 0px
+                                $arrows = $w['arrows'] ?? 0;
+                                $avg = $w['avg'] ?? null;
+                                $sigma = $w['sigma'] ?? null;
+                                $xRate = $w['x_rate'] ?? null;
+                                $hArrows = min(180, max(0, $arrows / 3));
+                                $posAvg  = is_null($avg) ? null : 180 - (max(0, min(10, $avg)) * 16);
+                                $posSigma = is_null($sigma) ? null : (int) round(180 * max(0, min(3, $sigma)) / 3);
+                                $sigmaColor = is_null($sigma)
+                                    ? 'bg-indigo-200'
+                                    : ($sigma <= 1.2
+                                        ? 'bg-emerald-200 border-emerald-500/80'
+                                        : ($sigma <= 1.8 ? 'bg-amber-200 border-amber-500/80' : 'bg-rose-200 border-rose-500/80'));
                             @endphp
                             <div class="flex flex-col items-center">
-                                <div class="relative h-[200px] w-12">
-                                    <div class="absolute bottom-0 left-0 right-0 rounded-t bg-gray-200" style="height: {{ $hArrows }}px" title="Arrows: {{ $w['arrows'] }}"></div>
-                                    <div class="absolute bottom-0 left-2 right-2 rounded-t bg-gray-400/60" style="height: {{ $hMins }}px" title="Mins: {{ $w['mins'] }}"></div>
-                                    <div class="absolute left-0 right-0 h-[2px] bg-gray-900/80" style="top: {{ $posAvg }}px" title="Avg: {{ $w['avg'] }}"></div>
+                                <div class="relative h-[180px] w-14 bg-[radial-gradient(circle_at_0_0,#f8fafc_1px,transparent_0)] bg-[length:24px_24px]">
+                                    <div class="absolute bottom-0 left-0 right-0 rounded-t bg-gray-200" style="height: {{ $hArrows }}px"></div>
+                                    @if(!is_null($posSigma))
+                                        <div class="absolute left-1 right-1 h-[10px] rounded-full border {{ $sigmaColor }}" style="bottom: {{ 180 - $posSigma }}px"></div>
+                                    @endif
+                                    @if(!is_null($posAvg))
+                                        <div class="absolute left-0 right-0 h-[2px] bg-gray-900" style="top: {{ $posAvg }}px"></div>
+                                    @endif
                                 </div>
-                                <div class="mt-2 text-xs text-gray-600">{{ $w['week'] }}</div>
+                                <div class="mt-2 text-xs font-medium text-gray-700">{{ $w['week'] ?? '—' }}</div>
+                                <div class="text-[11px] text-gray-500">{{ $w['range'] ?? '' }}</div>
+                                <div class="mt-1 text-[11px] text-gray-700 space-x-1">
+                                    <span>AAE {{ is_null($avg) ? '—' : number_format($avg, 2) }}</span>
+                                    <span class="text-gray-400">·</span>
+                                    <span>σ {{ is_null($sigma) ? '—' : number_format($sigma, 2) }}</span>
+                                    <span class="text-gray-400">·</span>
+                                    <span>X% {{ is_null($xRate) ? '—' : number_format($xRate, 1) . '%' }}</span>
+                                </div>
                             </div>
-                        @endforeach
+                        @empty
+                            <div class="col-span-8 text-xs text-gray-500">暫無足夠資料繪製趨勢</div>
+                        @endforelse
                     </div>
                 </div>
-                <div class="mt-3 text-xs text-gray-500">說明：灰深＝時長、灰淺＝箭數、黑線＝平均單箭分。</div>
             </div>
 
-            {{-- Notes / Coach To-Dos --}}
-            <div class="rounded-2xl border p-4">
-                <div class="flex items-center justify-between mb-3">
-                    <h2 class="text-sm font-semibold">教練／自我備忘</h2>
-                    <a href="#" class="text-xs text-gray-500 hover:underline">管理</a>
+            <div class="rounded-2xl border p-4 flex flex-col gap-4">
+                <div>
+                    <h2 class="text-sm font-semibold">焦點提示</h2>
+                    <p class="text-xs text-gray-500">快速檢視本週與月度狀態。</p>
                 </div>
-                <ul class="space-y-2">
-                    @foreach($notes as $n)
-                        <li class="rounded-xl bg-gray-50 p-3">
-                            <div class="text-xs text-gray-500">{{ $n['tag'] }}</div>
-                            <div class="text-sm">{{ $n['text'] }}</div>
-                        </li>
-                    @endforeach
-                </ul>
-                <div class="mt-3 text-xs text-gray-500">最近活動：{{ $stats['last_active'] }}</div>
+                <div class="space-y-3">
+                    @forelse($insights as $tip)
+                        <div class="rounded-xl border border-gray-100 bg-gray-50 p-3">
+                            <div class="flex items-center justify-between text-sm font-medium">
+                                <span>{{ $tip['title'] }}</span>
+                                <span class="text-gray-600">{{ is_null($tip['value']) ? '—' : $tip['value'] }}</span>
+                            </div>
+                            <div class="mt-1 text-xs text-gray-500">{{ $tip['hint'] }}</div>
+                        </div>
+                    @empty
+                        <div class="rounded-xl border border-dashed p-4 text-xs text-gray-500">等待更多訓練資料來生成建議</div>
+                    @endforelse
+                </div>
+
+                <div class="rounded-xl border p-3">
+                    <div class="flex items-center justify-between text-sm font-medium">
+                        <span>Gold / Red</span>
+                        <span class="text-gray-700">{{ $pct($stats['gold_rate'] ?? null) }} · {{ $pct($stats['red_rate'] ?? null) }}</span>
+                    </div>
+                    <div class="mt-1 text-xs text-gray-500">全期命中分佈</div>
+                </div>
             </div>
         </div>
 
-        <div class="mt-6 grid grid-cols-1 lg:grid-cols-3 gap-4">
-            {{-- Recent Sessions Table --}}
-            <div class="rounded-2xl border p-4 lg:col-span-2 overflow-x-auto">
+        {{-- Sessions + Notes --}}
+        <div class="grid grid-cols-1 xl:grid-cols-3 gap-4">
+            <div class="rounded-2xl border p-4 xl:col-span-2 overflow-x-auto">
                 <div class="flex items-center justify-between mb-3">
                     <h2 class="text-sm font-semibold">最近訓練</h2>
-                    <a href="#" class="text-xs text-gray-500 hover:underline">查看全部</a>
+                    <span class="text-xs text-gray-500">最新 {{ $stats['last_active'] ?? '—' }}</span>
                 </div>
                 <table class="min-w-full text-sm">
                     <thead class="bg-gray-50 text-xs uppercase text-gray-500">
@@ -407,28 +387,52 @@
                         <th class="px-3 py-2 text-right">箭數</th>
                         <th class="px-3 py-2 text-right">平均分</th>
                         <th class="px-3 py-2 text-right">總分</th>
-                        <th class="px-3 py-2 text-left">風速</th>
                         <th class="px-3 py-2 text-left">備註</th>
                     </tr>
                     </thead>
                     <tbody class="divide-y">
-                    @foreach($recentSessions as $s)
+                    @forelse($recentSessions as $s)
                         <tr class="hover:bg-gray-50">
-                            <td class="px-3 py-2">{{ $s['date'] }}</td>
-                            <td class="px-3 py-2">{{ $s['location'] }}</td>
-                            <td class="px-3 py-2 text-right">{{ $s['arrows'] }}</td>
-                            <td class="px-3 py-2 text-right">{{ number_format($s['avg'], 2) }}</td>
-                            <td class="px-3 py-2 text-right">{{ number_format($s['score']) }}</td>
-                            <td class="px-3 py-2">{{ $s['wind'] }}</td>
-                            <td class="px-3 py-2">{{ $s['notes'] }}</td>
+                            <td class="px-3 py-2">{{ $s['date'] ?? '—' }}</td>
+                            <td class="px-3 py-2">{{ $s['location'] ?? '—' }}</td>
+                            <td class="px-3 py-2 text-right">{{ $s['arrows'] ?? 0 }}</td>
+                            <td class="px-3 py-2 text-right">{{ isset($s['avg']) ? number_format($s['avg'], 2) : '—' }}</td>
+                            <td class="px-3 py-2 text-right">{{ isset($s['score']) ? number_format($s['score']) : '—' }}</td>
+                            <td class="px-3 py-2">{{ $s['notes'] ?? '—' }}</td>
                         </tr>
-                    @endforeach
+                    @empty
+                        <tr>
+                            <td colspan="6" class="px-3 py-4 text-center text-sm text-gray-500">尚無訓練紀錄</td>
+                        </tr>
+                    @endforelse
                     </tbody>
                 </table>
             </div>
 
-            {{-- Goals / Progress --}}
-            <div class="rounded-2xl border p-4">
+            <div class="rounded-2xl border p-4 flex flex-col gap-4">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h2 class="text-sm font-semibold">教練／自我備忘</h2>
+                        <p class="text-xs text-gray-500">把今天的重點放進來。</p>
+                    </div>
+                    <a href="#" class="text-xs text-gray-500 hover:underline">管理</a>
+                </div>
+                <ul class="space-y-2">
+                    @forelse($notes as $n)
+                        <li class="rounded-xl bg-gray-50 p-3">
+                            <div class="text-xs text-gray-500">{{ $n['tag'] ?? '備忘' }}</div>
+                            <div class="text-sm">{{ $n['text'] ?? '—' }}</div>
+                        </li>
+                    @empty
+                        <li class="rounded-xl border border-dashed p-4 text-xs text-gray-500">目前沒有備忘紀錄</li>
+                    @endforelse
+                </ul>
+            </div>
+        </div>
+
+        {{-- Goals + Badges --}}
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            <div class="rounded-2xl border p-4 lg:col-span-2">
                 <div class="flex items-center justify-between mb-3">
                     <h2 class="text-sm font-semibold">目標與進度</h2>
                     <a href="#" class="text-xs text-gray-500 hover:underline">設定</a>
@@ -446,31 +450,33 @@
                         </li>
                     @endforeach
                 </ul>
+            </div>
 
-                {{-- Badges --}}
-                <div class="mt-5">
-                    <h3 class="text-xs font-semibold text-gray-500 mb-2">成就徽章</h3>
-                    <div class="flex flex-wrap gap-2">
-                        @foreach($badges as $b)
-                            <div class="inline-flex items-center gap-2 rounded-xl border px-3 py-2 text-xs">
-                                <span class="text-base">{{ $b['icon'] }}</span>
-                                <span class="font-medium">{{ $b['title'] }}</span>
-                            </div>
-                        @endforeach
-                    </div>
+            <div class="rounded-2xl border p-4">
+                <h3 class="text-sm font-semibold">成就徽章</h3>
+                <p class="text-xs text-gray-500 mb-3">保持挑戰，徽章會自動亮起。</p>
+                <div class="flex flex-wrap gap-2">
+                    @forelse($badges as $b)
+                        <div class="inline-flex items-center gap-2 rounded-xl border px-3 py-2 text-xs">
+                            <span class="text-base">{{ $b['icon'] }}</span>
+                            <span class="font-medium">{{ $b['title'] }}</span>
+                        </div>
+                    @empty
+                        <div class="text-xs text-gray-500">達成挑戰後會顯示徽章</div>
+                    @endforelse
                 </div>
             </div>
         </div>
 
         {{-- Mobile Quick Stats --}}
-        <div class="mt-6 grid grid-cols-2 sm:hidden gap-2">
+        <div class="grid grid-cols-2 sm:hidden gap-2">
             <div class="rounded-xl border p-3 text-center">
                 <div class="text-xs text-gray-500">Gold 率</div>
-                <div class="text-base font-semibold">{{ $pct($stats['gold_rate']) }}</div>
+                <div class="text-base font-semibold">{{ $pct($stats['gold_rate'] ?? null) }}</div>
             </div>
             <div class="rounded-xl border p-3 text-center">
                 <div class="text-xs text-gray-500">Red 率</div>
-                <div class="text-base font-semibold">{{ $pct($stats['red_rate']) }}</div>
+                <div class="text-base font-semibold">{{ $pct($stats['red_rate'] ?? null) }}</div>
             </div>
         </div>
 
@@ -479,7 +485,7 @@
             <button id="dash-glossary-open" type="button" class="h-10 w-10 rounded-full bg-gray-900 text-white flex items-center justify-center shadow-lg">i</button>
         </div>
     </div>
-
+    
     {{-- ===== 名詞解釋：Modal ===== --}}
     <div id="dash-glossary-modal" class="fixed inset-0 z-[9998] hidden" role="dialog" aria-modal="true" aria-labelledby="dash-glossary-title">
         <div class="absolute inset-0 bg-black/40" data-dash-glossary-close></div>
