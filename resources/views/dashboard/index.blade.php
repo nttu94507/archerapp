@@ -254,7 +254,7 @@
             <div>
                 <h1 class="text-2xl font-semibold tracking-tight">
                     @auth
-                        歡迎回來，{{ auth()->user()->name ?? '夥伴' }}
+                        歡迎回來，{{ auth()->user()->display_name ?? '夥伴' }}
                     @else
                         嗨嗨！神射手
                     @endauth

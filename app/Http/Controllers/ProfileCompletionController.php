@@ -21,9 +21,13 @@ class ProfileCompletionController extends Controller
     {
         $user = $request->user();
 
+        $user->forceFill([
+            'nickname' => $request->safe()->string('nickname')->toString() ?: null,
+        ])->save();
+
         $profile = UserProfile::updateOrCreate(
             ['user_id' => $user->id],
-            $request->safe()->except(['agree_terms']) + [
+            $request->safe()->except(['agree_terms', 'nickname']) + [
                 'consent_signed_at' => now(),
                 'consent_version'   => config('legal.consent_version', 'v1'),
             ]

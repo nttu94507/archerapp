@@ -93,7 +93,7 @@
                         <button id="user-menu-button"
                                 class="flex items-center gap-2 rounded-xl bg-gray-100 px-3 py-2 text-sm font-medium hover:bg-gray-200"
                                 aria-haspopup="true" aria-expanded="false">
-                            {{ auth()->user()->name }}
+                            {{ auth()->user()->display_name }}
                             <svg class="h-4 w-4 text-gray-500" viewBox="0 0 20 20" fill="currentColor"
                                  aria-hidden="true">
                                 <path fill-rule="evenodd"
@@ -199,7 +199,7 @@
             {{-- 使用者區塊 --}}
             @auth
                 <div class="px-3 py-2 text-xs text-gray-500">使用者</div>
-                <div class="px-3 py-2 font-medium">{{ auth()->user()->name }}</div>
+                <div class="px-3 py-2 font-medium">{{ auth()->user()->display_name }}</div>
                 <a href="{{ route('user.profile.completion') }}"
                    class="block rounded-lg px-3 py-2 text-sm hover:bg-gray-50 text-gray-700">個人資料</a>
                 <form method="POST" action="{{ route('logout') }}" class="mt-1">

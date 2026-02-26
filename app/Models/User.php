@@ -20,6 +20,7 @@ class User extends Authenticatable
      */
     protected $fillable = [
         'name',
+        'nickname',
         'email',
         'password',
         'google_id',
@@ -76,5 +77,10 @@ class User extends Authenticatable
     public function isAdmin(): bool
     {
         return (bool) $this->is_admin;
+    }
+
+    public function getDisplayNameAttribute(): string
+    {
+        return $this->nickname ?: $this->name;
     }
 }

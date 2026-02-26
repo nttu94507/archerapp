@@ -1,15 +1,15 @@
 {{-- resources/views/profile/complete.blade.php --}}
 @extends('layouts.app')
 
-@section('title', '完成個人資料')
+@section('title', '個人資料')
 
 @section('content')
     <div class="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8 py-8">
 
         {{-- Page Header --}}
         <div class="mb-6">
-            <h1 class="text-2xl font-bold tracking-tight text-gray-900">完成個人資料</h1>
-            <p class="text-sm text-gray-500 mt-1">請填寫以下資訊，以便完成報名與保險登記。</p>
+            <h1 class="text-2xl font-bold tracking-tight text-gray-900">個人資料</h1>
+            <p class="text-sm text-gray-500 mt-1">可設定顯示暱稱；若未設定，系統會預設使用 Google 名稱。</p>
         </div>
 
         {{-- Form --}}
@@ -27,6 +27,20 @@
                     </ul>
                 </div>
             @endif
+
+            <div class="rounded-2xl border border-gray-200 p-6 space-y-5 shadow-sm bg-white">
+                <h2 class="text-lg font-semibold text-gray-900">帳號資訊</h2>
+
+                <div>
+                    <label for="nickname" class="block text-sm font-medium text-gray-700 mb-1">暱稱 {{ is_null(auth()->user()->profile_completed_at) ? '*' : '' }}</label>
+                    <input type="text" id="nickname" name="nickname"
+                           value="{{ old('nickname', auth()->user()->nickname) }}"
+                           placeholder="輸入你想顯示的暱稱"
+                           class="block w-full rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-indigo-500">
+                    <p class="mt-1 text-xs text-gray-500">留空時將使用 Google 名稱（{{ auth()->user()->name }}）。</p>
+                    @error('nickname') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
+                </div>
+            </div>
 
             {{-- 聯絡資訊 --}}
             <div class="rounded-2xl border border-gray-200 p-6 space-y-5 shadow-sm bg-white">

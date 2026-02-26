@@ -57,7 +57,7 @@ class EventRegistrationController extends Controller
             'event_id'       => $event->id,
             'event_group_id' => $group->id,
             'user_id'        => $user->id,
-            'name'           => $user->name,
+            'name'           => $user->display_name,
             'email'          => $user->email,
             'status'         => 'registered',
         ]);
