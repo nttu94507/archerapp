@@ -21,8 +21,10 @@ class CompleteProfileRequest extends FormRequest
      */
     public function rules(): array
     {
-//        dd(123);
+        $isFirstProfileUpdate = is_null($this->user()?->profile_completed_at);
+
         return [
+            'nickname' => [$isFirstProfileUpdate ? 'required' : 'nullable', 'string', 'max:50'],
             'phone' => ['required','string','max:30'],
             'city'  => ['nullable','string','max:100'],
             'emergency_contact_name'  => ['required','string','max:100'],
@@ -38,6 +40,7 @@ class CompleteProfileRequest extends FormRequest
     public function messages(): array
     {
         return [
+            'nickname.required' => '請設定暱稱。',
             'agree_terms.accepted' => '請勾選同意條款與個資告知。',
         ];
     }

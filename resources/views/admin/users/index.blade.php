@@ -23,7 +23,7 @@
                     <tbody class="divide-y divide-gray-100">
                     @forelse($users as $user)
                         <tr class="hover:bg-gray-50">
-                            <td class="px-6 py-4 font-medium text-gray-900">{{ $user->name }}</td>
+                            <td class="px-6 py-4 font-medium text-gray-900">{{ $user->display_name }}</td>
                             <td class="px-6 py-4 text-gray-700">{{ $user->email }}</td>
                             <td class="px-6 py-4 text-gray-700">
                                 @if($user->archery_sessions_max_created_at)

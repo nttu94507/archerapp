@@ -21,9 +21,13 @@ class ProfileCompletionController extends Controller
     {
         $user = $request->user();
 
+        $user->forceFill([
+            'nickname' => $request->safe()->string('nickname')->toString() ?: null,
+        ])->save();
+
         $profile = UserProfile::updateOrCreate(
             ['user_id' => $user->id],
-            $request->safe()->except(['agree_terms']) + [
+            $request->safe()->except(['agree_terms', 'nickname']) + [
                 'consent_signed_at' => now(),
                 'consent_version'   => config('legal.consent_version', 'v1'),
             ]
@@ -33,7 +37,7 @@ class ProfileCompletionController extends Controller
             $user->forceFill(['profile_completed_at' => now()])->save();
         }
 
-        return redirect()->intended(route('leaderboards.index')) // 或 events.index
+        return redirect()->intended(route('dashboard.index')) // 或 events.index
         ->with('status', '資料已完成！');
     }
 }
