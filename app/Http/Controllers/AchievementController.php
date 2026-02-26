@@ -44,12 +44,16 @@ class AchievementController extends Controller
     private function badgeStylesByDefinitionId(): Collection
     {
         return AchievementDefinition::query()
+            ->whereNotNull('target_value')
             ->orderBy('condition_type')
             ->orderBy('target_value')
             ->get()
             ->groupBy('condition_type')
             ->flatMap(function (Collection $items) {
-                return $items->values()->mapWithKeys(function ($item, $index) {
+                return $items
+                    ->unique('target_value')
+                    ->values()
+                    ->mapWithKeys(function ($item, $index) {
                     $style = match (true) {
                         $index >= 2 => [
                             'icon' => '🏆',
@@ -77,8 +81,8 @@ class AchievementController extends Controller
                         ],
                     };
 
-                    return [$item->id => $style];
-                });
+                        return [$item->id => $style];
+                    });
             });
     }
 
