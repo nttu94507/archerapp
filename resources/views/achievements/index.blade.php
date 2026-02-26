@@ -10,6 +10,18 @@
         </section>
 
         <section class="space-y-4">
+            <h2 class="text-xl font-semibold">可使用稱號</h2>
+
+            @forelse($availableTitles as $title)
+                <div class="bg-indigo-50 border border-indigo-200 rounded-xl p-4">
+                    <p class="font-semibold text-indigo-800">{{ $title }}</p>
+                </div>
+            @empty
+                <p class="text-sm text-gray-600">尚未解鎖可用稱號，先完成第一個成就吧！</p>
+            @endforelse
+        </section>
+
+        <section class="space-y-4">
             <h2 class="text-xl font-semibold">即將達成</h2>
 
             @forelse($inProgress as $item)
@@ -37,6 +49,9 @@
                 <article class="bg-green-50 border border-green-200 rounded-xl p-4">
                     <h3 class="font-semibold">{{ $item->definition->name }}</h3>
                     <p class="text-sm text-gray-700">{{ $item->definition->description }}</p>
+                    @if($item->definition->title_name)
+                        <p class="text-sm text-indigo-700 mt-1">解鎖稱號：{{ $item->definition->title_name }}</p>
+                    @endif
                     <p class="text-xs text-gray-500 mt-1">解鎖時間：{{ optional($item->unlocked_at)->format('Y-m-d H:i') }}</p>
                 </article>
             @empty

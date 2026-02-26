@@ -26,10 +26,16 @@ class AchievementController extends Controller
 
         $unlocked = $progressRecords->whereNotNull('unlocked_at');
         $inProgress = $this->visibleInProgressAchievements($progressRecords);
+        $availableTitles = $unlocked
+            ->pluck('definition.title_name')
+            ->filter()
+            ->unique()
+            ->values();
 
         return view('achievements.index', [
             'unlocked' => $unlocked,
             'inProgress' => $inProgress,
+            'availableTitles' => $availableTitles,
         ]);
     }
 
@@ -44,6 +50,7 @@ class AchievementController extends Controller
     {
         return $progressRecords
             ->whereNull('unlocked_at')
+            ->filter(fn ($item) => !($item->definition->is_hidden ?? false))
             ->groupBy(fn ($item) => $item->definition->condition_type)
             ->map(function (Collection $items) {
                 return $items

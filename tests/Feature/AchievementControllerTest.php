@@ -53,12 +53,50 @@ class AchievementControllerTest extends TestCase
         $this->assertDatabaseHas('achievement_definitions', [
             'key' => 'arrows_1000',
             'condition_type' => 'total_arrows',
+            'title_name' => '千箭射手',
         ]);
 
         $this->assertDatabaseHas('user_achievement_progress', [
             'user_id' => $user->id,
             'target_value' => 100,
             'current_value' => 126,
+        ]);
+    }
+
+    public function test_it_unlocks_hidden_title_for_short_distance_only_users(): void
+    {
+        $user = User::factory()->create(['profile_completed_at' => now()]);
+
+        foreach (range(1, 100) as $index) {
+            $session = $user->archerySessions()->create([
+                'bow_type' => 'recurve',
+                'venue' => 'indoor',
+                'distance_m' => 30,
+                'arrows_total' => 12,
+                'arrows_per_end' => 6,
+                'target_face' => 'ten-ring',
+                'score_total' => 90,
+                'x_count' => 1,
+                'm_count' => 0,
+                'note' => 'hidden-achievement-test',
+            ]);
+
+            $session->timestamps = false;
+            $session->created_at = now()->subDays($index);
+            $session->updated_at = now()->subDays($index);
+            $session->save();
+        }
+
+        $response = $this->actingAs($user)->get(route('achievements.index'));
+
+        $response->assertOk();
+        $response->assertSee('十里坡箭神');
+        $response->assertSee('隱藏成就：十里坡傳說');
+
+        $this->assertDatabaseHas('user_achievement_progress', [
+            'user_id' => $user->id,
+            'current_value' => 100,
+            'target_value' => 100,
         ]);
     }
 }
