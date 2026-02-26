@@ -37,7 +37,7 @@ class ProfileCompletionController extends Controller
             $user->forceFill(['profile_completed_at' => now()])->save();
         }
 
-        return redirect()->intended(route('leaderboards.index')) // 或 events.index
+        return redirect()->intended(route('dashboard.index')) // 或 events.index
         ->with('status', '資料已完成！');
     }
 }
