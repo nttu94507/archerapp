@@ -10,11 +10,12 @@ class AchievementControllerTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_it_shows_achievement_progress_for_user(): void
+    public function test_it_shows_only_next_target_in_each_achievement_series(): void
     {
         $user = User::factory()->create(['profile_completed_at' => now()]);
 
-        // 建立 7 天有效紀錄，並累積超過 100 支箭
+        // 建立 7 天有效紀錄，並累積超過 100 支箭。
+        // 預期：100 支箭已解鎖，進行中只顯示 1000，不顯示 5000。
         foreach (range(0, 6) as $daysAgo) {
             $session = $user->archerySessions()->create([
                 'bow_type' => 'recurve',
@@ -39,18 +40,25 @@ class AchievementControllerTest extends TestCase
 
         $response->assertOk();
         $response->assertSee('成就');
-        $response->assertSee('連續 7 天');
+
+        // streak 系列：7 已達成，進行中顯示 14，不再顯示 3
+        $response->assertSee('連續 14 天');
+        $response->assertDontSee('連續 3 天完成射箭紀錄');
+
+        // arrows 系列：100 已達成，進行中顯示 1000，不顯示 5000
         $response->assertSee('100 支箭');
+        $response->assertSee('1000 支箭');
+        $response->assertDontSee('5000 支箭');
 
         $this->assertDatabaseHas('achievement_definitions', [
-            'key' => 'streak_7',
-            'condition_type' => 'streak',
+            'key' => 'arrows_1000',
+            'condition_type' => 'total_arrows',
         ]);
 
         $this->assertDatabaseHas('user_achievement_progress', [
             'user_id' => $user->id,
-            'current_value' => 7,
-            'target_value' => 7,
+            'target_value' => 100,
+            'current_value' => 126,
         ]);
     }
 }

@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Services\AchievementProgressService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 
 class AchievementController extends Controller
 {
@@ -24,11 +25,32 @@ class AchievementController extends Controller
             ->get();
 
         $unlocked = $progressRecords->whereNotNull('unlocked_at');
-        $inProgress = $progressRecords->whereNull('unlocked_at');
+        $inProgress = $this->visibleInProgressAchievements($progressRecords);
 
         return view('achievements.index', [
             'unlocked' => $unlocked,
             'inProgress' => $inProgress,
         ]);
+    }
+
+    /**
+     * 只顯示每個系列「下一個」尚未解鎖的目標。
+     * 例如箭數系列會先顯示 100，解鎖後才顯示 1000，再來 5000。
+     *
+     * @param Collection<int, mixed> $progressRecords
+     * @return Collection<int, mixed>
+     */
+    private function visibleInProgressAchievements(Collection $progressRecords): Collection
+    {
+        return $progressRecords
+            ->whereNull('unlocked_at')
+            ->groupBy(fn ($item) => $item->definition->condition_type)
+            ->map(function (Collection $items) {
+                return $items
+                    ->sortBy(fn ($item) => $item->definition->target_value)
+                    ->first();
+            })
+            ->filter()
+            ->values();
     }
 }
