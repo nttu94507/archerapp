@@ -49,11 +49,9 @@ class AchievementController extends Controller
             ->get()
             ->groupBy('condition_type')
             ->flatMap(function (Collection $items) {
-                $lastIndex = max(0, $items->count() - 1);
-
-                return $items->values()->mapWithKeys(function ($item, $index) use ($lastIndex) {
+                return $items->values()->mapWithKeys(function ($item, $index) {
                     $style = match (true) {
-                        $index === $lastIndex => [
+                        $index >= 2 => [
                             'icon' => '🏆',
                             'label' => '金牌',
                             'bg' => 'bg-amber-100',
@@ -61,7 +59,7 @@ class AchievementController extends Controller
                             'ring' => 'ring-amber-200',
                             'progress' => 'bg-gradient-to-r from-amber-400 to-yellow-500',
                         ],
-                        $index === max(0, $lastIndex - 1) => [
+                        $index === 1 => [
                             'icon' => '🥈',
                             'label' => '銀牌',
                             'bg' => 'bg-slate-100',
