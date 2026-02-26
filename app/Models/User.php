@@ -63,6 +63,11 @@ class User extends Authenticatable
         return $this->hasMany(ArcherySession::class);
     }
 
+    public function achievementProgress(): HasMany
+    {
+        return $this->hasMany(UserAchievementProgress::class);
+    }
+
     public function hasCompletedProfile(): bool
     {
         return !is_null($this->profile_completed_at);

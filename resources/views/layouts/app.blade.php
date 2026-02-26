@@ -38,6 +38,10 @@
                class="px-2 py-1 rounded-lg hover:bg-gray-100 {{ request()->routeIs('scores.*') ? 'text-gray-900' : 'text-gray-600' }}">
                 訓練紀錄
             </a>
+            <a href="{{ route('achievements.index') }}"
+               class="px-2 py-1 rounded-lg hover:bg-gray-100 {{ request()->routeIs('achievements.*') ? 'text-gray-900' : 'text-gray-600' }}">
+                成就
+            </a>
 {{--            <a href="{{ route('events.index') }}"--}}
 {{--               class="px-2 py-1 rounded-lg hover:bg-gray-100 {{ request()->routeIs('events.*') ? 'text-gray-900' : 'text-gray-600' }}">--}}
 {{--                賽事情報--}}
@@ -154,6 +158,10 @@
             <a href="{{ route('scores.index') }}"
                class="flex items-center gap-2 rounded-lg px-3 py-2 hover:bg-gray-50 {{ request()->routeIs('scores.*') ? 'font-semibold text-gray-900' : 'text-gray-700' }}">
                 訓練紀錄
+            </a>
+            <a href="{{ route('achievements.index') }}"
+               class="flex items-center gap-2 rounded-lg px-3 py-2 hover:bg-gray-50 {{ request()->routeIs('achievements.*') ? 'font-semibold text-gray-900' : 'text-gray-700' }}">
+                成就
             </a>
 {{--            <a href="{{ route('events.index') }}" class="flex items-center gap-2 rounded-lg px-3 py-2 hover:bg-gray-50 {{ request()->routeIs('events.*') ? 'font-semibold text-gray-900' : 'text-gray-700' }}">--}}
 {{--                賽事--}}
