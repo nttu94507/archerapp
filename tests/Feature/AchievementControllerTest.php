@@ -1,0 +1,64 @@
+<?php
+
+namespace Tests\Feature;
+
+use App\Models\User;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\TestCase;
+
+class AchievementControllerTest extends TestCase
+{
+    use RefreshDatabase;
+
+    public function test_it_shows_only_next_target_in_each_achievement_series(): void
+    {
+        $user = User::factory()->create(['profile_completed_at' => now()]);
+
+        // 建立 7 天有效紀錄，並累積超過 100 支箭。
+        // 預期：100 支箭已解鎖，進行中只顯示 1000，不顯示 5000。
+        foreach (range(0, 6) as $daysAgo) {
+            $session = $user->archerySessions()->create([
+                'bow_type' => 'recurve',
+                'venue' => 'indoor',
+                'distance_m' => 18,
+                'arrows_total' => 18,
+                'arrows_per_end' => 6,
+                'target_face' => 'ten-ring',
+                'score_total' => 120,
+                'x_count' => 3,
+                'm_count' => 1,
+                'note' => 'test',
+            ]);
+
+            $session->timestamps = false;
+            $session->created_at = now()->subDays($daysAgo);
+            $session->updated_at = now()->subDays($daysAgo);
+            $session->save();
+        }
+
+        $response = $this->actingAs($user)->get(route('achievements.index'));
+
+        $response->assertOk();
+        $response->assertSee('成就');
+
+        // streak 系列：7 已達成，進行中顯示 14，不再顯示 3
+        $response->assertSee('連續 14 天');
+        $response->assertDontSee('連續 3 天完成射箭紀錄');
+
+        // arrows 系列：100 已達成，進行中顯示 1000，不顯示 5000
+        $response->assertSee('100 支箭');
+        $response->assertSee('1000 支箭');
+        $response->assertDontSee('5000 支箭');
+
+        $this->assertDatabaseHas('achievement_definitions', [
+            'key' => 'arrows_1000',
+            'condition_type' => 'total_arrows',
+        ]);
+
+        $this->assertDatabaseHas('user_achievement_progress', [
+            'user_id' => $user->id,
+            'target_value' => 100,
+            'current_value' => 126,
+        ]);
+    }
+}
