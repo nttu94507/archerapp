@@ -20,9 +20,11 @@ class AchievementProgressService
         $metrics = $this->buildMetrics($user);
 
         foreach ($definitions as $definition) {
-            $currentValue = $definition->key === 'hidden_short_distance_specialist'
-                ? ($metrics['short_distance_only_sessions'] ?? 0)
-                : ($metrics[$definition->condition_type] ?? 0);
+            $currentValue = match (true) {
+                $definition->key === 'hidden_short_distance_specialist' => (int) ($metrics['short_distance_only_sessions'] ?? 0),
+                str_starts_with((string) $definition->key, 'sessions_') => (int) ($metrics['total_sessions'] ?? 0),
+                default => (int) ($metrics[$definition->condition_type] ?? 0),
+            };
             $targetValue = max(1, (int) $definition->target_value);
             $progressPercent = min(100, (int) floor(($currentValue / $targetValue) * 100));
 
@@ -56,9 +58,13 @@ class AchievementProgressService
             ['key' => 'days_7', 'name' => '累積 7 天', 'description' => '累積 7 天有有效訓練', 'title_name' => '穩定開弓', 'category' => 'total_days', 'condition_type' => 'total_days', 'target_value' => 7, 'is_hidden' => false],
             ['key' => 'days_30', 'name' => '累積 30 天', 'description' => '累積 30 天有有效訓練', 'title_name' => '月練成鋒', 'category' => 'total_days', 'condition_type' => 'total_days', 'target_value' => 30, 'is_hidden' => false],
             ['key' => 'days_100', 'name' => '累積 100 天', 'description' => '累積 100 天有有效訓練', 'title_name' => '百日宗師', 'category' => 'total_days', 'condition_type' => 'total_days', 'target_value' => 100, 'is_hidden' => false],
+            ['key' => 'days_1825', 'name' => '五年如一日', 'description' => '累積 1825 天有有效訓練（5 年長期成就）', 'title_name' => '長弓歲月', 'category' => 'total_days', 'condition_type' => 'total_days', 'target_value' => 1825, 'is_hidden' => false],
             ['key' => 'arrows_100', 'name' => '100 支箭', 'description' => '累積完成 100 支箭', 'title_name' => '百箭新秀', 'category' => 'total_arrows', 'condition_type' => 'total_arrows', 'target_value' => 100, 'is_hidden' => false],
             ['key' => 'arrows_1000', 'name' => '1000 支箭', 'description' => '累積完成 1000 支箭', 'title_name' => '千箭射手', 'category' => 'total_arrows', 'condition_type' => 'total_arrows', 'target_value' => 1000, 'is_hidden' => false],
             ['key' => 'arrows_5000', 'name' => '5000 支箭', 'description' => '累積完成 5000 支箭', 'title_name' => '萬里穿楊', 'category' => 'total_arrows', 'condition_type' => 'total_arrows', 'target_value' => 5000, 'is_hidden' => false],
+            ['key' => 'sessions_100', 'name' => '100 局', 'description' => '累積完成 100 局計分訓練', 'title_name' => '百局穩手', 'category' => 'total_sessions', 'condition_type' => 'total_days', 'target_value' => 100, 'is_hidden' => false],
+            ['key' => 'sessions_500', 'name' => '500 局', 'description' => '累積完成 500 局計分訓練', 'title_name' => '千場磨弓', 'category' => 'total_sessions', 'condition_type' => 'total_days', 'target_value' => 500, 'is_hidden' => false],
+            ['key' => 'sessions_1000', 'name' => '1000 局', 'description' => '累積完成 1000 局計分訓練', 'title_name' => '萬局宗匠', 'category' => 'total_sessions', 'condition_type' => 'total_days', 'target_value' => 1000, 'is_hidden' => false],
             ['key' => 'hidden_short_distance_specialist', 'name' => '隱藏成就：十里坡傳說', 'description' => '在沒有任何一場超過 30 公尺的情況下，完成 100 場 30 公尺內計分。', 'title_name' => '十里坡箭神', 'category' => 'hidden', 'condition_type' => 'total_days', 'target_value' => 100, 'is_hidden' => true],
         ];
 
@@ -102,6 +108,10 @@ class AchievementProgressService
             ->where('user_id', $user->id)
             ->sum('arrows_total');
 
+        $totalSessions = (int) DB::table('archery_sessions')
+            ->where('user_id', $user->id)
+            ->count();
+
         $overThirtyMetersCount = (int) DB::table('archery_sessions')
             ->where('user_id', $user->id)
             ->where('distance_m', '>', 30)
@@ -116,6 +126,7 @@ class AchievementProgressService
             'streak' => $streak,
             'total_days' => $totalDays,
             'total_arrows' => $totalArrows,
+            'total_sessions' => $totalSessions,
             'short_distance_only_sessions' => $overThirtyMetersCount === 0 ? $withinThirtyMetersCount : 0,
         ];
     }

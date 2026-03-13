@@ -51,7 +51,7 @@ class AchievementController extends Controller
         return $progressRecords
             ->whereNull('unlocked_at')
             ->filter(fn ($item) => !($item->definition->is_hidden ?? false))
-            ->groupBy(fn ($item) => $item->definition->condition_type)
+            ->groupBy(fn ($item) => $item->definition->category)
             ->map(function (Collection $items) {
                 return $items
                     ->sortBy(fn ($item) => $item->definition->target_value)

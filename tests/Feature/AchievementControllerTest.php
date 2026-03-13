@@ -50,6 +50,13 @@ class AchievementControllerTest extends TestCase
         $response->assertSee('1000 支箭');
         $response->assertDontSee('5000 支箭');
 
+        // sessions 系列：只有 7 局，應看到 100 局，不會直接出現 500 局
+        $response->assertSee('100 局');
+        $response->assertDontSee('500 局');
+
+        // 5 年長期成就（1825 天）在天數系列中可見
+        $response->assertSee('五年如一日');
+
         $this->assertDatabaseHas('achievement_definitions', [
             'key' => 'arrows_1000',
             'condition_type' => 'total_arrows',
@@ -92,6 +99,43 @@ class AchievementControllerTest extends TestCase
         $response->assertOk();
         $response->assertSee('十里坡箭神');
         $response->assertSee('隱藏成就：十里坡傳說');
+
+        $this->assertDatabaseHas('user_achievement_progress', [
+            'user_id' => $user->id,
+            'current_value' => 100,
+            'target_value' => 100,
+        ]);
+    }
+
+    public function test_it_unlocks_session_achievement_by_total_sessions(): void
+    {
+        $user = User::factory()->create(['profile_completed_at' => now()]);
+
+        foreach (range(1, 100) as $index) {
+            $session = $user->archerySessions()->create([
+                'bow_type' => 'recurve',
+                'venue' => 'indoor',
+                'distance_m' => 18,
+                'arrows_total' => 6,
+                'arrows_per_end' => 6,
+                'target_face' => 'ten-ring',
+                'score_total' => 45,
+                'x_count' => 0,
+                'm_count' => 0,
+                'note' => 'session-series-test',
+            ]);
+
+            $session->timestamps = false;
+            $session->created_at = now()->subDays($index);
+            $session->updated_at = now()->subDays($index);
+            $session->save();
+        }
+
+        $response = $this->actingAs($user)->get(route('achievements.index'));
+
+        $response->assertOk();
+        $response->assertSee('100 局');
+        $response->assertSee('解鎖稱號：百局穩手');
 
         $this->assertDatabaseHas('user_achievement_progress', [
             'user_id' => $user->id,

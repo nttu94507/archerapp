@@ -6,7 +6,7 @@
     <div class="max-w-5xl mx-auto px-4 py-8 space-y-8">
         <section>
             <h1 class="text-2xl font-bold">🏅 成就</h1>
-            <p class="text-sm text-gray-600 mt-1">追蹤你的連續訓練、累積天數與總箭數進度。</p>
+            <p class="text-sm text-gray-600 mt-1">追蹤你的連續訓練、累積天數、局數與總箭數進度。</p>
         </section>
 
         <section class="space-y-4">
