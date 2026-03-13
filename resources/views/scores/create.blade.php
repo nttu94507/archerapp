@@ -33,6 +33,104 @@
             </div>
         </div>
 
+        <div id="timer-card" data-phase="idle" data-collapsed="0"
+             class="fixed right-3 top-20 sm:top-24 z-40 w-[calc(100%-1.5rem)] sm:w-96 rounded-2xl border border-gray-800 bg-black text-gray-100 shadow-lg overflow-hidden transition-colors duration-200 mb-6">
+            <div id="timer-header" class="px-4 py-3 border-b border-gray-800 flex items-center justify-between gap-3 flex-wrap">
+                <div class="flex items-center gap-3">
+                    <div>
+                        <h2 class="text-lg font-semibold text-white">訓練計時模式</h2>
+                        <p class="text-xs text-gray-400">提供循環與計分兩種倒數模式，並附提示音。</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2">
+                    <div class="inline-flex rounded-full border border-gray-700 bg-gray-900/80 shadow-sm p-1 text-xs font-medium" id="timer-mode-tabs">
+                        <button type="button" data-timer-mode="loop"
+                                class="px-3 py-1 rounded-full bg-white text-gray-900">循環模式</button>
+                        <button type="button" data-timer-mode="scoring"
+                                class="px-3 py-1 rounded-full text-gray-300 bg-transparent">計分模式</button>
+                    </div>
+                    <button type="button" id="timer-collapse"
+                            class="rounded-full border border-gray-700 bg-gray-900/80 px-2.5 py-1 text-xs font-medium text-gray-100 hover:bg-gray-800">
+                        收合
+                    </button>
+                </div>
+            </div>
+
+            <div id="timer-compact" class="hidden px-3 py-2">
+                <button type="button" id="timer-expand"
+                        class="flex items-center gap-2 rounded-full bg-gray-900 text-white px-3 py-2 text-xs shadow-md hover:bg-gray-800">
+                    <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"
+                         stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <circle cx="12" cy="12" r="9"></circle>
+                        <path d="M12 7v6l3 2"></path>
+                    </svg>
+                    <div class="flex flex-col text-left leading-tight">
+                        <span id="timer-compact-status" class="text-[11px] text-gray-200">待機</span>
+                        <span id="timer-compact-time" class="font-mono font-semibold text-sm">00:00</span>
+                    </div>
+                </button>
+            </div>
+
+            <div id="timer-body" class="p-4 space-y-4">
+                <div class="flex items-end justify-between gap-4 flex-wrap">
+                    <div>
+                        <div class="text-xs text-gray-400">目前狀態</div>
+                        <div class="text-5xl font-mono font-semibold text-white" id="timer-display">00:00</div>
+                        <div class="text-sm text-gray-200" id="timer-status">待機</div>
+                        <div class="text-xs text-gray-400" id="timer-progress"></div>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <button type="button" id="timer-start"
+                                class="rounded-xl bg-emerald-500 text-black px-4 py-2 text-sm font-semibold hover:bg-emerald-400">開始</button>
+                        <button type="button" id="timer-stop"
+                                class="rounded-xl border border-gray-600 px-4 py-2 text-sm font-semibold text-red-200 hover:bg-gray-800">停止</button>
+                        <button type="button" id="timer-toggle-settings"
+                                class="rounded-xl border border-gray-600 px-4 py-2 text-sm font-semibold text-gray-100 hover:bg-gray-800">設定</button>
+                    </div>
+                </div>
+
+                <div id="timer-settings" class="grid sm:grid-cols-2 gap-4">
+                    <div id="loop-settings" class="space-y-3">
+                        <div class="flex items-center justify-between">
+                            <h3 class="text-sm font-semibold text-gray-800">循環模式</h3>
+                            <span class="text-[11px] text-gray-500">5 秒預備 → 訓練 → 休息</span>
+                        </div>
+                        <div class="grid grid-cols-3 gap-3 items-end">
+                            <label class="text-xs font-medium text-gray-600 flex flex-col gap-1">
+                                訓練秒數
+                                <input type="number" id="loop-train" class="rounded-xl border-gray-300 text-sm px-3 py-2" min="5" value="45">
+                            </label>
+                            <label class="text-xs font-medium text-gray-600 flex flex-col gap-1">
+                                休息秒數
+                                <input type="number" id="loop-rest" class="rounded-xl border-gray-300 text-sm px-3 py-2" min="0" value="15">
+                            </label>
+                            <label class="text-xs font-medium text-gray-600 flex flex-col gap-1">
+                                組數
+                                <input type="number" id="loop-sets" class="rounded-xl border-gray-300 text-sm px-3 py-2" min="1" value="3">
+                            </label>
+                        </div>
+                    </div>
+
+                    <div id="scoring-settings" class="space-y-3 hidden">
+                        <div class="flex items-center justify-between">
+                            <h3 class="text-sm font-semibold text-gray-800">計分模式</h3>
+                            <span class="text-[11px] text-gray-500">發射線 → 射擊</span>
+                        </div>
+                        <div class="grid grid-cols-2 gap-3 items-end">
+                            <label class="text-xs font-medium text-gray-600 flex flex-col gap-1">
+                                發射線秒數
+                                <input type="number" id="score-line" class="rounded-xl border-gray-300 text-sm px-3 py-2" min="5" value="10">
+                            </label>
+                            <label class="text-xs font-medium text-gray-600 flex flex-col gap-1">
+                                射擊秒數
+                                <input type="number" id="score-shoot" class="rounded-xl border-gray-300 text-sm px-3 py-2" min="30" value="180">
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <div class="grid lg:grid-cols-2 gap-4 mb-4">
             {{-- 靶面輸入卡 --}}
             <div class="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden">
@@ -209,6 +307,32 @@
 @section('js')
     {{-- 簡易樣式（沿用 Tailwind） --}}
     <style>
+        #timer-card { transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease; }
+        #timer-card[data-phase="idle"] #timer-display,
+        #timer-card[data-phase="idle"] #timer-status,
+        #timer-card[data-phase="idle"] #timer-progress,
+        #timer-card[data-phase="idle"] #timer-compact-time,
+        #timer-card[data-phase="idle"] #timer-compact-status { color: #f87171; }
+        #timer-card[data-phase="countdown"] #timer-display,
+        #timer-card[data-phase="countdown"] #timer-status,
+        #timer-card[data-phase="countdown"] #timer-progress,
+        #timer-card[data-phase="countdown"] #timer-compact-time,
+        #timer-card[data-phase="countdown"] #timer-compact-status { color: #fefefe; }
+        #timer-card[data-phase="shooting"] #timer-display,
+        #timer-card[data-phase="shooting"] #timer-status,
+        #timer-card[data-phase="shooting"] #timer-progress,
+        #timer-card[data-phase="shooting"] #timer-compact-time,
+        #timer-card[data-phase="shooting"] #timer-compact-status { color: #34d399; }
+        #timer-card.collapsed { cursor: pointer; width: auto; min-width: 0; border-radius: 9999px; padding: 6px; }
+        #timer-card.collapsed #timer-body { display: none; }
+        #timer-card.collapsed #timer-compact { display: block; }
+        #timer-card.collapsed #timer-header { display: none; }
+        #timer-card.collapsed .border-b { border-bottom: none; }
+        @media (min-width: 1024px) {
+            #timer-card { right: 1.75rem; top: 5.5rem; }
+        }
+        #timer-settings.hidden { display: none; }
+
         :root { --target-image: url('{{ $defaults['target_face'] === 'six-ring' ? '/images/target-6plus.svg' : '/images/target-122.svg' }}'); }
         .target-face {
             background: var(--target-image) center/contain no-repeat;
@@ -262,6 +386,238 @@
 
 
     <script>
+        (function () {
+            const $ = (id) => document.getElementById(id);
+            const card = $('timer-card');
+            if (!card) return;
+
+            const display = $('timer-display');
+            const statusEl = $('timer-status');
+            const progress = $('timer-progress');
+            const settingsWrap = $('timer-settings');
+            const loopSettings = $('loop-settings');
+            const scoringSettings = $('scoring-settings');
+            const compactWrap = $('timer-compact');
+            const compactTime = $('timer-compact-time');
+            const compactStatus = $('timer-compact-status');
+            const timerBody = $('timer-body');
+            const modeTabs = Array.from(document.querySelectorAll('#timer-mode-tabs [data-timer-mode]'));
+
+            const btnStart = $('timer-start');
+            const btnStop = $('timer-stop');
+            const btnToggleSettings = $('timer-toggle-settings');
+            const btnCollapse = $('timer-collapse');
+            const btnExpand = $('timer-expand');
+
+            const loopTrain = $('loop-train');
+            const loopRest = $('loop-rest');
+            const loopSets = $('loop-sets');
+            const scoreLine = $('score-line');
+            const scoreShoot = $('score-shoot');
+
+            let timerId = null;
+            let activeMode = 'loop';
+            let audioCtx = null;
+            let currentSet = 1;
+            let totalSets = 1;
+
+            const setStatus = (label) => {
+                if (!label) return;
+                statusEl.textContent = label;
+                if (compactStatus) compactStatus.textContent = label;
+            };
+
+            const setDisplayTime = (value) => {
+                display.textContent = value;
+                if (compactTime) compactTime.textContent = value;
+            };
+
+            const setPhase = (phase, label) => {
+                card.dataset.phase = phase;
+                if (label) setStatus(label);
+            };
+
+            const formatTime = (seconds) => {
+                const sec = Math.max(0, Math.ceil(seconds));
+                const m = String(Math.floor(sec / 60)).padStart(2, '0');
+                const s = String(sec % 60).padStart(2, '0');
+                return `${m}:${s}`;
+            };
+
+            const ensureCtx = () => {
+                if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                if (audioCtx?.state === 'suspended') audioCtx.resume();
+                return audioCtx;
+            };
+
+            const playTone = (times = 1, freq = 880, duration = 0.12, endFreq = null, volume = 0.4) => {
+                const ctx = ensureCtx();
+                for (let i = 0; i < times; i++) {
+                    const osc = ctx.createOscillator();
+                    const gain = ctx.createGain();
+                    osc.type = 'triangle';
+                    osc.frequency.value = freq;
+                    const start = ctx.currentTime + i * (duration + 0.08);
+                    osc.connect(gain);
+                    gain.connect(ctx.destination);
+                    gain.gain.setValueAtTime(volume, start);
+                    gain.gain.exponentialRampToValueAtTime(0.001, start + duration);
+                    if (endFreq) {
+                        osc.frequency.exponentialRampToValueAtTime(endFreq, start + duration * 0.7);
+                    }
+                    osc.start(start);
+                    osc.stop(start + duration + 0.02);
+                }
+            };
+
+            const tickBeep = () => playTone(1, 940, 0.14, 1260, 0.48);
+            const whistle = (times = 1) => playTone(times, 1080, 0.32, 1480, 0.55);
+
+            const clearTimer = () => {
+                if (timerId) {
+                    clearInterval(timerId);
+                    timerId = null;
+                }
+            };
+
+            const resetTimer = (label = '待機') => {
+                clearTimer();
+                progress.textContent = '';
+                setDisplayTime('00:00');
+                setPhase('idle', label);
+            };
+
+            const setActiveMode = (mode) => {
+                activeMode = mode;
+                modeTabs.forEach((btn) => {
+                    const isActive = btn.dataset.timerMode === mode;
+                    btn.classList.toggle('bg-white', isActive);
+                    btn.classList.toggle('text-gray-900', isActive);
+                    btn.classList.toggle('shadow', isActive);
+                    btn.classList.toggle('bg-transparent', !isActive);
+                    btn.classList.toggle('text-gray-300', !isActive);
+                });
+                loopSettings.classList.toggle('hidden', mode !== 'loop');
+                scoringSettings.classList.toggle('hidden', mode !== 'scoring');
+            };
+
+            const runCountdown = (seconds, { phase, label, tickOnLastTen = true, onEnd }) => {
+                clearTimer();
+                let remaining = Math.max(0, Math.ceil(seconds));
+                const endAt = Date.now() + seconds * 1000;
+                setPhase(phase, label);
+                setDisplayTime(formatTime(remaining));
+                timerId = setInterval(() => {
+                    const now = Date.now();
+                    const next = Math.max(0, Math.ceil((endAt - now) / 1000));
+                    if (next !== remaining) {
+                        remaining = next;
+                        setDisplayTime(formatTime(remaining));
+                        if (remaining <= 10 && tickOnLastTen) tickBeep();
+                    }
+                    if (now >= endAt) {
+                        clearTimer();
+                        onEnd?.();
+                    }
+                }, 200);
+            };
+
+            const startLoopMode = () => {
+                const train = Math.max(5, parseInt(loopTrain.value || '0', 10));
+                const rest = Math.max(0, parseInt(loopRest.value || '0', 10));
+                totalSets = Math.max(1, parseInt(loopSets.value || '1', 10));
+                currentSet = 1;
+                progress.textContent = `第 ${currentSet} / ${totalSets} 組`;
+                const runRest = () => {
+                    if (rest <= 0) return advanceSet();
+                    setStatus(`第 ${currentSet} 組休息`); progress.textContent = `第 ${currentSet} / ${totalSets} 組`;
+                    runCountdown(rest, { phase: 'countdown', label: `第 ${currentSet} 組休息`, onEnd: advanceSet });
+                };
+                const runTrain = () => {
+                    setStatus(`第 ${currentSet} 組訓練`); progress.textContent = `第 ${currentSet} / ${totalSets} 組`;
+                    runCountdown(train, {
+                        phase: 'shooting',
+                        label: `第 ${currentSet} 組訓練`,
+                        onEnd: () => { whistle(2); runRest(); },
+                    });
+                };
+                const advanceSet = () => {
+                    if (currentSet < totalSets) {
+                        currentSet += 1;
+                        runCountdown(5, { phase: 'countdown', label: `第 ${currentSet} 組預備`, tickOnLastTen: false, onEnd: () => { whistle(1); runTrain(); } });
+                    } else {
+                        whistle(1);
+                        resetTimer('循環完成');
+                    }
+                };
+                runCountdown(5, { phase: 'countdown', label: '預備倒數', tickOnLastTen: false, onEnd: () => { whistle(1); runTrain(); } });
+            };
+
+            const startScoringMode = () => {
+                const line = Math.max(5, parseInt(scoreLine.value || '10', 10));
+                const shoot = Math.max(30, parseInt(scoreShoot.value || '180', 10));
+                progress.textContent = '';
+                const startShooting = () => {
+                    runCountdown(shoot, {
+                        phase: 'shooting',
+                        label: '射擊倒數',
+                        onEnd: () => { whistle(1); resetTimer('完成'); },
+                    });
+                };
+                runCountdown(line, {
+                    phase: 'countdown',
+                    label: '發射線倒數',
+                    onEnd: () => { whistle(1); startShooting(); },
+                });
+            };
+
+            const setCollapsed = (collapsed) => {
+                const isCollapsed = !!collapsed;
+                card.dataset.collapsed = isCollapsed ? '1' : '0';
+                card.classList.toggle('collapsed', isCollapsed);
+                if (timerBody) timerBody.style.display = isCollapsed ? 'none' : '';
+                if (compactWrap) compactWrap.style.display = isCollapsed ? 'block' : 'none';
+                if (btnCollapse) btnCollapse.textContent = isCollapsed ? '展開' : '收合';
+            };
+
+            setCollapsed(false);
+
+            btnCollapse?.addEventListener('click', (event) => {
+                event.stopPropagation();
+                setCollapsed(card.dataset.collapsed !== '1');
+            });
+
+            btnExpand?.addEventListener('click', (event) => {
+                event.stopPropagation();
+                setCollapsed(false);
+            });
+
+            card?.addEventListener('click', () => {
+                if (card.dataset.collapsed === '1') setCollapsed(false);
+            });
+
+            btnStart?.addEventListener('click', () => {
+                clearTimer();
+                if (activeMode === 'loop') startLoopMode();
+                else startScoringMode();
+            });
+
+            btnStop?.addEventListener('click', () => {
+                resetTimer('已停止');
+            });
+
+            btnToggleSettings?.addEventListener('click', () => {
+                settingsWrap.classList.toggle('hidden');
+            });
+
+            modeTabs.forEach((btn) => {
+                btn.addEventListener('click', () => setActiveMode(btn.dataset.timerMode || 'loop'));
+            });
+
+            setActiveMode('loop');
+            resetTimer();
+        })();
+
         (function () {
             // ---- DOM（若沒有表單也能運作） ----
             const root = document.getElementById('score-root');
