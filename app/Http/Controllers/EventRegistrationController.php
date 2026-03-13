@@ -31,6 +31,10 @@ class EventRegistrationController extends Controller
             return back()->with('error', '目前非報名期間。');
         }
 
+        if ($group->registration_closed) {
+            return back()->with('error', '此組別已結束報名。');
+        }
+
         // 檢查是否已報名（有效狀態）
         $exists = EventRegistration::query()
             ->where('event_id', $event->id)
