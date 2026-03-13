@@ -345,33 +345,61 @@
         {{-- ===== /月結指標 ===== --}}
 
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
-            {{-- Trend Chart (fake) --}}
+            {{-- 每月訓練箭數曲線（12 個月） --}}
             <div class="rounded-2xl border p-4 lg:col-span-2">
                 <div class="flex items-center justify-between mb-3">
-                    <h2 class="text-sm font-semibold">最近 8 週趨勢</h2>
-                    <div class="text-xs text-gray-500">箭數 / 平均分 / 時長</div>
+                    <h2 class="text-sm font-semibold">每月訓練箭數（近一年）</h2>
+                    <div class="text-xs text-gray-500">過去 12 個月</div>
                 </div>
-                {{-- 無外部圖表庫：以純 CSS 長條 + 線條模擬 --}}
+                @php
+                    $yearlyArrowTrend = $yearlyArrowTrend ?? [];
+                    $maxArrows = max(1, collect($yearlyArrowTrend)->max('arrows') ?? 0);
+                    $chartWidth = 720;
+                    $chartHeight = 220;
+                    $paddingX = 24;
+                    $paddingY = 18;
+                    $pointCount = max(1, count($yearlyArrowTrend));
+                    $usableWidth = $chartWidth - ($paddingX * 2);
+                    $usableHeight = $chartHeight - ($paddingY * 2);
+                    $stepX = $pointCount > 1 ? ($usableWidth / ($pointCount - 1)) : 0;
+                    $points = collect($yearlyArrowTrend)->values()->map(function ($point, $idx) use ($paddingX, $paddingY, $usableHeight, $stepX, $maxArrows) {
+                        $x = $paddingX + ($stepX * $idx);
+                        $y = $paddingY + $usableHeight - (($point['arrows'] / $maxArrows) * $usableHeight);
+
+                        return [
+                            'x' => round($x, 1),
+                            'y' => round($y, 1),
+                            'month' => $point['month'],
+                            'month_key' => $point['month_key'],
+                            'arrows' => $point['arrows'],
+                        ];
+                    });
+                    $polyline = $points->map(fn ($p) => $p['x'] . ',' . $p['y'])->implode(' ');
+                @endphp
                 <div class="overflow-x-auto">
-                    <div class="min-w-[640px] grid grid-cols-8 gap-3">
-                        @foreach($weeklyTrend as $w)
-                            @php
-                                $hArrows = min(200, $w['arrows'] / 3);  // 600 arrows -> 200px
-                                $hMins   = min(200, $w['mins']   / 2);  // 400 mins -> 200px
-                                $posAvg  = 200 - ($w['avg'] * 20);      // 10 -> top 0px
-                            @endphp
-                            <div class="flex flex-col items-center">
-                                <div class="relative h-[200px] w-12">
-                                    <div class="absolute bottom-0 left-0 right-0 rounded-t bg-gray-200" style="height: {{ $hArrows }}px" title="Arrows: {{ $w['arrows'] }}"></div>
-                                    <div class="absolute bottom-0 left-2 right-2 rounded-t bg-gray-400/60" style="height: {{ $hMins }}px" title="Mins: {{ $w['mins'] }}"></div>
-                                    <div class="absolute left-0 right-0 h-[2px] bg-gray-900/80" style="top: {{ $posAvg }}px" title="Avg: {{ $w['avg'] }}"></div>
-                                </div>
-                                <div class="mt-2 text-xs text-gray-600">{{ $w['week'] }}</div>
-                            </div>
-                        @endforeach
+                    <div class="min-w-[760px]">
+                        <svg viewBox="0 0 {{ $chartWidth }} {{ $chartHeight }}" class="w-full" role="img" aria-label="每月訓練箭數曲線圖">
+                            <line x1="{{ $paddingX }}" y1="{{ $chartHeight - $paddingY }}" x2="{{ $chartWidth - $paddingX }}" y2="{{ $chartHeight - $paddingY }}" stroke="#d1d5db" stroke-width="1" />
+                            <line x1="{{ $paddingX }}" y1="{{ $paddingY }}" x2="{{ $paddingX }}" y2="{{ $chartHeight - $paddingY }}" stroke="#d1d5db" stroke-width="1" />
+                            @foreach([0.25, 0.5, 0.75, 1.0] as $ratio)
+                                @php $yGuide = $paddingY + $usableHeight - ($usableHeight * $ratio); @endphp
+                                <line x1="{{ $paddingX }}" y1="{{ $yGuide }}" x2="{{ $chartWidth - $paddingX }}" y2="{{ $yGuide }}" stroke="#e5e7eb" stroke-dasharray="3 4" stroke-width="1" />
+                            @endforeach
+
+                            @if($polyline !== '')
+                                <polyline points="{{ $polyline }}" fill="none" stroke="#111827" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" />
+                            @endif
+
+                            @foreach($points as $point)
+                                <circle cx="{{ $point['x'] }}" cy="{{ $point['y'] }}" r="3.5" fill="#111827">
+                                    <title>{{ $point['month_key'] }}：{{ $point['arrows'] }} 箭</title>
+                                </circle>
+                                <text x="{{ $point['x'] }}" y="{{ $chartHeight - 2 }}" text-anchor="middle" font-size="10" fill="#4b5563">{{ $point['month'] }}</text>
+                            @endforeach
+                        </svg>
                     </div>
                 </div>
-                <div class="mt-3 text-xs text-gray-500">說明：灰深＝時長、灰淺＝箭數、黑線＝平均單箭分。</div>
+                <div class="mt-3 text-xs text-gray-500">曲線代表每個月訓練箭數，方便觀察一年內訓練量變化。</div>
             </div>
 
             {{-- Notes / Coach To-Dos --}}

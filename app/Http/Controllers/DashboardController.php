@@ -13,8 +13,6 @@ class DashboardController extends Controller
 
     public function index()
     {
-        $userId = auth()->id();
-
         [$cmStart, $cmEnd] = $this->monthWindow('current');
         [$pmStart, $pmEnd] = $this->monthWindow('prev');
 
@@ -42,8 +40,41 @@ class DashboardController extends Controller
         // 其餘你原本塞給 view 的資料...
         return view('dashboard.index', [
             'monthlyIndex' => $monthlyIndex,
+            'yearlyArrowTrend' => $this->yearlyArrowTrend(),
         ]);
     }
+
+    private function yearlyArrowTrend(): array
+    {
+        $userId = auth()->id();
+        $start = now()->subMonths(11)->startOfMonth();
+        $end = now()->copy()->endOfMonth();
+
+        $rows = ArcheryShot::query()
+            ->whereHas('session', fn ($q) =>
+                $q->where('user_id', $userId)
+                    ->whereBetween('created_at', [$start, $end])
+            )
+            ->selectRaw("DATE_FORMAT(created_at, '%Y-%m') AS month_key, COUNT(*) AS arrows")
+            ->groupBy('month_key')
+            ->orderBy('month_key')
+            ->get()
+            ->pluck('arrows', 'month_key');
+
+        $trend = [];
+        for ($i = 11; $i >= 0; $i--) {
+            $month = now()->subMonths($i);
+            $monthKey = $month->format('Y-m');
+            $trend[] = [
+                'month' => $month->format('n月'),
+                'month_key' => $monthKey,
+                'arrows' => (int) ($rows[$monthKey] ?? 0),
+            ];
+        }
+
+        return $trend;
+    }
+
     private function monthAgg(Carbon $from, Carbon $to): array
     {
         $userId = auth()->id();
@@ -108,4 +139,3 @@ class DashboardController extends Controller
 
 
 }
-
