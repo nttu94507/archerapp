@@ -345,24 +345,24 @@
         {{-- ===== /月結指標 ===== --}}
 
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
-            {{-- 每月訓練箭數曲線（12 個月） --}}
+            {{-- 每月訓練箭數曲線（6 個月） --}}
             <div class="rounded-2xl border p-4 lg:col-span-2">
                 <div class="flex items-center justify-between mb-3">
-                    <h2 class="text-sm font-semibold">每月訓練箭數（近一年）</h2>
-                    <div class="text-xs text-gray-500">過去 12 個月</div>
+                    <h2 class="text-sm font-semibold">每月訓練箭數（近半年）</h2>
+                    <div class="text-xs text-gray-500">過去 6 個月</div>
                 </div>
                 @php
-                    $yearlyArrowTrend = $yearlyArrowTrend ?? [];
-                    $maxArrows = max(1, collect($yearlyArrowTrend)->max('arrows') ?? 0);
+                    $halfYearArrowTrend = $halfYearArrowTrend ?? [];
+                    $maxArrows = max(1, collect($halfYearArrowTrend)->max('arrows') ?? 0);
                     $chartWidth = 720;
                     $chartHeight = 220;
                     $paddingX = 24;
                     $paddingY = 18;
-                    $pointCount = max(1, count($yearlyArrowTrend));
+                    $pointCount = max(1, count($halfYearArrowTrend));
                     $usableWidth = $chartWidth - ($paddingX * 2);
                     $usableHeight = $chartHeight - ($paddingY * 2);
                     $stepX = $pointCount > 1 ? ($usableWidth / ($pointCount - 1)) : 0;
-                    $points = collect($yearlyArrowTrend)->values()->map(function ($point, $idx) use ($paddingX, $paddingY, $usableHeight, $stepX, $maxArrows) {
+                    $points = collect($halfYearArrowTrend)->values()->map(function ($point, $idx) use ($paddingX, $paddingY, $usableHeight, $stepX, $maxArrows) {
                         $x = $paddingX + ($stepX * $idx);
                         $y = $paddingY + $usableHeight - (($point['arrows'] / $maxArrows) * $usableHeight);
 
@@ -399,7 +399,7 @@
                         </svg>
                     </div>
                 </div>
-                <div class="mt-3 text-xs text-gray-500">曲線代表每個月訓練箭數，方便觀察一年內訓練量變化。</div>
+                <div class="mt-3 text-xs text-gray-500">曲線代表每個月訓練箭數，方便觀察半年內訓練量變化。</div>
             </div>
 
             {{-- Notes / Coach To-Dos --}}

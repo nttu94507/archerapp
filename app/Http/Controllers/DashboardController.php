@@ -40,14 +40,14 @@ class DashboardController extends Controller
         // 其餘你原本塞給 view 的資料...
         return view('dashboard.index', [
             'monthlyIndex' => $monthlyIndex,
-            'yearlyArrowTrend' => $this->yearlyArrowTrend(),
+            'halfYearArrowTrend' => $this->halfYearArrowTrend(),
         ]);
     }
 
-    private function yearlyArrowTrend(): array
+    private function halfYearArrowTrend(): array
     {
         $userId = auth()->id();
-        $start = now()->subMonths(11)->startOfMonth();
+        $start = now()->subMonths(5)->startOfMonth();
         $end = now()->copy()->endOfMonth();
 
         $rows = ArcheryShot::query()
@@ -62,7 +62,7 @@ class DashboardController extends Controller
             ->pluck('arrows', 'month_key');
 
         $trend = [];
-        for ($i = 11; $i >= 0; $i--) {
+        for ($i = 5; $i >= 0; $i--) {
             $month = now()->subMonths($i);
             $monthKey = $month->format('Y-m');
             $trend[] = [
