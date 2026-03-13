@@ -94,8 +94,9 @@ class AchievementProgressService
     private function buildArrowMilestones(): array
     {
         $items = [];
+        $milestones = [10000, 30000, 60000, 90000, 100000];
 
-        foreach (range(5000, 100000, 1000) as $target) {
+        foreach ($milestones as $target) {
             $items[] = [
                 'key' => 'arrows_' . $target,
                 'name' => $target === 100000 ? '草船借箭' : ($target . ' 支箭'),
@@ -113,19 +114,13 @@ class AchievementProgressService
 
     private function arrowMilestoneTitle(int $target): string
     {
-        if ($target <= 10000) {
-            return '千步穿楊' . (int) ($target / 1000) . '段';
-        }
-
-        if ($target <= 30000) {
-            return '百發百中' . (int) ($target / 1000) . '階';
-        }
-
-        if ($target <= 60000) {
-            return '天工神射' . (int) ($target / 1000) . '重';
-        }
-
-        return '箭道無雙' . (int) ($target / 1000) . '冠';
+        return match ($target) {
+            10000 => '千矢貫心',
+            30000 => '萬箭齊發',
+            60000 => '神臂穿楊',
+            90000 => '箭道至尊',
+            default => '傳奇弓手',
+        };
     }
 
     /**

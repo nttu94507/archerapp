@@ -41,7 +41,7 @@ class AchievementController extends Controller
 
     /**
      * 只顯示每個系列「下一個」尚未解鎖的目標。
-     * 例如箭數系列會先顯示 5000，解鎖後才顯示 6000。
+     * 例如箭數系列會先顯示 10000，解鎖後才顯示 30000。
      *
      * @param Collection<int, mixed> $progressRecords
      * @return Collection<int, mixed>
