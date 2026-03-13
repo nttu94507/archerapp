@@ -58,15 +58,17 @@ class AchievementProgressService
             ['key' => 'days_7', 'name' => '累積 7 天', 'description' => '累積 7 天有有效訓練', 'title_name' => '穩定開弓', 'category' => 'total_days', 'condition_type' => 'total_days', 'target_value' => 7, 'is_hidden' => false],
             ['key' => 'days_30', 'name' => '累積 30 天', 'description' => '累積 30 天有有效訓練', 'title_name' => '月練成鋒', 'category' => 'total_days', 'condition_type' => 'total_days', 'target_value' => 30, 'is_hidden' => false],
             ['key' => 'days_100', 'name' => '累積 100 天', 'description' => '累積 100 天有有效訓練', 'title_name' => '百日宗師', 'category' => 'total_days', 'condition_type' => 'total_days', 'target_value' => 100, 'is_hidden' => false],
+            ['key' => 'days_365', 'name' => '一年有成', 'description' => '累積 365 天有有效訓練（1 年長期成就）', 'title_name' => '歲練弓心', 'category' => 'total_days', 'condition_type' => 'total_days', 'target_value' => 365, 'is_hidden' => false],
+            ['key' => 'days_730', 'name' => '兩載不輟', 'description' => '累積 730 天有有效訓練（2 年長期成就）', 'title_name' => '雙年定志', 'category' => 'total_days', 'condition_type' => 'total_days', 'target_value' => 730, 'is_hidden' => false],
+            ['key' => 'days_1095', 'name' => '三年有恆', 'description' => '累積 1095 天有有效訓練（3 年長期成就）', 'title_name' => '三載神射', 'category' => 'total_days', 'condition_type' => 'total_days', 'target_value' => 1095, 'is_hidden' => false],
             ['key' => 'days_1825', 'name' => '五年如一日', 'description' => '累積 1825 天有有效訓練（5 年長期成就）', 'title_name' => '長弓歲月', 'category' => 'total_days', 'condition_type' => 'total_days', 'target_value' => 1825, 'is_hidden' => false],
-            ['key' => 'arrows_100', 'name' => '100 支箭', 'description' => '累積完成 100 支箭', 'title_name' => '百箭新秀', 'category' => 'total_arrows', 'condition_type' => 'total_arrows', 'target_value' => 100, 'is_hidden' => false],
-            ['key' => 'arrows_1000', 'name' => '1000 支箭', 'description' => '累積完成 1000 支箭', 'title_name' => '千箭射手', 'category' => 'total_arrows', 'condition_type' => 'total_arrows', 'target_value' => 1000, 'is_hidden' => false],
-            ['key' => 'arrows_5000', 'name' => '5000 支箭', 'description' => '累積完成 5000 支箭', 'title_name' => '萬里穿楊', 'category' => 'total_arrows', 'condition_type' => 'total_arrows', 'target_value' => 5000, 'is_hidden' => false],
             ['key' => 'sessions_100', 'name' => '100 局', 'description' => '累積完成 100 局計分訓練', 'title_name' => '百局穩手', 'category' => 'total_sessions', 'condition_type' => 'total_days', 'target_value' => 100, 'is_hidden' => false],
             ['key' => 'sessions_500', 'name' => '500 局', 'description' => '累積完成 500 局計分訓練', 'title_name' => '千場磨弓', 'category' => 'total_sessions', 'condition_type' => 'total_days', 'target_value' => 500, 'is_hidden' => false],
             ['key' => 'sessions_1000', 'name' => '1000 局', 'description' => '累積完成 1000 局計分訓練', 'title_name' => '萬局宗匠', 'category' => 'total_sessions', 'condition_type' => 'total_days', 'target_value' => 1000, 'is_hidden' => false],
             ['key' => 'hidden_short_distance_specialist', 'name' => '隱藏成就：十里坡傳說', 'description' => '在沒有任何一場超過 30 公尺的情況下，完成 100 場 30 公尺內計分。', 'title_name' => '十里坡箭神', 'category' => 'hidden', 'condition_type' => 'total_days', 'target_value' => 100, 'is_hidden' => true],
         ];
+
+        $items = array_merge($items, $this->buildArrowMilestones());
 
         return collect($items)->map(function (array $item) {
             return AchievementDefinition::query()->updateOrCreate(
@@ -84,6 +86,46 @@ class AchievementProgressService
                 ]
             );
         });
+    }
+
+    /**
+     * @return array<int,array<string,mixed>>
+     */
+    private function buildArrowMilestones(): array
+    {
+        $items = [];
+
+        foreach (range(5000, 100000, 1000) as $target) {
+            $items[] = [
+                'key' => 'arrows_' . $target,
+                'name' => $target === 100000 ? '草船借箭' : ($target . ' 支箭'),
+                'description' => '累積完成 ' . $target . ' 支箭',
+                'title_name' => $target === 100000 ? '草船借箭' : $this->arrowMilestoneTitle($target),
+                'category' => 'total_arrows',
+                'condition_type' => 'total_arrows',
+                'target_value' => $target,
+                'is_hidden' => false,
+            ];
+        }
+
+        return $items;
+    }
+
+    private function arrowMilestoneTitle(int $target): string
+    {
+        if ($target <= 10000) {
+            return '千步穿楊' . (int) ($target / 1000) . '段';
+        }
+
+        if ($target <= 30000) {
+            return '百發百中' . (int) ($target / 1000) . '階';
+        }
+
+        if ($target <= 60000) {
+            return '天工神射' . (int) ($target / 1000) . '重';
+        }
+
+        return '箭道無雙' . (int) ($target / 1000) . '冠';
     }
 
     /**

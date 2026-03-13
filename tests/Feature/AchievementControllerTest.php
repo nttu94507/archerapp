@@ -14,8 +14,8 @@ class AchievementControllerTest extends TestCase
     {
         $user = User::factory()->create(['profile_completed_at' => now()]);
 
-        // 建立 7 天有效紀錄，並累積超過 100 支箭。
-        // 預期：100 支箭已解鎖，進行中只顯示 1000，不顯示 5000。
+        // 建立 7 天有效紀錄，總箭數為 126。
+        // 預期：箭數系列從 5000 起算，進行中顯示 5000，不顯示 6000。
         foreach (range(0, 6) as $daysAgo) {
             $session = $user->archerySessions()->create([
                 'bow_type' => 'recurve',
@@ -45,10 +45,9 @@ class AchievementControllerTest extends TestCase
         $response->assertSee('連續 14 天');
         $response->assertDontSee('連續 3 天完成射箭紀錄');
 
-        // arrows 系列：100 已達成，進行中顯示 1000，不顯示 5000
-        $response->assertSee('100 支箭');
-        $response->assertSee('1000 支箭');
-        $response->assertDontSee('5000 支箭');
+        // arrows 系列：里程碑從 5000 開始
+        $response->assertSee('5000 支箭');
+        $response->assertDontSee('6000 支箭');
 
         // sessions 系列：只有 7 局，應看到 100 局，不會直接出現 500 局
         $response->assertSee('100 局');
@@ -58,9 +57,15 @@ class AchievementControllerTest extends TestCase
         $response->assertSee('五年如一日');
 
         $this->assertDatabaseHas('achievement_definitions', [
-            'key' => 'arrows_1000',
+            'key' => 'arrows_5000',
             'condition_type' => 'total_arrows',
-            'title_name' => '千箭射手',
+            'title_name' => '千步穿楊5段',
+        ]);
+
+        $this->assertDatabaseHas('achievement_definitions', [
+            'key' => 'arrows_100000',
+            'name' => '草船借箭',
+            'title_name' => '草船借箭',
         ]);
 
         $this->assertDatabaseHas('user_achievement_progress', [
