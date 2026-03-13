@@ -11,17 +11,20 @@ class AchievementDefinition extends Model
         'key',
         'name',
         'description',
+        'title_name',
         'category',
         'condition_type',
         'target_value',
         'points',
         'is_active',
+        'is_hidden',
     ];
 
     protected $casts = [
         'target_value' => 'integer',
         'points' => 'integer',
         'is_active' => 'boolean',
+        'is_hidden' => 'boolean',
     ];
 
     public function progressRecords(): HasMany

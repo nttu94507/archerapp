@@ -26,16 +26,22 @@ class AchievementController extends Controller
 
         $unlocked = $progressRecords->whereNotNull('unlocked_at');
         $inProgress = $this->visibleInProgressAchievements($progressRecords);
+        $availableTitles = $unlocked
+            ->pluck('definition.title_name')
+            ->filter()
+            ->unique()
+            ->values();
 
         return view('achievements.index', [
             'unlocked' => $unlocked,
             'inProgress' => $inProgress,
+            'availableTitles' => $availableTitles,
         ]);
     }
 
     /**
      * 只顯示每個系列「下一個」尚未解鎖的目標。
-     * 例如箭數系列會先顯示 100，解鎖後才顯示 1000，再來 5000。
+     * 例如箭數系列會先顯示 10000，解鎖後才顯示 30000。
      *
      * @param Collection<int, mixed> $progressRecords
      * @return Collection<int, mixed>
@@ -44,7 +50,8 @@ class AchievementController extends Controller
     {
         return $progressRecords
             ->whereNull('unlocked_at')
-            ->groupBy(fn ($item) => $item->definition->condition_type)
+            ->filter(fn ($item) => !($item->definition->is_hidden ?? false))
+            ->groupBy(fn ($item) => $item->definition->category)
             ->map(function (Collection $items) {
                 return $items
                     ->sortBy(fn ($item) => $item->definition->target_value)
