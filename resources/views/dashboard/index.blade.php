@@ -376,9 +376,9 @@
                     });
                     $polyline = $points->map(fn ($p) => $p['x'] . ',' . $p['y'])->implode(' ');
                 @endphp
-                <div class="overflow-x-auto">
-                    <div class="min-w-[760px]">
-                        <svg viewBox="0 0 {{ $chartWidth }} {{ $chartHeight }}" class="w-full" role="img" aria-label="每月訓練箭數曲線圖">
+                <div class="w-full">
+                    <div class="w-full">
+                        <svg viewBox="0 0 {{ $chartWidth }} {{ $chartHeight }}" class="w-full h-auto" role="img" aria-label="每月訓練箭數曲線圖">
                             <line x1="{{ $paddingX }}" y1="{{ $chartHeight - $paddingY }}" x2="{{ $chartWidth - $paddingX }}" y2="{{ $chartHeight - $paddingY }}" stroke="#d1d5db" stroke-width="1" />
                             <line x1="{{ $paddingX }}" y1="{{ $paddingY }}" x2="{{ $paddingX }}" y2="{{ $chartHeight - $paddingY }}" stroke="#d1d5db" stroke-width="1" />
                             @foreach([0.25, 0.5, 0.75, 1.0] as $ratio)
