@@ -18,17 +18,11 @@
             'best_36' => 321,
             'gold_rate' => 0.34,
             'red_rate' => 0.47,
-            'last_active' => '2 天前',
         ];
         $goals = [
             ['title' => '36 箭 ≥ 330', 'progress' => 0.74, 'due' => '2025/12/31'],
             ['title' => '連續訓練 14 天', 'progress' => $stats['streak_days'] / 14, 'due' => '—'],
             ['title' => 'X% ≥ 38%', 'progress' => $stats['gold_rate'] < 0.38 ? $stats['gold_rate']/0.38 : 1, 'due' => '2026/03/31'],
-        ];
-        $notes = [
-            ['tag' => '站姿', 'text' => '腳尖對準靶心微內扣，骨架撐住重心。'],
-            ['tag' => '放箭', 'text' => '放鬆後臂，手肘沿線後移，不要側甩。'],
-            ['tag' => '瞄準', 'text' => '呼吸停在第二拍，穩住 0.8 秒再放。'],
         ];
         $badges = [
             ['icon' => '🔥', 'title' => '7-Day Streak'],
@@ -323,9 +317,9 @@
         @endif
         {{-- ===== /月結指標 ===== --}}
 
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <div class="mt-6">
             {{-- 每月訓練箭數曲線（6 個月） --}}
-            <div class="rounded-2xl border p-4 lg:col-span-2">
+            <div class="rounded-2xl border p-4">
                 <div class="flex items-center justify-between mb-3">
                     <h2 class="text-sm font-semibold">每月訓練箭數（近半年）</h2>
                     <div class="text-xs text-gray-500">過去 6 個月</div>
@@ -380,24 +374,6 @@
                 </div>
                 <div class="mt-3 text-xs text-gray-500">曲線代表每個月訓練箭數，方便觀察半年內訓練量變化。</div>
             </div>
-
-            {{-- Notes / Coach To-Dos --}}
-            <div class="rounded-2xl border p-4">
-                <div class="flex items-center justify-between mb-3">
-                    <h2 class="text-sm font-semibold">教練／自我備忘</h2>
-                    <a href="#" class="text-xs text-gray-500 hover:underline">管理</a>
-                </div>
-                <ul class="space-y-2">
-                    @foreach($notes as $n)
-                        <li class="rounded-xl bg-gray-50 p-3">
-                            <div class="text-xs text-gray-500">{{ $n['tag'] }}</div>
-                            <div class="text-sm">{{ $n['text'] }}</div>
-                        </li>
-                    @endforeach
-                </ul>
-                <div class="mt-3 text-xs text-gray-500">最近活動：{{ $stats['last_active'] }}</div>
-            </div>
-        </div>
 
         <div class="mt-6 rounded-2xl border p-4 sm:p-5">
             <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between mb-4">
