@@ -19,16 +19,6 @@
             'gold_rate' => 0.34,
             'red_rate' => 0.47,
         ];
-        $goals = [
-            ['title' => '36 箭 ≥ 330', 'progress' => 0.74, 'due' => '2025/12/31'],
-            ['title' => '連續訓練 14 天', 'progress' => $stats['streak_days'] / 14, 'due' => '—'],
-            ['title' => 'X% ≥ 38%', 'progress' => $stats['gold_rate'] < 0.38 ? $stats['gold_rate']/0.38 : 1, 'due' => '2026/03/31'],
-        ];
-        $badges = [
-            ['icon' => '🔥', 'title' => '7-Day Streak'],
-            ['icon' => '🎯', 'title' => '1000 Arrows a Day'],
-            ['icon' => '🏆', 'title' => 'Best End 58'],
-        ];
         // ======== /假資料 ========
 
     @endphp
@@ -374,48 +364,9 @@
                 </div>
                 <div class="mt-3 text-xs text-gray-500">曲線代表每個月訓練箭數，方便觀察半年內訓練量變化。</div>
             </div>
-
-        <div class="mt-6 rounded-2xl border p-4 sm:p-5">
-            <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between mb-4">
-                <div>
-                    <h2 class="text-sm font-semibold">成就進度</h2>
-                    <p class="mt-1 text-xs text-gray-500">第三層聚焦顯示目前目標完成度與已解鎖成就。</p>
-                </div>
-            </div>
-
-            <div class="grid grid-cols-1 xl:grid-cols-3 gap-4">
-                <div class="xl:col-span-2">
-                    <ul class="space-y-4">
-                        @foreach($goals as $g)
-                            @php $progress = min(100, max(0, round($g['progress'] * 100))); @endphp
-                            <li class="rounded-2xl bg-gray-50 p-4">
-                                <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                                    <div>
-                                        <div class="text-sm font-medium">{{ $g['title'] }}</div>
-                                        <div class="text-xs text-gray-500">到期：{{ $g['due'] }}</div>
-                                    </div>
-                                    <div class="text-sm font-semibold text-gray-700">{{ $progress }}%</div>
-                                </div>
-                                <div class="mt-3 h-2.5 w-full rounded-full bg-gray-200">
-                                    <div class="h-2.5 rounded-full bg-gray-900" style="width: {{ $progress }}%"></div>
-                                </div>
-                            </li>
-                        @endforeach
-                    </ul>
-                </div>
-
-                <div class="rounded-2xl bg-gray-50 p-4">
-                    <h3 class="text-xs font-semibold text-gray-500 mb-3">已解鎖成就</h3>
-                    <div class="grid grid-cols-1 sm:grid-cols-3 xl:grid-cols-1 gap-2">
-                        @foreach($badges as $b)
-                            <div class="inline-flex items-center gap-3 rounded-xl border border-gray-200 bg-white px-3 py-3 text-sm">
-                                <span class="text-lg">{{ $b['icon'] }}</span>
-                                <span class="font-medium">{{ $b['title'] }}</span>
-                            </div>
-                        @endforeach
-                    </div>
-                </div>
-            </div>
+        <div class="mt-6 rounded-2xl border border-dashed p-6 text-center">
+            <h2 class="text-base font-semibold">成就系統重建中</h2>
+            <p class="mt-2 text-sm text-gray-600">目前已暫停所有射箭成就，後續會以全新機制重新上線。</p>
         </div>
     </div>
     @endauth

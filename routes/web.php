@@ -12,7 +12,6 @@ use App\Http\Controllers\LoginController;
 use App\Http\Controllers\ProfileCompletionController;
 use App\Http\Controllers\ScoreController;
 use App\Http\Controllers\TeamPostController;
-use App\Http\Controllers\AchievementController;
 use Illuminate\Support\Facades\Route;
 
 // open page
@@ -82,9 +81,6 @@ Route::middleware(['auth'])->group(function () {
     Route::resource('scores', \App\Http\Controllers\ScoreController::class);
 });
 
-Route::middleware(['auth'])->group(function () {
-    Route::get('achievements', [AchievementController::class, 'index'])->name('achievements.index');
-});
 
 Route::middleware(['auth', 'profile.completed'])->group(function () {
     Route::get('/my-events', [MyEventController::class, 'index'])->name('my-events.index');
