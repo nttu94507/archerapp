@@ -365,8 +365,9 @@
                 <div class="mt-3 text-xs text-gray-500">曲線代表每個月訓練箭數，方便觀察半年內訓練量變化。</div>
             </div>
         <div class="mt-6 rounded-2xl border border-dashed p-6 text-center">
-            <h2 class="text-base font-semibold">成就系統重建中</h2>
-            <p class="mt-2 text-sm text-gray-600">目前已暫停所有射箭成就，後續會以全新機制重新上線。</p>
+            <h2 class="text-base font-semibold">成就系統已回歸</h2>
+            <p class="mt-2 text-sm text-gray-600">已提供完整成就清單，前往成就頁查看各項達成進度。</p>
+            <a href="{{ route('achievements.index') }}" class="mt-3 inline-flex items-center rounded-lg bg-gray-900 px-3 py-2 text-xs font-medium text-white hover:bg-gray-800">查看成就</a>
         </div>
     </div>
     @endauth

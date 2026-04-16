@@ -12,6 +12,8 @@ use App\Http\Controllers\LoginController;
 use App\Http\Controllers\ProfileCompletionController;
 use App\Http\Controllers\ScoreController;
 use App\Http\Controllers\TeamPostController;
+use App\Http\Controllers\AchievementController;
+use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
 
 // open page
@@ -79,6 +81,8 @@ Route::middleware(['auth', 'admin'])->group(function () {
 Route::middleware(['auth'])->group(function () {
     Route::get('scores/setup', [ScoreController::class, 'setup'])->name('scores.setup');
     Route::resource('scores', \App\Http\Controllers\ScoreController::class);
+    Route::get('achievements', [AchievementController::class, 'index'])->name('achievements.index');
+    Route::get('profile/me', [ProfileController::class, 'show'])->name('profile.show');
 });
 
 
