@@ -3,6 +3,9 @@
 @section('content')
 <div class="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 py-6">
     <div class="rounded-2xl border bg-white p-4 sm:p-6 space-y-4">
+        <div>
+            <a href="{{ route('second-hand.index') }}" class="inline-flex items-center rounded-xl border px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50">← 返回二手市集</a>
+        </div>
         <h1 class="text-2xl font-semibold">{{ $item->title }}</h1>
         <p class="text-xl font-bold">NT$ {{ number_format($item->price) }}</p>
         <p class="text-sm text-gray-600">賣家：{{ $item->seller_display_name }}</p>
