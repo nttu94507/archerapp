@@ -10,15 +10,16 @@
                 <span class="text-xs text-gray-500">共 {{ $items->total() }} 件</span>
             </div>
 
-            <form method="GET" action="{{ route('second-hand.index') }}" class="flex items-center gap-2">
+            <form id="search-form" method="GET" action="{{ route('second-hand.index') }}" class="flex items-center gap-2">
                 <input
+                    id="search-input"
                     type="text"
                     name="q"
                     value="{{ $keyword ?? '' }}"
                     placeholder="搜尋標題或內文關鍵字"
                     class="w-full rounded-xl border px-3 py-2 text-sm"
+                    autocomplete="off"
                 >
-                <button type="submit" class="shrink-0 rounded-xl bg-gray-900 px-4 py-2 text-sm font-semibold text-white hover:bg-gray-800">搜尋</button>
             </form>
 
             @if (session('status'))
@@ -47,6 +48,17 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
+            const searchForm = document.getElementById('search-form');
+            const searchInput = document.getElementById('search-input');
+            let searchTimer = null;
+
+            searchInput?.addEventListener('input', () => {
+                clearTimeout(searchTimer);
+                searchTimer = setTimeout(() => {
+                    searchForm.submit();
+                }, 1000);
+            });
+
             let nextPageUrl = @json($items->nextPageUrl());
             let loading = false;
             const anchor = document.getElementById('load-more-anchor');
