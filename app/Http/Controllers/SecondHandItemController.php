@@ -81,11 +81,28 @@ class SecondHandItemController extends Controller
         return redirect()->route('second-hand.index')->with('status', '二手商品已上架。');
     }
 
+
+    public function markSold(SecondHandItem $secondHandItem)
+    {
+        $user = auth()->user();
+        if (! $user || (! $user->isAdmin() && $secondHandItem->seller_id !== $user->id)) {
+            abort(403);
+        }
+
+        $secondHandItem->update(['is_sold' => true]);
+
+        return redirect()->route('second-hand.show', $secondHandItem)->with('status', '商品已標記為已售出。');
+    }
+
     public function destroy(SecondHandItem $secondHandItem)
     {
         $user = auth()->user();
         if (! $user || (! $user->isAdmin() && $secondHandItem->seller_id !== $user->id)) {
             abort(403);
+        }
+
+        if ($secondHandItem->is_sold) {
+            return redirect()->route('second-hand.show', $secondHandItem)->with('status', '已售出商品不可刪除，系統會保留紀錄。');
         }
 
         $secondHandItem->delete();

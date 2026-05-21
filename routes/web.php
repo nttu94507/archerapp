@@ -51,6 +51,7 @@ Route::get('/second-hand', [SecondHandItemController::class, 'index'])->name('se
 Route::middleware('auth')->group(function () {
     Route::get('/second-hand/create', [SecondHandItemController::class, 'create'])->name('second-hand.create');
     Route::post('/second-hand', [SecondHandItemController::class, 'store'])->name('second-hand.store');
+    Route::patch('/second-hand/{secondHandItem}/sold', [SecondHandItemController::class, 'markSold'])->name('second-hand.sold');
     Route::delete('/second-hand/{secondHandItem}', [SecondHandItemController::class, 'destroy'])->name('second-hand.destroy');
 });
 Route::get('/second-hand/{secondHandItem}', [SecondHandItemController::class, 'show'])->name('second-hand.show');

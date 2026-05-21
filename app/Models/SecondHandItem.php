@@ -21,6 +21,11 @@ class SecondHandItem extends Model
         'description',
         'contact_type',
         'contact_value',
+        'is_sold',
+    ];
+
+    protected $casts = [
+        'is_sold' => 'boolean',
     ];
 
     public function seller(): BelongsTo
