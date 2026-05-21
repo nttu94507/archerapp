@@ -21,10 +21,6 @@
             <form action="{{ route('second-hand.store') }}" method="POST" enctype="multipart/form-data" class="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
                 @csrf
                 <label class="space-y-1 md:col-span-2">
-                    <span class="text-sm text-gray-700">販售者暱稱</span>
-                    <input value="{{ auth()->user()->display_name }}" disabled class="w-full rounded-xl border bg-gray-100 px-3 py-2 text-sm text-gray-600">
-                </label>
-                <label class="space-y-1 md:col-span-2">
                     <span class="text-sm text-gray-700">商品名稱</span>
                     <input name="title" value="{{ old('title') }}" required class="w-full rounded-xl border px-3 py-2 text-sm">
                 </label>
