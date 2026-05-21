@@ -31,6 +31,7 @@
                 <label class="space-y-1">
                     <span class="text-sm text-gray-700">商品照片</span>
                     <input type="file" name="photo" accept="image/*" required class="w-full rounded-xl border px-3 py-2 text-sm file:mr-3 file:rounded-lg file:border-0 file:bg-gray-900 file:px-3 file:py-1 file:text-white">
+                    <p class="text-xs text-gray-500">檔案上限 10MB，建議使用 JPG/PNG。</p>
                 </label>
                 <label class="space-y-1">
                     <span class="text-sm text-gray-700">聯繫方式類型</span>
