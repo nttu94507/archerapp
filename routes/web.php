@@ -13,6 +13,7 @@ use App\Http\Controllers\ProfileCompletionController;
 use App\Http\Controllers\ScoreController;
 use App\Http\Controllers\TeamPostController;
 use App\Http\Controllers\AchievementController;
+use App\Http\Controllers\SecondHandItemController;
 use Illuminate\Support\Facades\Route;
 
 // open page
@@ -35,6 +36,9 @@ Route::get('/tool', function () {
 Route::get('/payment', function () {
     return view('tool.paymentfinish');
 })->name('tool.paymentfinish');
+
+Route::get('/second-hand', [SecondHandItemController::class, 'index'])->name('second-hand.index');
+Route::post('/second-hand', [SecondHandItemController::class, 'store'])->name('second-hand.store');
 
 Route::prefix('admin')->middleware(['auth', 'admin'])->name('admin.')->group(function () {
     Route::get('/', function () {
