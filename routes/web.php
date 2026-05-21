@@ -15,6 +15,7 @@ use App\Http\Controllers\TeamPostController;
 use App\Http\Controllers\AchievementController;
 use App\Http\Controllers\SecondHandItemController;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Storage;
 
 // open page
 Route::get('/', [DashboardController::class, 'index'])->name('dashboard.index');
@@ -23,6 +24,15 @@ Route::get('/login/options', [\App\Http\Controllers\LoginController::class, 'opt
 Route::get('/arrow-rank', function () {
     return view('arrow-rank.create');
 })->name('arrow-rank.create');
+
+
+Route::get('/storage/{path}', function (string $path) {
+    if (! Storage::disk('public')->exists($path)) {
+        abort(404);
+    }
+
+    return response()->file(Storage::disk('public')->path($path));
+})->where('path', '.*');
 
 //google 登入相關
 Route::get('/auth/google/redirect', [GoogleController::class, 'redirect'])
