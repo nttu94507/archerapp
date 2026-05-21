@@ -39,6 +39,8 @@ class SecondHandItem extends Model
             return '未知賣家';
         }
 
-        return $this->seller->nickname ?: $this->seller->name;
+        $nickname = trim((string) $this->seller->nickname);
+
+        return $nickname !== '' ? $nickname : $this->seller->name;
     }
 }
