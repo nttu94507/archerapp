@@ -9,7 +9,19 @@ class SecondHandItemController extends Controller
 {
     public function index(Request $request)
     {
-        $items = SecondHandItem::query()->with(['seller', 'photos'])->latest()->paginate(12);
+        $keyword = trim((string) $request->query('q', ''));
+
+        $items = SecondHandItem::query()
+            ->with(['seller', 'photos'])
+            ->when($keyword !== '', function ($query) use ($keyword) {
+                $query->where(function ($q) use ($keyword) {
+                    $q->where('title', 'like', "%{$keyword}%")
+                        ->orWhere('description', 'like', "%{$keyword}%");
+                });
+            })
+            ->latest()
+            ->paginate(12)
+            ->withQueryString();
 
         if ($request->ajax()) {
             return response()->json([
@@ -18,7 +30,7 @@ class SecondHandItemController extends Controller
             ]);
         }
 
-        return view('second-hand.index', ['items' => $items]);
+        return view('second-hand.index', ['items' => $items, 'keyword' => $keyword]);
     }
 
     public function show(SecondHandItem $secondHandItem)

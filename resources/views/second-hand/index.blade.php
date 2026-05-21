@@ -4,13 +4,25 @@
 
 @section('content')
     <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-5 space-y-4">
-        <section class="rounded-2xl border bg-white px-4 py-3 sm:px-5">
+        <section class="rounded-2xl border bg-white px-4 py-3 sm:px-5 space-y-3">
             <div class="flex items-center justify-between gap-3">
                 <h1 class="text-xl sm:text-2xl font-semibold tracking-tight">二手市集</h1>
                 <span class="text-xs text-gray-500">共 {{ $items->total() }} 件</span>
             </div>
+
+            <form method="GET" action="{{ route('second-hand.index') }}" class="flex items-center gap-2">
+                <input
+                    type="text"
+                    name="q"
+                    value="{{ $keyword ?? '' }}"
+                    placeholder="搜尋標題或內文關鍵字"
+                    class="w-full rounded-xl border px-3 py-2 text-sm"
+                >
+                <button type="submit" class="shrink-0 rounded-xl bg-gray-900 px-4 py-2 text-sm font-semibold text-white hover:bg-gray-800">搜尋</button>
+            </form>
+
             @if (session('status'))
-                <div class="mt-3 rounded-xl border border-emerald-300 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
+                <div class="rounded-xl border border-emerald-300 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
                     {{ session('status') }}
                 </div>
             @endif
