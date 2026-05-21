@@ -14,13 +14,19 @@ class SecondHandItemController extends Controller
         ]);
     }
 
+    public function create()
+    {
+        return view('second-hand.create');
+    }
+
     public function store(Request $request)
     {
         $validated = $request->validate([
             'title' => ['required', 'string', 'max:120'],
             'price' => ['required', 'integer', 'min:0'],
-            'seller_nickname' => ['nullable', 'string', 'max:50'],
             'description' => ['nullable', 'string', 'max:1000'],
+            'contact_type' => ['required', 'in:phone,social'],
+            'contact_value' => ['required', 'string', 'max:100'],
             'photo' => ['required', 'image', 'max:4096'],
         ]);
 
@@ -29,10 +35,10 @@ class SecondHandItemController extends Controller
         SecondHandItem::create([
             'title' => $validated['title'],
             'price' => $validated['price'],
-            'seller_nickname' => $validated['seller_nickname']
-                ?? auth()->user()?->display_name
-                ?? '匿名賣家',
+            'seller_nickname' => auth()->user()->display_name,
             'description' => $validated['description'] ?? null,
+            'contact_type' => $validated['contact_type'],
+            'contact_value' => $validated['contact_value'],
             'photo_path' => $photoPath,
         ]);
 

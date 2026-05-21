@@ -38,7 +38,10 @@ Route::get('/payment', function () {
 })->name('tool.paymentfinish');
 
 Route::get('/second-hand', [SecondHandItemController::class, 'index'])->name('second-hand.index');
-Route::post('/second-hand', [SecondHandItemController::class, 'store'])->name('second-hand.store');
+Route::middleware('auth')->group(function () {
+    Route::get('/second-hand/create', [SecondHandItemController::class, 'create'])->name('second-hand.create');
+    Route::post('/second-hand', [SecondHandItemController::class, 'store'])->name('second-hand.store');
+});
 
 Route::prefix('admin')->middleware(['auth', 'admin'])->name('admin.')->group(function () {
     Route::get('/', function () {

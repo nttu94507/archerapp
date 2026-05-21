@@ -15,5 +15,7 @@ class SecondHandItem extends Model
         'seller_nickname',
         'photo_path',
         'description',
+        'contact_type',
+        'contact_value',
     ];
 }
