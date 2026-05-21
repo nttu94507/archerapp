@@ -48,9 +48,11 @@ Route::get('/payment', function () {
 })->name('tool.paymentfinish');
 
 Route::get('/second-hand', [SecondHandItemController::class, 'index'])->name('second-hand.index');
+Route::get('/second-hand/{secondHandItem}', [SecondHandItemController::class, 'show'])->name('second-hand.show');
 Route::middleware('auth')->group(function () {
     Route::get('/second-hand/create', [SecondHandItemController::class, 'create'])->name('second-hand.create');
     Route::post('/second-hand', [SecondHandItemController::class, 'store'])->name('second-hand.store');
+    Route::delete('/second-hand/{secondHandItem}', [SecondHandItemController::class, 'destroy'])->name('second-hand.destroy');
 });
 
 Route::prefix('admin')->middleware(['auth', 'admin'])->name('admin.')->group(function () {

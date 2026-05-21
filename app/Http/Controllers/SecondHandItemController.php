@@ -9,7 +9,7 @@ class SecondHandItemController extends Controller
 {
     public function index(Request $request)
     {
-        $items = SecondHandItem::query()->latest()->paginate(12);
+        $items = SecondHandItem::query()->with(['seller', 'photos'])->latest()->paginate(12);
 
         if ($request->ajax()) {
             return response()->json([
@@ -18,9 +18,14 @@ class SecondHandItemController extends Controller
             ]);
         }
 
-        return view('second-hand.index', [
-            'items' => $items,
-        ]);
+        return view('second-hand.index', ['items' => $items]);
+    }
+
+    public function show(SecondHandItem $secondHandItem)
+    {
+        $secondHandItem->load(['seller', 'photos']);
+
+        return view('second-hand.show', ['item' => $secondHandItem]);
     }
 
     public function create()
@@ -36,21 +41,43 @@ class SecondHandItemController extends Controller
             'description' => ['nullable', 'string', 'max:1000'],
             'contact_type' => ['required', 'in:phone,social'],
             'contact_value' => ['required', 'string', 'max:100'],
-            'photo' => ['required', 'image', 'max:4096'],
+            'photos' => ['required', 'array', 'min:1', 'max:8'],
+            'photos.*' => ['required', 'image', 'max:4096'],
         ]);
 
-        $photoPath = $request->file('photo')->store('second-hand', 'public');
-
-        SecondHandItem::create([
+        $item = SecondHandItem::create([
             'title' => $validated['title'],
             'price' => $validated['price'],
-            'seller_nickname' => auth()->user()->display_name,
+            'seller_id' => auth()->id(),
             'description' => $validated['description'] ?? null,
             'contact_type' => $validated['contact_type'],
             'contact_value' => $validated['contact_value'],
-            'photo_path' => $photoPath,
+            'photo_path' => '',
         ]);
 
+        $firstPath = null;
+        foreach ($request->file('photos') as $idx => $photo) {
+            $photoPath = $photo->store('second-hand', 'public');
+            $item->photos()->create(['photo_path' => $photoPath, 'sort_order' => $idx]);
+            if ($firstPath === null) {
+                $firstPath = $photoPath;
+            }
+        }
+
+        $item->update(['photo_path' => $firstPath ?? '']);
+
         return redirect()->route('second-hand.index')->with('status', '二手商品已上架。');
+    }
+
+    public function destroy(SecondHandItem $secondHandItem)
+    {
+        $user = auth()->user();
+        if (! $user || (! $user->isAdmin() && $secondHandItem->seller_id !== $user->id)) {
+            abort(403);
+        }
+
+        $secondHandItem->delete();
+
+        return redirect()->route('second-hand.index')->with('status', '商品已刪除。');
     }
 }
