@@ -7,10 +7,19 @@ use Illuminate\Http\Request;
 
 class SecondHandItemController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
+        $items = SecondHandItem::query()->latest()->paginate(12);
+
+        if ($request->ajax()) {
+            return response()->json([
+                'html' => view('second-hand.partials.item-cards', ['items' => $items])->render(),
+                'next_page_url' => $items->nextPageUrl(),
+            ]);
+        }
+
         return view('second-hand.index', [
-            'items' => SecondHandItem::query()->latest()->get(),
+            'items' => $items,
         ]);
     }
 
