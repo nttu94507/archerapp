@@ -5,17 +5,24 @@ namespace App\Services;
 use App\Models\AchievementDefinition;
 use App\Models\User;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
 class AchievementProgressService
 {
     private const MIN_ARROWS_FOR_ACTIVE_DAY = 12;
+    private const SYNC_COOLDOWN_MINUTES = 30;
 
     /**
      * @return array<string,int>
      */
     public function syncForUser(User $user): array
     {
+        if (! $this->shouldSyncForUser($user)) {
+            return [];
+        }
+
         $definitions = $this->seedDefinitions();
         $metrics = $this->buildMetrics($user);
 
@@ -43,7 +50,37 @@ class AchievementProgressService
             }
         }
 
+        Cache::put($this->dirtyCacheKey($user->id), false, now()->addDays(7));
+
         return $metrics;
+    }
+
+    public function markUserDirty(int $userId): void
+    {
+        Cache::put($this->dirtyCacheKey($userId), true, now()->addDays(7));
+    }
+
+    private function shouldSyncForUser(User $user): bool
+    {
+        $isDirty = Cache::get($this->dirtyCacheKey($user->id), true);
+
+        if ($isDirty) {
+            return true;
+        }
+
+        $lastCalculatedAt = $user->achievementProgress()
+            ->max('last_calculated_at');
+
+        if ($lastCalculatedAt === null) {
+            return true;
+        }
+
+        return now()->diffInMinutes($lastCalculatedAt) >= self::SYNC_COOLDOWN_MINUTES;
+    }
+
+    private function dirtyCacheKey(int $userId): string
+    {
+        return 'achievement:dirty:' . $userId;
     }
 
     /**
@@ -56,6 +93,8 @@ class AchievementProgressService
             ['key' => 'streak_7', 'name' => '連續 7 天', 'description' => '連續 7 天完成射箭紀錄', 'title_name' => '週訓行者', 'category' => 'streak', 'condition_type' => 'streak', 'target_value' => 7, 'is_hidden' => false],
             ['key' => 'streak_14', 'name' => '連續 14 天', 'description' => '連續 14 天完成射箭紀錄', 'title_name' => '百步定心', 'category' => 'streak', 'condition_type' => 'streak', 'target_value' => 14, 'is_hidden' => false],
             ['key' => 'days_7', 'name' => '累積 7 天', 'description' => '累積 7 天有有效訓練', 'title_name' => '穩定開弓', 'category' => 'total_days', 'condition_type' => 'total_days', 'target_value' => 7, 'is_hidden' => false],
+            ['key' => 'weekly_2days_4', 'name' => '每週 2 天（4 週）', 'description' => '累積 4 週達成每週至少 2 天有效訓練', 'title_name' => '穩定節奏', 'category' => 'consistency', 'condition_type' => 'weeks_with_2_days', 'target_value' => 4, 'is_hidden' => false],
+            ['key' => 'weekly_3days_4', 'name' => '每週 3 天（4 週）', 'description' => '累積 4 週達成每週至少 3 天有效訓練', 'title_name' => '習慣成形', 'category' => 'consistency', 'condition_type' => 'weeks_with_3_days', 'target_value' => 4, 'is_hidden' => false],
             ['key' => 'days_30', 'name' => '累積 30 天', 'description' => '累積 30 天有有效訓練', 'title_name' => '月練成鋒', 'category' => 'total_days', 'condition_type' => 'total_days', 'target_value' => 30, 'is_hidden' => false],
             ['key' => 'days_100', 'name' => '累積 100 天', 'description' => '累積 100 天有有效訓練', 'title_name' => '百日宗師', 'category' => 'total_days', 'condition_type' => 'total_days', 'target_value' => 100, 'is_hidden' => false],
             ['key' => 'days_365', 'name' => '一年有成', 'description' => '累積 365 天有有效訓練（1 年長期成就）', 'title_name' => '歲練弓心', 'category' => 'total_days', 'condition_type' => 'total_days', 'target_value' => 365, 'is_hidden' => false],
@@ -140,6 +179,7 @@ class AchievementProgressService
 
         $totalDays = count($activeDays);
         $streak = $this->calculateCurrentStreak($activeDays);
+        $weeklyConsistency = $this->calculateWeeklyConsistency($activeDays);
 
         $totalArrows = (int) DB::table('archery_sessions')
             ->where('user_id', $user->id)
@@ -165,6 +205,30 @@ class AchievementProgressService
             'total_arrows' => $totalArrows,
             'total_sessions' => $totalSessions,
             'short_distance_only_sessions' => $overThirtyMetersCount === 0 ? $withinThirtyMetersCount : 0,
+            'weeks_with_2_days' => $weeklyConsistency['weeks_with_2_days'],
+            'weeks_with_3_days' => $weeklyConsistency['weeks_with_3_days'],
+        ];
+    }
+
+    /**
+     * @param array<int,string> $activeDays
+     * @return array{weeks_with_2_days:int,weeks_with_3_days:int}
+     */
+    private function calculateWeeklyConsistency(array $activeDays): array
+    {
+        $weeks = [];
+
+        foreach ($activeDays as $day) {
+            $key = Carbon::parse($day)->startOfWeek()->toDateString();
+            $weeks[$key] = ($weeks[$key] ?? 0) + 1;
+        }
+
+        $weeksWith2Days = count(array_filter($weeks, fn (int $count) => $count >= 2));
+        $weeksWith3Days = count(array_filter($weeks, fn (int $count) => $count >= 3));
+
+        return [
+            'weeks_with_2_days' => $weeksWith2Days,
+            'weeks_with_3_days' => $weeksWith3Days,
         ];
     }
 
