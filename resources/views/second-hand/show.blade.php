@@ -19,11 +19,15 @@
         <p class="text-sm text-gray-600">賣家：{{ $item->seller_display_name }}</p>
         <p class="text-sm text-gray-600">聯絡方式：{{ $item->contact_type === 'phone' ? '手機' : '社群媒體' }} / {{ $item->contact_value }}</p>
         @if($item->description)<p class="text-sm text-gray-700">{{ $item->description }}</p>@endif
+
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             @foreach($item->photos as $photo)
-                <img src="{{ asset('storage/' . $photo->photo_path) }}" class="w-full h-56 object-cover rounded-xl" alt="{{ $item->title }}">
+                <button type="button" class="group" data-lightbox-src="{{ asset('storage/' . $photo->photo_path) }}" data-lightbox-alt="{{ $item->title }}">
+                    <img src="{{ asset('storage/' . $photo->photo_path) }}" class="w-full h-56 object-cover rounded-xl group-hover:opacity-90 transition" alt="{{ $item->title }}">
+                </button>
             @endforeach
         </div>
+
         @auth
             @if(auth()->id() === $item->seller_id || auth()->user()->isAdmin())
                 @if(! $item->is_sold)
@@ -42,4 +46,69 @@
         @endauth
     </div>
 </div>
+
+<div id="image-lightbox" class="fixed inset-0 z-50 hidden bg-black/80 p-4 sm:p-8">
+    <div class="mx-auto flex h-full max-w-6xl flex-col">
+        <div class="mb-3 flex items-center justify-end gap-2">
+            <button id="zoom-out" type="button" class="rounded-lg bg-white/10 px-3 py-2 text-sm text-white hover:bg-white/20">－</button>
+            <button id="zoom-in" type="button" class="rounded-lg bg-white/10 px-3 py-2 text-sm text-white hover:bg-white/20">＋</button>
+            <button id="lightbox-close" type="button" class="rounded-lg bg-white/10 px-3 py-2 text-sm text-white hover:bg-white/20">關閉</button>
+        </div>
+        <div class="relative flex-1 overflow-auto rounded-xl bg-black/40">
+            <img id="lightbox-image" src="" alt="" class="mx-auto my-6 max-w-none origin-center transition-transform duration-150">
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const lightbox = document.getElementById('image-lightbox');
+        const lightboxImg = document.getElementById('lightbox-image');
+        const closeBtn = document.getElementById('lightbox-close');
+        const zoomInBtn = document.getElementById('zoom-in');
+        const zoomOutBtn = document.getElementById('zoom-out');
+        const triggers = document.querySelectorAll('[data-lightbox-src]');
+        let zoom = 1;
+
+        const applyZoom = () => {
+            lightboxImg.style.transform = `scale(${zoom})`;
+        };
+
+        const openLightbox = (src, alt) => {
+            zoom = 1;
+            lightboxImg.src = src;
+            lightboxImg.alt = alt || '';
+            applyZoom();
+            lightbox.classList.remove('hidden');
+            document.body.classList.add('overflow-hidden');
+        };
+
+        const closeLightbox = () => {
+            lightbox.classList.add('hidden');
+            lightboxImg.src = '';
+            document.body.classList.remove('overflow-hidden');
+        };
+
+        triggers.forEach((el) => {
+            el.addEventListener('click', () => openLightbox(el.dataset.lightboxSrc, el.dataset.lightboxAlt));
+        });
+
+        closeBtn.addEventListener('click', closeLightbox);
+        lightbox.addEventListener('click', (e) => {
+            if (e.target === lightbox) closeLightbox();
+        });
+        document.addEventListener('keydown', (e) => {
+            if (!lightbox.classList.contains('hidden') && e.key === 'Escape') closeLightbox();
+        });
+
+        zoomInBtn.addEventListener('click', () => {
+            zoom = Math.min(zoom + 0.2, 3);
+            applyZoom();
+        });
+        zoomOutBtn.addEventListener('click', () => {
+            zoom = Math.max(zoom - 0.2, 0.5);
+            applyZoom();
+        });
+    });
+</script>
 @endsection
