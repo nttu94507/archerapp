@@ -29,6 +29,8 @@ class AchievementProgressService
         foreach ($definitions as $definition) {
             $currentValue = match (true) {
                 $definition->key === 'hidden_short_distance_specialist' => (int) ($metrics['short_distance_only_sessions'] ?? 0),
+                $definition->key === 'weekly_2days_4' => (int) ($metrics['weeks_with_2_days'] ?? 0),
+                $definition->key === 'weekly_3days_4' => (int) ($metrics['weeks_with_3_days'] ?? 0),
                 str_starts_with((string) $definition->key, 'sessions_') => (int) ($metrics['total_sessions'] ?? 0),
                 default => (int) ($metrics[$definition->condition_type] ?? 0),
             };
@@ -93,8 +95,8 @@ class AchievementProgressService
             ['key' => 'streak_7', 'name' => '連續 7 天', 'description' => '連續 7 天完成射箭紀錄', 'title_name' => '週訓行者', 'category' => 'streak', 'condition_type' => 'streak', 'target_value' => 7, 'is_hidden' => false],
             ['key' => 'streak_14', 'name' => '連續 14 天', 'description' => '連續 14 天完成射箭紀錄', 'title_name' => '百步定心', 'category' => 'streak', 'condition_type' => 'streak', 'target_value' => 14, 'is_hidden' => false],
             ['key' => 'days_7', 'name' => '累積 7 天', 'description' => '累積 7 天有有效訓練', 'title_name' => '穩定開弓', 'category' => 'total_days', 'condition_type' => 'total_days', 'target_value' => 7, 'is_hidden' => false],
-            ['key' => 'weekly_2days_4', 'name' => '每週 2 天（4 週）', 'description' => '累積 4 週達成每週至少 2 天有效訓練', 'title_name' => '穩定節奏', 'category' => 'consistency', 'condition_type' => 'weeks_with_2_days', 'target_value' => 4, 'is_hidden' => false],
-            ['key' => 'weekly_3days_4', 'name' => '每週 3 天（4 週）', 'description' => '累積 4 週達成每週至少 3 天有效訓練', 'title_name' => '習慣成形', 'category' => 'consistency', 'condition_type' => 'weeks_with_3_days', 'target_value' => 4, 'is_hidden' => false],
+            ['key' => 'weekly_2days_4', 'name' => '每週 2 天（4 週）', 'description' => '累積 4 週達成每週至少 2 天有效訓練', 'title_name' => '穩定節奏', 'category' => 'consistency', 'condition_type' => 'total_days', 'target_value' => 4, 'is_hidden' => false],
+            ['key' => 'weekly_3days_4', 'name' => '每週 3 天（4 週）', 'description' => '累積 4 週達成每週至少 3 天有效訓練', 'title_name' => '習慣成形', 'category' => 'consistency', 'condition_type' => 'total_days', 'target_value' => 4, 'is_hidden' => false],
             ['key' => 'days_30', 'name' => '累積 30 天', 'description' => '累積 30 天有有效訓練', 'title_name' => '月練成鋒', 'category' => 'total_days', 'condition_type' => 'total_days', 'target_value' => 30, 'is_hidden' => false],
             ['key' => 'days_100', 'name' => '累積 100 天', 'description' => '累積 100 天有有效訓練', 'title_name' => '百日宗師', 'category' => 'total_days', 'condition_type' => 'total_days', 'target_value' => 100, 'is_hidden' => false],
             ['key' => 'days_365', 'name' => '一年有成', 'description' => '累積 365 天有有效訓練（1 年長期成就）', 'title_name' => '歲練弓心', 'category' => 'total_days', 'condition_type' => 'total_days', 'target_value' => 365, 'is_hidden' => false],
