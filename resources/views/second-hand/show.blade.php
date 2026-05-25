@@ -17,8 +17,16 @@
         </div>
         <p class="text-xl font-bold">NT$ {{ number_format($item->price) }}</p>
         <p class="text-sm text-gray-600">賣家：{{ $item->seller_display_name }}</p>
-        <p class="text-sm text-gray-600">聯絡方式：{{ $item->contact_type === 'phone' ? '手機' : '社群媒體' }} / {{ $item->contact_value }}</p>
+        @auth
+            <p class="text-sm text-gray-600">聯絡方式：{{ $item->contact_type === 'phone' ? '手機' : '社群媒體' }} / {{ $item->contact_value }}</p>
+        @else
+            <p class="text-sm text-gray-500">聯絡方式：登入後可查看</p>
+        @endauth
         @if($item->description)<p class="text-sm text-gray-700">{{ $item->description }}</p>@endif
+
+        <div class="pt-1">
+            <button id="share-btn" type="button" data-share-url="{{ $shareUrl }}" class="rounded-xl border px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">分享商品</button>
+        </div>
 
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             @foreach($item->photos as $photo)
@@ -108,6 +116,25 @@
         zoomOutBtn.addEventListener('click', () => {
             zoom = Math.max(zoom - 0.2, 0.5);
             applyZoom();
+        });
+
+        const shareBtn = document.getElementById('share-btn');
+        shareBtn?.addEventListener('click', async () => {
+            const shareUrl = shareBtn.dataset.shareUrl;
+            try {
+                if (navigator.share) {
+                    await navigator.share({ title: document.title, url: shareUrl });
+                    return;
+                }
+            } catch (e) {}
+
+            try {
+                await navigator.clipboard.writeText(shareUrl);
+                shareBtn.textContent = '連結已複製';
+                setTimeout(() => shareBtn.textContent = '分享商品', 1500);
+            } catch (e) {
+                window.prompt('請複製連結', shareUrl);
+            }
         });
     });
 </script>

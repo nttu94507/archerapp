@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\SecondHandItem;
+use App\Models\SecondHandItemShareClick;
+use Illuminate\Support\Str;
 use Illuminate\Http\Request;
 
 class SecondHandItemController extends Controller
@@ -33,11 +35,37 @@ class SecondHandItemController extends Controller
         return view('second-hand.index', ['items' => $items, 'keyword' => $keyword]);
     }
 
-    public function show(SecondHandItem $secondHandItem)
+    public function show(Request $request, SecondHandItem $secondHandItem)
     {
         $secondHandItem->load(['seller', 'photos']);
 
-        return view('second-hand.show', ['item' => $secondHandItem]);
+        $refCode = trim((string) $request->query('ref', ''));
+        if ($refCode !== '') {
+            $shareClick = SecondHandItemShareClick::query()
+                ->where('second_hand_item_id', $secondHandItem->id)
+                ->where('ref_code', $refCode)
+                ->first();
+
+            if ($shareClick && (! auth()->check() || auth()->id() !== $shareClick->sharer_id)) {
+                $shareClick->increment('click_count');
+            }
+        }
+
+        $shareUrl = route('second-hand.show', $secondHandItem);
+        if (auth()->check()) {
+            $shareRecord = SecondHandItemShareClick::firstOrCreate(
+                [
+                    'second_hand_item_id' => $secondHandItem->id,
+                    'sharer_id' => auth()->id(),
+                ],
+                [
+                    'ref_code' => Str::random(32),
+                ]
+            );
+            $shareUrl = route('second-hand.show', ['secondHandItem' => $secondHandItem, 'ref' => $shareRecord->ref_code]);
+        }
+
+        return view('second-hand.show', ['item' => $secondHandItem, 'shareUrl' => $shareUrl]);
     }
 
     public function create()
