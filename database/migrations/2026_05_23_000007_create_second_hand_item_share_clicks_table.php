@@ -15,7 +15,7 @@ return new class extends Migration {
             $table->unsignedInteger('click_count')->default(0);
             $table->timestamps();
 
-            $table->unique(['second_hand_item_id', 'sharer_id']);
+            $table->unique(['second_hand_item_id', 'sharer_id'], 'shi_share_click_item_sharer_unique');
         });
     }
 
