@@ -7,6 +7,7 @@
                 <p class="text-lg font-bold">NT$ {{ number_format($item->price) }}</p>
                 <p class="text-sm text-gray-600">{{ $item->seller_display_name }}</p>
             </div>
+            <p class="text-xs text-gray-500">瀏覽 {{ number_format($item->view_count) }} 次</p>
         </div>
     </a>
 @endforeach

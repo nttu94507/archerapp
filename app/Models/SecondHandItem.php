@@ -22,10 +22,12 @@ class SecondHandItem extends Model
         'contact_type',
         'contact_value',
         'is_sold',
+        'view_count',
     ];
 
     protected $casts = [
         'is_sold' => 'boolean',
+        'view_count' => 'integer',
     ];
 
     public function seller(): BelongsTo
