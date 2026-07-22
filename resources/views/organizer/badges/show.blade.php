@@ -6,7 +6,7 @@
 <div class="mx-auto max-w-7xl space-y-7 px-4 py-8 sm:px-6">
     <div>
         <a href="{{ route('organizer.events.badges.index', $event) }}" class="text-sm text-indigo-600">← 返回 Badge 一覽</a>
-        <h1 class="mt-2 text-2xl font-bold">{{ $badge->name }}</h1>
+        <div class="mt-2 flex items-center gap-3"><img src="{{ $badge->icon_url }}" alt="" class="h-16 w-16 rounded-2xl object-cover"><h1 class="text-2xl font-bold">{{ $badge->name }}</h1></div>
         <p class="mt-1 text-sm text-gray-500">{{ $event->name }}・{{ $badge->description }}</p>
     </div>
 
@@ -18,11 +18,12 @@
             <h2 class="font-semibold">申請 QR Code</h2>
             <img src="{{ route('organizer.events.badges.qrcode', [$event, $badge]) }}" alt="申請 QR Code" class="mt-3 aspect-square w-full rounded-xl border p-2">
             <p class="mt-2 text-xs text-gray-500">掃描只會送出申請，必須經過主辦方核准。</p>
-            <form method="POST" action="{{ route('organizer.events.badges.update', [$event, $badge]) }}" class="mt-5 space-y-3 border-t pt-4">
+            <form method="POST" action="{{ route('organizer.events.badges.update', [$event, $badge]) }}" enctype="multipart/form-data" class="mt-5 space-y-3 border-t pt-4">
                 @csrf @method('PATCH')
                 <label class="flex items-center gap-2 text-sm"><input type="checkbox" name="claim_enabled" value="1" @checked($badge->claim_enabled) class="rounded"> 開放申請</label>
                 <div><label class="text-xs text-gray-600">開始時間</label><input type="datetime-local" name="claim_starts_at" value="{{ optional($badge->claim_starts_at)->format('Y-m-d\TH:i') }}" class="mt-1 w-full rounded-xl border-gray-300 text-sm"></div>
                 <div><label class="text-xs text-gray-600">截止時間</label><input type="datetime-local" name="claim_ends_at" value="{{ optional($badge->claim_ends_at)->format('Y-m-d\TH:i') }}" class="mt-1 w-full rounded-xl border-gray-300 text-sm"></div>
+                <div><label class="text-xs text-gray-600">更換圖示</label><input type="file" name="icon" accept="image/jpeg,image/png,image/webp" class="mt-1 block w-full text-sm"></div>
                 <button class="w-full rounded-xl bg-indigo-600 px-4 py-2 text-sm text-white">儲存申請設定</button>
             </form>
             <form method="POST" action="{{ route('organizer.events.badges.regenerate-token', [$event, $badge]) }}" class="mt-3" onsubmit="return confirm('舊 QR Code 將立即失效，確定重新產生？')">@csrf<button class="w-full rounded-xl border px-4 py-2 text-sm text-red-600 hover:bg-red-50">讓舊 QR Code 失效</button></form>

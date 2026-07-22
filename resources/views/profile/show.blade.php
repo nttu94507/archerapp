@@ -18,7 +18,7 @@
     </div>
     <section class="mt-5 rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
         <h2 class="text-lg font-semibold">賽事 Badge</h2>
-        <div class="mt-4 space-y-3">@forelse($member->eventBadges as $award)<article class="rounded-xl border border-amber-200 bg-amber-50 p-4"><p class="text-xs font-medium text-amber-700">主辦方驗證</p><h3 class="mt-1 font-semibold">{{ $award->badge->name }}</h3><p class="text-sm text-gray-600">{{ $award->badge->event->name }}</p></article>@empty<p class="text-sm text-gray-500">尚未取得賽事 Badge。</p>@endforelse</div>
+        <div class="mt-4 space-y-3">@forelse($member->eventBadges as $award)<article class="flex items-center gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4"><img src="{{ $award->badge->icon_url }}" alt="" class="h-14 w-14 shrink-0 rounded-xl object-cover"><div><p class="text-xs font-medium text-amber-700">主辦方驗證</p><h3 class="mt-1 font-semibold">{{ $award->badge->name }}</h3><p class="text-sm text-gray-600">{{ $award->badge->event->name }}</p></div></article>@empty<p class="text-sm text-gray-500">尚未取得賽事 Badge。</p>@endforelse</div>
     </section>
 </div>
 @endsection

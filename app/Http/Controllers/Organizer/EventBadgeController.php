@@ -15,6 +15,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
 
 class EventBadgeController extends Controller
@@ -41,12 +42,17 @@ class EventBadgeController extends Controller
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:120'],
             'description' => ['nullable', 'string', 'max:1000'],
+            'icon' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
             'type' => ['required', 'in:participant,finisher,staff,volunteer,special'],
             'eligibility' => ['required', 'in:any,registered,checked_in,scored'],
             'claim_starts_at' => ['nullable', 'date'],
             'claim_ends_at' => ['nullable', 'date', 'after:claim_starts_at'],
         ]);
 
+        unset($validated['icon']);
+        if ($request->hasFile('icon')) {
+            $validated['icon_path'] = $request->file('icon')->store('badge-icons', 'public');
+        }
         $badge = $event->badges()->create($validated + [
             'created_by' => $request->user()->id,
             'claim_enabled' => $request->boolean('claim_enabled'),
@@ -73,8 +79,15 @@ class EventBadgeController extends Controller
         $validated = $request->validate([
             'claim_starts_at' => ['nullable', 'date'],
             'claim_ends_at' => ['nullable', 'date', 'after:claim_starts_at'],
+            'icon' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
         ]);
 
+        unset($validated['icon']);
+        if ($request->hasFile('icon')) {
+            $newPath = $request->file('icon')->store('badge-icons', 'public');
+            if ($badge->icon_path) Storage::disk('public')->delete($badge->icon_path);
+            $validated['icon_path'] = $newPath;
+        }
         $badge->update($validated + ['claim_enabled' => $request->boolean('claim_enabled')]);
 
         return back()->with('success', 'QR Code 申請設定已更新。');

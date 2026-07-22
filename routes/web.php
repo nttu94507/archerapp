@@ -40,7 +40,7 @@ Route::get('/storage/{path}', function (string $path) {
     }
 
     return response()->file(Storage::disk('public')->path($path));
-})->where('path', '.*');
+})->where('path', '.*')->name('storage.local');
 
 //google 登入相關
 Route::get('/auth/google/redirect', [GoogleController::class, 'redirect'])

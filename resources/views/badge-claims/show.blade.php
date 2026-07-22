@@ -6,7 +6,7 @@
 <div class="mx-auto max-w-lg px-4 py-10 sm:px-6">
     <div class="rounded-2xl border bg-white p-6 shadow-sm">
         <p class="text-sm font-medium text-indigo-600">賽事 Badge 申請</p>
-        <h1 class="mt-2 text-2xl font-bold">{{ $badge->name }}</h1>
+        <div class="mt-2 flex items-center gap-3"><img src="{{ $badge->icon_url }}" alt="" class="h-16 w-16 rounded-2xl object-cover"><h1 class="text-2xl font-bold">{{ $badge->name }}</h1></div>
         <p class="mt-2 text-gray-600">{{ $badge->event->name }}</p>
         @if($badge->description)<p class="mt-4 rounded-xl bg-gray-50 p-4 text-sm text-gray-600">{{ $badge->description }}</p>@endif
 

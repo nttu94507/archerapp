@@ -11,6 +11,8 @@ use App\Models\EventStaff;
 use App\Models\User;
 use App\Models\UserEventBadge;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class EventBadgeWorkflowTest extends TestCase
@@ -19,6 +21,7 @@ class EventBadgeWorkflowTest extends TestCase
 
     public function test_event_owner_can_create_badge_but_unrelated_user_cannot_manage_it(): void
     {
+        Storage::fake('public');
         [$owner, $event] = $this->eventWithOwner();
 
         $response = $this->actingAs($owner)->post(route('organizer.events.badges.store', $event), [
@@ -27,15 +30,32 @@ class EventBadgeWorkflowTest extends TestCase
             'type' => 'participant',
             'eligibility' => 'checked_in',
             'claim_enabled' => '1',
+            'icon' => UploadedFile::fake()->createWithContent(
+                'badge.png',
+                base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=')
+            ),
         ]);
 
         $badge = EventBadge::firstOrFail();
         $response->assertRedirect(route('organizer.events.badges.show', [$event, $badge]));
         $this->assertTrue($badge->claim_enabled);
+        $this->assertNotNull($badge->icon_path);
+        Storage::disk('public')->assertExists($badge->icon_path);
 
         $this->actingAs(User::factory()->create())
             ->get(route('organizer.events.badges.show', [$event, $badge]))
             ->assertForbidden();
+    }
+
+    public function test_badge_without_uploaded_icon_uses_default_icon(): void
+    {
+        [$owner, $event] = $this->eventWithOwner();
+        $badge = EventBadge::create([
+            'event_id'=>$event->id, 'created_by'=>$owner->id, 'name'=>'預設圖示',
+            'type'=>'participant', 'eligibility'=>'any',
+        ]);
+
+        $this->assertStringEndsWith('/images/default-badge.svg', $badge->icon_url);
     }
 
     public function test_registered_member_can_scan_and_submit_only_one_claim(): void

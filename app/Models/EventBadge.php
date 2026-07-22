@@ -10,7 +10,7 @@ use Illuminate\Support\Str;
 class EventBadge extends Model
 {
     protected $fillable = [
-        'event_id', 'created_by', 'name', 'description', 'type', 'eligibility',
+        'event_id', 'created_by', 'name', 'description', 'icon_path', 'type', 'eligibility',
         'claim_token', 'claim_enabled', 'claim_starts_at', 'claim_ends_at', 'is_active',
     ];
 
@@ -54,5 +54,10 @@ class EventBadge extends Model
             && $this->claim_enabled
             && ($this->claim_starts_at === null || $this->claim_starts_at->isPast())
             && ($this->claim_ends_at === null || $this->claim_ends_at->isFuture());
+    }
+
+    public function getIconUrlAttribute(): string
+    {
+        return $this->icon_path ? asset('storage/'.$this->icon_path) : asset('images/default-badge.svg');
     }
 }

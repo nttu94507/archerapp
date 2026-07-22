@@ -17,11 +17,12 @@
 
     <section class="rounded-2xl border bg-white p-6 shadow-sm">
         <h2 class="text-lg font-semibold">建立 Badge</h2>
-        <form method="POST" action="{{ route('organizer.events.badges.store', $event) }}" class="mt-5 grid gap-4 md:grid-cols-2">
+        <form method="POST" action="{{ route('organizer.events.badges.store', $event) }}" enctype="multipart/form-data" class="mt-5 grid gap-4 md:grid-cols-2">
             @csrf
             <div><label class="text-sm font-medium">名稱 *</label><input name="name" required value="{{ old('name') }}" class="mt-1 w-full rounded-xl border-gray-300" placeholder="例：2026 台北公開賽參賽者"></div>
             <div><label class="text-sm font-medium">類型 *</label><select name="type" class="mt-1 w-full rounded-xl border-gray-300"><option value="participant">參賽</option><option value="finisher">完賽</option><option value="staff">工作人員</option><option value="volunteer">志工</option><option value="special">特別 Badge</option></select></div>
             <div><label class="text-sm font-medium">申請資格 *</label><select name="eligibility" class="mt-1 w-full rounded-xl border-gray-300"><option value="registered">已有有效報名</option><option value="checked_in">已完成報到</option><option value="scored">已有有效成績</option><option value="any">不限資格</option></select></div>
+            <div><label class="text-sm font-medium">圖示</label><input type="file" name="icon" accept="image/jpeg,image/png,image/webp" class="mt-1 block w-full text-sm"><p class="mt-1 text-xs text-gray-500">JPG、PNG 或 WebP，最大 2MB</p></div>
             <div class="flex items-end"><label class="inline-flex items-center gap-2 text-sm"><input type="checkbox" name="claim_enabled" value="1" class="rounded border-gray-300"> 建立後立即開放 QR 申請</label></div>
             <div><label class="text-sm font-medium">開始時間</label><input type="datetime-local" name="claim_starts_at" class="mt-1 w-full rounded-xl border-gray-300"></div>
             <div><label class="text-sm font-medium">截止時間</label><input type="datetime-local" name="claim_ends_at" class="mt-1 w-full rounded-xl border-gray-300"></div>
@@ -36,7 +37,7 @@
             @forelse($badges as $badge)
                 <a href="{{ route('organizer.events.badges.show', [$event, $badge]) }}" class="rounded-2xl border bg-white p-5 shadow-sm hover:border-indigo-300">
                     <div class="flex items-start justify-between gap-3">
-                        <div><p class="font-semibold">{{ $badge->name }}</p><p class="mt-1 text-sm text-gray-500">{{ $badge->description ?: '尚無說明' }}</p></div>
+                        <div class="flex min-w-0 items-center gap-3"><img src="{{ $badge->icon_url }}" alt="" class="h-14 w-14 shrink-0 rounded-xl object-cover"><div class="min-w-0"><p class="break-words font-semibold">{{ $badge->name }}</p>@if($badge->description)<p class="mt-1 line-clamp-2 text-sm text-gray-500">{{ $badge->description }}</p>@endif</div></div>
                         <span class="rounded-full px-2 py-1 text-xs {{ $badge->isClaimOpen() ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600' }}">{{ $badge->isClaimOpen() ? '申請中' : '未開放' }}</span>
                     </div>
                     <div class="mt-4 flex gap-4 border-t pt-3 text-sm text-gray-600"><span>待審 {{ $badge->pending_claims_count }}</span><span>申請 {{ $badge->claims_count }}</span><span>已授予 {{ $badge->active_awards_count }}</span></div>
