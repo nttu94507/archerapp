@@ -7,7 +7,7 @@
     <div class="mx-auto max-w-5xl px-4 py-8">
         <div class="mb-6">
             <h1 class="text-2xl font-bold">新增組別 — {{ $event->name }}</h1>
-            <p class="text-sm text-gray-500 mt-1">一次新增多個組別，提交後可再編輯。</p>
+            <p class="text-sm text-gray-500 mt-1">一次新增多個組別，提交後即可在列表管理。</p>
         </div>
 
         <form method="POST" action="{{ route('events.groups.store', $event) }}" id="group-form">
@@ -40,7 +40,7 @@
                 <button type="button" class="text-sm text-red-600 hover:underline remove-group">移除</button>
             </div>
 
-            <div class="grid grid-cols-1 md:grid-cols-7 gap-3">
+            <div class="grid grid-cols-1 md:grid-cols-8 gap-3">
                 <div class="md:col-span-2">
                     <label class="block text-xs text-gray-600 mb-1">名稱 *</label>
                     <input type="text" class="w-full rounded-lg border px-3 py-2 text-sm"
@@ -96,6 +96,12 @@
                     <label class="block text-xs text-gray-600 mb-1">名額</label>
                     <input type="number" min="1" class="w-full rounded-lg border px-3 py-2 text-sm"
                            name="groups[__INDEX__][quota]">
+                </div>
+
+                <div>
+                    <label class="block text-xs text-gray-600 mb-1">靶位數量</label>
+                    <input type="number" min="1" class="w-full rounded-lg border px-3 py-2 text-sm"
+                           name="groups[__INDEX__][target_slots]">
                 </div>
 
                 <div>
