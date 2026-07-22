@@ -42,7 +42,7 @@ class EventBadgeController extends Controller
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:120'],
             'description' => ['nullable', 'string', 'max:1000'],
-            'icon' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
+            'icon' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:10240'],
             'type' => ['required', 'in:participant,finisher,staff,volunteer,special'],
             'eligibility' => ['required', 'in:any,registered,checked_in,scored'],
             'claim_starts_at' => ['nullable', 'date'],
@@ -79,7 +79,7 @@ class EventBadgeController extends Controller
         $validated = $request->validate([
             'claim_starts_at' => ['nullable', 'date'],
             'claim_ends_at' => ['nullable', 'date', 'after:claim_starts_at'],
-            'icon' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
+            'icon' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:10240'],
         ]);
 
         unset($validated['icon']);
