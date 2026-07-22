@@ -10,6 +10,7 @@ use App\Models\EventStaff;
 use App\Models\User;
 use App\Models\OrganizerProfile;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\URL;
 use Tests\TestCase;
 
 class EventManagementWorkflowTest extends TestCase
@@ -63,6 +64,37 @@ class EventManagementWorkflowTest extends TestCase
         $this->assertSame('checked_in',$registration->fresh()->status);
         $this->assertNotNull($registration->fresh()->checked_in_at);
         $this->assertDatabaseHas('event_audit_logs',['event_id'=>$event->id,'action'=>'registration.checked_in']);
+    }
+
+    public function test_member_can_accept_a_signed_staff_qr_invitation(): void
+    {
+        [$owner,$event] = $this->ownedEvent();
+        $member = User::factory()->create();
+        $url = URL::temporarySignedRoute('organizer.staff-invitations.show', now()->addDay(), [
+            'event'=>$event, 'role'=>'staff', 'inviter'=>$owner->id,
+        ]);
+
+        $this->actingAs($member)->get($url)->assertOk()->assertSee('確認加入工作團隊');
+        $this->actingAs($member)->post($url)->assertRedirect(route('organizer.events.show',$event));
+        $this->assertDatabaseHas('event_staff', [
+            'event_id'=>$event->id, 'user_id'=>$member->id, 'role'=>'staff', 'status'=>'active',
+        ]);
+        $this->assertDatabaseHas('event_audit_logs', [
+            'event_id'=>$event->id, 'user_id'=>$member->id, 'action'=>'staff.invitation_accepted',
+        ]);
+    }
+
+    public function test_staff_qr_invitation_rejects_a_tampered_role(): void
+    {
+        [$owner,$event] = $this->ownedEvent();
+        $member = User::factory()->create();
+        $url = URL::temporarySignedRoute('organizer.staff-invitations.show', now()->addDay(), [
+            'event'=>$event, 'role'=>'staff', 'inviter'=>$owner->id,
+        ]);
+        $tamperedUrl = str_replace('/staff?', '/manager?', $url);
+
+        $this->actingAs($member)->get($tamperedUrl)->assertForbidden();
+        $this->assertDatabaseMissing('event_staff', ['event_id'=>$event->id, 'user_id'=>$member->id]);
     }
 
     public function test_scores_are_bound_to_registration_and_require_verification_before_publication(): void
