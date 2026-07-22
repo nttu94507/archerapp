@@ -103,6 +103,8 @@ Route::prefix('organizer')->middleware('auth')->name('organizer.')->group(functi
     Route::post('events/{event}/cancel', [OrganizerEventController::class, 'cancel'])->name('events.cancel');
     Route::post('events/{event}/staff', [OrganizerEventController::class, 'addStaff'])->name('events.staff.store');
     Route::patch('events/{event}/staff/{staff}/revoke', [OrganizerEventController::class, 'revokeStaff'])->name('events.staff.revoke');
+    Route::get('staff-invitations/{event}/{role}', [OrganizerEventController::class, 'showStaffInvitation'])->middleware('signed')->name('staff-invitations.show');
+    Route::post('staff-invitations/{event}/{role}', [OrganizerEventController::class, 'acceptStaffInvitation'])->middleware('signed')->name('staff-invitations.accept');
     Route::get('events/{event}/registrations', [OrganizerRegistrationController::class, 'index'])->name('events.registrations.index');
     Route::patch('events/{event}/registrations/bulk', [OrganizerRegistrationController::class, 'bulk'])->name('events.registrations.bulk');
     Route::post('events/{event}/registrations/check-in', [OrganizerRegistrationController::class, 'checkIn'])->name('events.registrations.check-in');

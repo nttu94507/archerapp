@@ -7,9 +7,14 @@ use App\Models\Event;
 use App\Models\EventAuditLog;
 use App\Models\EventStaff;
 use App\Models\User;
+use BaconQrCode\Renderer\Image\SvgImageBackEnd;
+use BaconQrCode\Renderer\ImageRenderer;
+use BaconQrCode\Renderer\RendererStyle\RendererStyle;
+use BaconQrCode\Writer;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\URL;
 use Illuminate\View\View;
 
 class EventController extends Controller
@@ -18,7 +23,10 @@ class EventController extends Controller
     {
         $events = Event::query()
             ->whereHas('staff', fn ($query) => $query->where('user_id', $request->user()->id)->where('status', 'active'))
-            ->withCount(['groups', 'registrations', 'badges'])
+            ->withCount([
+                'groups', 'registrations', 'badges',
+                'registrations as checked_in_count' => fn ($query) => $query->where('status', 'checked_in'),
+            ])
             ->orderByDesc('start_date')->paginate(15);
 
         $organizerProfile = $request->user()->organizerProfile;
@@ -58,8 +66,18 @@ class EventController extends Controller
             ->loadCount(['registrations', 'badges']);
         $statusCounts = $event->registrations()->selectRaw('status, count(*) as total')->groupBy('status')->pluck('total', 'status');
         $auditLogs = $event->auditLogs()->with('user')->limit(20)->get();
+        $staffInviteQrs = [];
+        if ($request->user()->can('manageStaff', $event)) {
+            $writer = new Writer(new ImageRenderer(new RendererStyle(280, 2), new SvgImageBackEnd));
+            foreach (['manager', 'staff', 'viewer'] as $role) {
+                $url = URL::temporarySignedRoute('organizer.staff-invitations.show', now()->addDay(), [
+                    'event' => $event, 'role' => $role, 'inviter' => $request->user()->id,
+                ]);
+                $staffInviteQrs[$role] = 'data:image/svg+xml;base64,'.base64_encode($writer->writeString($url));
+            }
+        }
 
-        return view('organizer.events.show', compact('event', 'statusCounts', 'auditLogs'));
+        return view('organizer.events.show', compact('event', 'statusCounts', 'auditLogs', 'staffInviteQrs'));
     }
 
     public function edit(Event $event): View
@@ -120,6 +138,28 @@ class EventController extends Controller
         $this->audit($event, $request, 'staff.revoked', $staff->user_id);
 
         return back()->with('success', '工作人員權限已撤銷。');
+    }
+
+    public function showStaffInvitation(Request $request, Event $event, string $role): View
+    {
+        abort_unless(in_array($role, ['manager', 'staff', 'viewer'], true), 404);
+        return view('organizer.events.staff-invitation', compact('event', 'role'));
+    }
+
+    public function acceptStaffInvitation(Request $request, Event $event, string $role): RedirectResponse
+    {
+        abort_unless(in_array($role, ['manager', 'staff', 'viewer'], true), 404);
+        $inviter = User::findOrFail($request->integer('inviter'));
+        abort_unless($inviter->can('manageStaff', $event), 403, '這份邀請已失效。');
+        abort_if($event->staff()->where('user_id', $request->user()->id)->where('role', 'owner')->exists(), 422, '賽事擁有者不需要加入邀請。');
+
+        EventStaff::updateOrCreate(['event_id' => $event->id, 'user_id' => $request->user()->id], [
+            'role' => $role, 'status' => 'active', 'invited_by' => $inviter->id,
+            'invited_at' => now(), 'accepted_at' => now(),
+        ]);
+        $this->audit($event, $request, 'staff.invitation_accepted', $request->user()->id, ['role' => $role]);
+
+        return redirect()->route('organizer.events.show', $event)->with('success', '已加入 '.$event->name.' 的工作團隊。');
     }
 
     private function validateEvent(Request $request): array
