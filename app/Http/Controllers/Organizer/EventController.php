@@ -64,7 +64,10 @@ class EventController extends Controller
     {
         $this->authorize('viewManagement', $event);
         $event->load(['groups' => fn ($query) => $query->withCount('registrations'), 'staff.user'])
-            ->loadCount(['registrations', 'badges']);
+            ->loadCount([
+                'registrations', 'badges',
+                'registrations as verified_results_count' => fn ($query) => $query->whereNotNull('score_verified_at'),
+            ]);
         $statusCounts = $event->registrations()->selectRaw('status, count(*) as total')->groupBy('status')->pluck('total', 'status');
         $auditLogs = $event->auditLogs()->with('user')->limit(20)->get();
         $staffInviteQrs = [];
