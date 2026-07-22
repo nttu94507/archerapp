@@ -45,6 +45,13 @@
             </div>
         </div>
 
+        @if(session('success'))
+            <div class="mb-4 rounded-xl border border-green-200 bg-green-50 p-4 text-sm text-green-700">{{ session('success') }}</div>
+        @endif
+        @if(session('error'))
+            <div class="mb-4 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">{{ session('error') }}</div>
+        @endif
+
         {{-- 組別清單（公開） --}}
         <section id="groups" class="rounded-2xl border bg-white p-4 shadow-sm">
             <h2 class="text-lg font-semibold text-gray-900 mb-3">可報名組別</h2>
@@ -106,6 +113,9 @@
                             $full = $cap !== null && $registered >= $cap;
 
                             $already = auth()->check() && in_array($g->id, $myGroupIds ?? [], true);
+                            $groupRegStart = $g->reg_start ?: $regStartAt;
+                            $groupRegEnd = $g->reg_end ?: $regEndAt;
+                            $groupIsBetween = $groupRegStart && $groupRegEnd && now()->between($groupRegStart, $groupRegEnd);
                         @endphp
 
                         <li class="py-3 flex items-center justify-between">
@@ -123,7 +133,7 @@
                                     <span class="inline-flex items-center rounded-xl bg-gray-100 px-3 py-1.5 text-xs font-medium text-gray-600">
                                 已報名
                             </span>
-                                @elseif(!$isBetween)
+                                @elseif(!$groupIsBetween)
                                     <span class="text-xs text-gray-400">目前不可報名</span>
                                 @elseif($full)
                                     <span class="inline-flex items-center rounded-xl bg-gray-100 px-3 py-1.5 text-xs font-medium text-gray-500">

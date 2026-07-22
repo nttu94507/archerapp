@@ -87,4 +87,28 @@ class EventRegistrationQuickRegisterTest extends TestCase
 
         $this->assertDatabaseCount('event_registrations', 1);
     }
+
+    public function test_admin_can_register_when_group_registration_window_is_open(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+        $event = Event::factory()->create(['reg_start' => null, 'reg_end' => null]);
+        $group = EventGroup::factory()->create([
+            'event_id' => $event->id,
+            'reg_start' => now()->subHour(),
+            'reg_end' => now()->addHour(),
+            'quota' => 5,
+        ]);
+
+        $this->actingAs($admin)->get(route('events.show', $event))
+            ->assertOk()->assertSee('立即報名');
+        $this->actingAs($admin)->post(route('events.quick_register', [$event, $group]))
+            ->assertSessionHas('success');
+
+        $this->assertDatabaseHas('event_registrations', [
+            'event_id' => $event->id,
+            'event_group_id' => $group->id,
+            'user_id' => $admin->id,
+            'status' => 'registered',
+        ]);
+    }
 }
