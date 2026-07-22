@@ -37,7 +37,7 @@ class EventBadgeController extends Controller
         return view('organizer.badges.index', compact('event', 'badges', 'groups'));
     }
 
-    public function store(Request $request, Event $event): RedirectResponse
+    public function store(Request $request, Event $event, EventBadgeAwardService $service): RedirectResponse
     {
         $this->authorizeOrganizer($request, $event);
 
@@ -46,14 +46,17 @@ class EventBadgeController extends Controller
             'description' => ['nullable', 'string', 'max:1000'],
             'icon' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:10240'],
             'type' => ['required', 'in:participant,finisher,staff,volunteer,special'],
-            'eligibility' => ['required', 'in:any,registered,checked_in,scored'],
-            'award_rule' => ['nullable', 'in:manual,attendance,placement'],
+            'eligibility' => ['nullable', 'in:any,registered,checked_in,scored'],
+            'award_rule' => ['nullable', 'in:manual,attendance,placement,staff,volunteer'],
             'event_group_id' => ['nullable', 'integer', 'exists:event_groups,id'],
             'placement' => ['nullable', 'integer', 'between:1,3'],
             'claim_starts_at' => ['nullable', 'date'],
             'claim_ends_at' => ['nullable', 'date', 'after:claim_starts_at'],
         ]);
         $validated['award_rule'] ??= 'manual';
+        $validated['eligibility'] = in_array($validated['award_rule'], ['staff', 'volunteer'], true)
+            ? 'any'
+            : ($validated['eligibility'] ?? 'registered');
         if ($validated['award_rule'] === 'placement') {
             abort_unless(! empty($validated['event_group_id']) && ! empty($validated['placement']), 422, '名次 Badge 必須選擇組別與名次。');
         }
@@ -67,6 +70,7 @@ class EventBadgeController extends Controller
             'created_by' => $request->user()->id,
             'claim_enabled' => $request->boolean('claim_enabled'),
         ]);
+        $service->awardExistingTeamFor($badge);
 
         return redirect()->route('organizer.events.badges.show', [$event, $badge])
             ->with('success', 'Badge 已建立。');

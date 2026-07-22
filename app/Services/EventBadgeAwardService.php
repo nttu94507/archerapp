@@ -5,10 +5,36 @@ namespace App\Services;
 use App\Models\Event;
 use App\Models\EventBadge;
 use App\Models\EventRegistration;
+use App\Models\EventStaff;
 use App\Models\UserEventBadge;
 
 class EventBadgeAwardService
 {
+    public function awardTeamFor(EventStaff $staff): int
+    {
+        if ($staff->status !== 'active') return 0;
+
+        $rules = match ($staff->role) {
+            'owner', 'manager', 'staff' => ['staff'],
+            'volunteer' => ['volunteer'],
+            default => [],
+        };
+        if ($rules === []) return 0;
+
+        $badges = EventBadge::where('event_id', $staff->event_id)->whereIn('award_rule', $rules)->where('is_active', true)->get();
+        foreach ($badges as $badge) $this->award($badge, $staff->user_id, $staff->role === 'volunteer' ? 'volunteer' : 'staff');
+        return $badges->count();
+    }
+
+    public function awardExistingTeamFor(EventBadge $badge): int
+    {
+        if (! in_array($badge->award_rule, ['staff', 'volunteer'], true)) return 0;
+        $roles = $badge->award_rule === 'volunteer' ? ['volunteer'] : ['owner', 'manager', 'staff'];
+        $members = EventStaff::where('event_id', $badge->event_id)->where('status', 'active')->whereIn('role', $roles)->get();
+        foreach ($members as $member) $this->awardTeamFor($member);
+        return $members->count();
+    }
+
     public function awardAttendanceFor(EventRegistration $registration): int
     {
         if (! in_array($registration->status, ['registered', 'checked_in'], true)

@@ -20,6 +20,34 @@ class EventBadgeWorkflowTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_creating_staff_badge_awards_existing_active_work_team_without_application(): void
+    {
+        [$owner, $event] = $this->eventWithOwner();
+        $staff = User::factory()->create();
+        EventStaff::create(['event_id'=>$event->id,'user_id'=>$staff->id,'role'=>'staff','status'=>'active','invited_by'=>$owner->id,'accepted_at'=>now()]);
+
+        $this->actingAs($owner)->post(route('organizer.events.badges.store',$event), [
+            'name'=>'賽事工作人員', 'type'=>'staff', 'eligibility'=>'any', 'award_rule'=>'staff',
+        ])->assertSessionHas('success');
+
+        $badge = EventBadge::where('name','賽事工作人員')->firstOrFail();
+        $this->assertDatabaseHas('user_event_badges',['event_badge_id'=>$badge->id,'user_id'=>$owner->id,'award_source'=>'staff']);
+        $this->assertDatabaseHas('user_event_badges',['event_badge_id'=>$badge->id,'user_id'=>$staff->id,'award_source'=>'staff']);
+    }
+
+    public function test_accepting_volunteer_invitation_automatically_awards_volunteer_badge(): void
+    {
+        [$owner, $event] = $this->eventWithOwner();
+        $volunteer = User::factory()->create();
+        $badge = EventBadge::create(['event_id'=>$event->id,'created_by'=>$owner->id,'name'=>'賽事志工','type'=>'volunteer','eligibility'=>'any','award_rule'=>'volunteer']);
+        $url = \Illuminate\Support\Facades\URL::temporarySignedRoute('organizer.staff-invitations.show', now()->addDay(), ['event'=>$event,'role'=>'volunteer','inviter'=>$owner->id]);
+
+        $this->actingAs($volunteer)->post($url)->assertRedirect(route('organizer.events.show',$event));
+
+        $this->assertDatabaseHas('event_staff',['event_id'=>$event->id,'user_id'=>$volunteer->id,'role'=>'volunteer','status'=>'active']);
+        $this->assertDatabaseHas('user_event_badges',['event_badge_id'=>$badge->id,'user_id'=>$volunteer->id,'award_source'=>'volunteer']);
+    }
+
     public function test_paid_and_checked_in_registration_receives_attendance_badge_regardless_of_order(): void
     {
         [$owner, $event] = $this->eventWithOwner();

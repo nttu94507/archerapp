@@ -14,7 +14,7 @@ class EventPolicy
 
     public function viewManagement(User $user, Event $event): bool
     {
-        return $this->hasRole($user, $event, ['owner', 'manager', 'staff', 'viewer']);
+        return $this->hasRole($user, $event, ['owner', 'manager', 'staff', 'volunteer', 'viewer']);
     }
 
     public function update(User $user, Event $event): bool

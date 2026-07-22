@@ -7,6 +7,7 @@ use App\Models\Event;
 use App\Models\EventAuditLog;
 use App\Models\EventStaff;
 use App\Models\User;
+use App\Services\EventBadgeAwardService;
 use BaconQrCode\Renderer\Image\SvgImageBackEnd;
 use BaconQrCode\Renderer\ImageRenderer;
 use BaconQrCode\Renderer\RendererStyle\RendererStyle;
@@ -69,7 +70,7 @@ class EventController extends Controller
         $staffInviteQrs = [];
         if ($request->user()->can('manageStaff', $event)) {
             $writer = new Writer(new ImageRenderer(new RendererStyle(280, 2), new SvgImageBackEnd));
-            foreach (['manager', 'staff', 'viewer'] as $role) {
+            foreach (['manager', 'staff', 'volunteer', 'viewer'] as $role) {
                 $url = URL::temporarySignedRoute('organizer.staff-invitations.show', now()->addDay(), [
                     'event' => $event, 'role' => $role, 'inviter' => $request->user()->id,
                 ]);
@@ -125,15 +126,16 @@ class EventController extends Controller
         return back()->with('success', '賽事已取消並停止公開報名。');
     }
 
-    public function addStaff(Request $request, Event $event): RedirectResponse
+    public function addStaff(Request $request, Event $event, EventBadgeAwardService $badges): RedirectResponse
     {
         $this->authorize('manageStaff', $event);
-        $validated = $request->validate(['email' => ['required', 'email', 'exists:users,email'], 'role' => ['required', 'in:manager,staff,viewer']]);
+        $validated = $request->validate(['email' => ['required', 'email', 'exists:users,email'], 'role' => ['required', 'in:manager,staff,volunteer,viewer']]);
         $user = User::where('email', $validated['email'])->firstOrFail();
-        EventStaff::updateOrCreate(['event_id' => $event->id, 'user_id' => $user->id], [
+        $staff = EventStaff::updateOrCreate(['event_id' => $event->id, 'user_id' => $user->id], [
             'role' => $validated['role'], 'status' => 'active', 'invited_by' => $request->user()->id,
             'invited_at' => now(), 'accepted_at' => now(),
         ]);
+        $badges->awardTeamFor($staff);
         $this->audit($event, $request, 'staff.added', $user->id, ['role' => $validated['role']]);
 
         return back()->with('success', '工作人員已加入。');
@@ -152,21 +154,22 @@ class EventController extends Controller
 
     public function showStaffInvitation(Request $request, Event $event, string $role): View
     {
-        abort_unless(in_array($role, ['manager', 'staff', 'viewer'], true), 404);
+        abort_unless(in_array($role, ['manager', 'staff', 'volunteer', 'viewer'], true), 404);
         return view('organizer.events.staff-invitation', compact('event', 'role'));
     }
 
-    public function acceptStaffInvitation(Request $request, Event $event, string $role): RedirectResponse
+    public function acceptStaffInvitation(Request $request, Event $event, string $role, EventBadgeAwardService $badges): RedirectResponse
     {
-        abort_unless(in_array($role, ['manager', 'staff', 'viewer'], true), 404);
+        abort_unless(in_array($role, ['manager', 'staff', 'volunteer', 'viewer'], true), 404);
         $inviter = User::findOrFail($request->integer('inviter'));
         abort_unless($inviter->can('manageStaff', $event), 403, '這份邀請已失效。');
         abort_if($event->staff()->where('user_id', $request->user()->id)->where('role', 'owner')->exists(), 422, '賽事擁有者不需要加入邀請。');
 
-        EventStaff::updateOrCreate(['event_id' => $event->id, 'user_id' => $request->user()->id], [
+        $staff = EventStaff::updateOrCreate(['event_id' => $event->id, 'user_id' => $request->user()->id], [
             'role' => $role, 'status' => 'active', 'invited_by' => $inviter->id,
             'invited_at' => now(), 'accepted_at' => now(),
         ]);
+        $badges->awardTeamFor($staff);
         $this->audit($event, $request, 'staff.invitation_accepted', $request->user()->id, ['role' => $role]);
 
         return redirect()->route('organizer.events.show', $event)->with('success', '已加入 '.$event->name.' 的工作團隊。');

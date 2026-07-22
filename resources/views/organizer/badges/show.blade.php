@@ -16,7 +16,7 @@
     <div class="grid gap-6 lg:grid-cols-[320px_1fr]">
         <section class="rounded-2xl border bg-white p-5 shadow-sm">
             <h2 class="font-semibold">發放方式</h2>
-            <p class="mt-3 rounded-xl bg-indigo-50 p-3 text-sm text-indigo-700">{{ ['attendance'=>'完成繳費並報到後自動發放','placement'=>'正式成績發布後依名次自動發放','manual'=>'由主辦方從參賽名單授予'][$badge->award_rule] ?? '主辦方授予' }}</p>
+            <p class="mt-3 rounded-xl bg-indigo-50 p-3 text-sm text-indigo-700">{{ ['attendance'=>'完成繳費並報到後自動發放','placement'=>'正式成績發布後依名次自動發放','staff'=>'加入工作團隊後自動發放','volunteer'=>'成為賽事志工後自動發放','manual'=>'由主辦方從參賽名單授予'][$badge->award_rule] ?? '主辦方授予' }}</p>
             @if($badge->eventGroup)<p class="mt-2 text-sm text-gray-600">組別：{{ $badge->eventGroup->name }}</p>@endif
             @if($badge->placement)<p class="mt-1 text-sm text-gray-600">名次：第 {{ $badge->placement }} 名</p>@endif
             <form method="POST" action="{{ route('organizer.events.badges.update', [$event, $badge]) }}" enctype="multipart/form-data" class="mt-5 space-y-3 border-t pt-4">
