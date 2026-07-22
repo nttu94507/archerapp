@@ -107,6 +107,44 @@ class EventBadgeWorkflowTest extends TestCase
         ]);
     }
 
+    public function test_any_active_group_registration_qualifies_even_if_an_older_group_was_withdrawn(): void
+    {
+        [$owner, $event] = $this->eventWithOwner();
+        $member = User::factory()->create();
+        $this->register($event, $member, 'withdrawn');
+        $this->register($event, $member, 'registered');
+        $badge = EventBadge::create([
+            'event_id'=>$event->id, 'created_by'=>$owner->id, 'name'=>'參賽 Badge',
+            'type'=>'participant', 'eligibility'=>'registered', 'claim_enabled'=>true,
+        ]);
+
+        $this->actingAs($member)->post(route('badge-claims.store',$badge->claim_token));
+
+        $this->assertDatabaseHas('event_badge_claims', [
+            'event_badge_id'=>$badge->id, 'user_id'=>$member->id,
+            'status'=>'pending', 'is_eligible'=>true, 'eligibility_note'=>'已有有效報名',
+        ]);
+    }
+
+    public function test_pending_claim_refreshes_after_member_registers(): void
+    {
+        [$owner, $event] = $this->eventWithOwner();
+        $member = User::factory()->create();
+        $badge = EventBadge::create([
+            'event_id'=>$event->id, 'created_by'=>$owner->id, 'name'=>'參賽 Badge',
+            'type'=>'participant', 'eligibility'=>'registered', 'claim_enabled'=>true,
+        ]);
+        $this->actingAs($member)->post(route('badge-claims.store',$badge->claim_token));
+        $this->register($event, $member, 'registered');
+
+        $this->actingAs($member)->get(route('badge-claims.show',$badge->claim_token))->assertOk();
+
+        $this->assertDatabaseHas('event_badge_claims', [
+            'event_badge_id'=>$badge->id, 'user_id'=>$member->id,
+            'status'=>'pending', 'is_eligible'=>true,
+        ]);
+    }
+
     public function test_owner_can_bulk_approve_claim_and_badge_appears_on_member_profile(): void
     {
         [$owner, $event] = $this->eventWithOwner();

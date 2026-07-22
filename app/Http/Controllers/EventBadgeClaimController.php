@@ -17,6 +17,13 @@ class EventBadgeClaimController extends Controller
         $badge = EventBadge::with('event')->where('claim_token', $token)->firstOrFail();
         $claim = $badge->claims()->where('user_id', $request->user()->id)->first();
         [$eligible, $note] = $this->eligibility($badge, $request->user()->id);
+        if ($claim && in_array($claim->status, ['pending', 'needs_review'], true)) {
+            $claim->update([
+                'status' => $eligible ? 'pending' : 'needs_review',
+                'is_eligible' => $eligible,
+                'eligibility_note' => $note,
+            ]);
+        }
 
         return view('badge-claims.show', compact('badge', 'claim', 'eligible', 'note'));
     }
@@ -34,14 +41,16 @@ class EventBadgeClaimController extends Controller
         }
 
         [$eligible, $note] = $this->eligibility($badge, $request->user()->id);
-        EventBadgeClaim::firstOrCreate(
+        $claim = EventBadgeClaim::firstOrNew(
             ['event_badge_id' => $badge->id, 'user_id' => $request->user()->id],
-            [
+        );
+        if (! $claim->exists || in_array($claim->status, ['pending', 'needs_review'], true)) {
+            $claim->fill([
                 'status' => $eligible ? 'pending' : 'needs_review',
                 'is_eligible' => $eligible,
                 'eligibility_note' => $note,
-            ]
-        );
+            ])->save();
+        }
 
         return back()->with('success', '申請已送出，等待主辦方確認。');
     }
@@ -53,10 +62,11 @@ class EventBadgeClaimController extends Controller
             return [true, '不限資格'];
         }
 
-        $registration = EventRegistration::where('event_id', $badge->event_id)
-            ->where('user_id', $userId)->first();
+        $activeRegistrations = EventRegistration::where('event_id', $badge->event_id)
+            ->where('user_id', $userId)
+            ->whereIn('status', ['registered', 'checked_in']);
 
-        if (! $registration || in_array($registration->status, ['withdrawn', 'refunded', 'no_show'], true)) {
+        if (! $activeRegistrations->exists()) {
             return [false, '找不到有效報名資料'];
         }
 
@@ -65,11 +75,11 @@ class EventBadgeClaimController extends Controller
         }
 
         if ($badge->eligibility === 'checked_in') {
-            return [$registration->status === 'checked_in', $registration->status === 'checked_in' ? '已完成報到' : '尚未完成報到'];
+            $checkedIn = (clone $activeRegistrations)->where('status', 'checked_in')->exists();
+            return [$checkedIn, $checkedIn ? '已完成報到' : '尚未完成報到'];
         }
 
-        $hasScore = EventRegistration::where('event_id', $badge->event_id)
-            ->where('user_id', $userId)->whereNotNull('score_verified_at')->exists();
+        $hasScore = (clone $activeRegistrations)->whereNotNull('score_verified_at')->exists();
         return [$hasScore, $hasScore ? '已有主辦方確認成績' : '尚無主辦方確認成績'];
     }
 }
