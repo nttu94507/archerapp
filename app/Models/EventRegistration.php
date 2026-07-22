@@ -11,12 +11,13 @@ class EventRegistration extends Model
         'event_id','event_group_id','user_id',
         'name','email','phone','team_name',
         'status','withdraw_reason','withdrawn_at','withdrawn_by',
-        'paid','score_submitted_at','checked_in_at','checked_in_by',
+        'paid','payment_status','payment_confirmed_at','payment_confirmed_by','payment_amount','payment_method','payment_reference','payment_note','score_submitted_at','checked_in_at','checked_in_by',
         'score_verified_at','score_verified_by','result_published_at',
     ];
 
     protected $casts = [
         'paid'         => 'boolean',
+        'payment_confirmed_at' => 'datetime',
         'withdrawn_at' => 'datetime',
         'score_submitted_at' => 'datetime',
         'checked_in_at' => 'datetime', 'score_verified_at' => 'datetime', 'result_published_at' => 'datetime',

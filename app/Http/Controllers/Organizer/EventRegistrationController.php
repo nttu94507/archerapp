@@ -6,7 +6,9 @@ use App\Http\Controllers\Controller;
 use App\Models\Event;
 use App\Models\EventAuditLog;
 use App\Models\EventRegistration;
+use App\Models\EventPaymentAudit;
 use App\Models\User;
+use App\Services\EventBadgeAwardService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -18,13 +20,15 @@ class EventRegistrationController extends Controller
         $this->authorize('manageRegistrations', $event);
         $query = $event->registrations()->with(['user', 'event_group']);
         if ($request->filled('status')) $query->where('status', $request->status);
-        if ($request->filled('q')) $query->where(fn ($q) => $q->where('name', 'like', '%'.$request->q.'%')->orWhere('email', 'like', '%'.$request->q.'%'));
+        if ($request->filled('payment_status')) $query->where('payment_status', $request->payment_status);
+        if ($request->filled('event_group_id')) $query->where('event_group_id', $request->event_group_id);
+        if ($request->filled('q')) $query->where(fn ($q) => $q->where('name', 'like', '%'.$request->q.'%')->orWhere('email', 'like', '%'.$request->q.'%')->orWhereHas('user', fn ($user) => $user->where('uuid', 'like', '%'.$request->q.'%')));
         $registrations = $query->orderBy('event_group_id')->orderBy('name')->paginate(30)->withQueryString();
-
-        return view('organizer.registrations.index', compact('event', 'registrations'));
+        $groups = $event->groups()->orderBy('name')->get();
+        return view('organizer.registrations.index', compact('event', 'registrations', 'groups'));
     }
 
-    public function update(Request $request, Event $event, EventRegistration $registration): RedirectResponse
+    public function update(Request $request, Event $event, EventRegistration $registration, EventBadgeAwardService $badges): RedirectResponse
     {
         $this->authorize('manageRegistrations', $event);
         $this->ensureBelongs($event, $registration);
@@ -33,23 +37,29 @@ class EventRegistrationController extends Controller
             'paid' => ['nullable', 'boolean'],
         ]);
         $this->applyStatus($registration, $validated['status'], $request->user()->id);
-        if (array_key_exists('paid', $validated)) $registration->update(['paid' => $request->boolean('paid')]);
+        if (array_key_exists('paid', $validated)) {
+            $this->setPayment($registration, $request->boolean('paid') ? 'paid' : 'pending', $request->user()->id);
+        }
+        $badges->awardAttendanceFor($registration->fresh());
         $this->audit($event, $request, 'registration.updated', $registration, $validated);
         return back()->with('success', '報名狀態已更新。');
     }
 
-    public function bulk(Request $request, Event $event): RedirectResponse
+    public function bulk(Request $request, Event $event, EventBadgeAwardService $badges): RedirectResponse
     {
         $this->authorize('manageRegistrations', $event);
         $validated = $request->validate(['registration_ids' => ['required', 'array', 'min:1'], 'registration_ids.*' => ['integer'], 'status' => ['required', 'in:registered,checked_in,withdrawn,refunded,no_show']]);
         $registrations = $event->registrations()->whereIn('id', $validated['registration_ids'])->get();
         abort_if($registrations->count() !== count(array_unique($validated['registration_ids'])), 422, '包含無效報名。');
-        foreach ($registrations as $registration) $this->applyStatus($registration, $validated['status'], $request->user()->id);
+        foreach ($registrations as $registration) {
+            $this->applyStatus($registration, $validated['status'], $request->user()->id);
+            $badges->awardAttendanceFor($registration->fresh());
+        }
         $this->audit($event, $request, 'registration.bulk_updated', null, ['count' => $registrations->count(), 'status' => $validated['status']]);
         return back()->with('success', '已更新 '.$registrations->count().' 筆報名。');
     }
 
-    public function checkIn(Request $request, Event $event): RedirectResponse
+    public function checkIn(Request $request, Event $event, EventBadgeAwardService $badges): RedirectResponse
     {
         $this->authorize('manageRegistrations', $event);
         $validated = $request->validate(['uuid' => ['required', 'uuid']]);
@@ -57,8 +67,28 @@ class EventRegistrationController extends Controller
         $registration = $user ? $event->registrations()->where('user_id', $user->id)->where('status', 'registered')->first() : null;
         if (! $registration) return back()->with('error', '找不到此會員可報到的有效報名。');
         $this->applyStatus($registration, 'checked_in', $request->user()->id);
+        $badges->awardAttendanceFor($registration->fresh());
         $this->audit($event, $request, 'registration.checked_in', $registration);
         return back()->with('success', $registration->name.' 已完成報到。');
+    }
+
+    public function bulkPayment(Request $request, Event $event, EventBadgeAwardService $badges): RedirectResponse
+    {
+        $this->authorize('manageRegistrations', $event);
+        $validated = $request->validate([
+            'registration_ids'=>['required','array','min:1'], 'registration_ids.*'=>['integer'],
+            'payment_status'=>['required','in:pending,paid,exempt,refunded,issue'],
+            'payment_amount'=>['nullable','numeric','min:0'], 'payment_method'=>['nullable','string','max:30'],
+            'payment_reference'=>['nullable','string','max:120'], 'payment_note'=>['nullable','string','max:1000'],
+        ]);
+        $registrations = $event->registrations()->whereIn('id', $validated['registration_ids'])->get();
+        abort_if($registrations->count() !== count(array_unique($validated['registration_ids'])), 422, '包含無效報名。');
+        foreach ($registrations as $registration) {
+            $this->setPayment($registration, $validated['payment_status'], $request->user()->id, $validated);
+            $badges->awardAttendanceFor($registration->fresh());
+        }
+        $this->audit($event, $request, 'registration.payment_bulk_updated', null, ['count'=>$registrations->count(),'payment_status'=>$validated['payment_status']]);
+        return back()->with('success', '已更新 '.$registrations->count().' 筆繳費狀態。');
     }
 
     private function applyStatus(EventRegistration $registration, string $status, int $actorId): void
@@ -67,6 +97,25 @@ class EventRegistrationController extends Controller
             'status' => $status,
             'checked_in_at' => $status === 'checked_in' ? ($registration->checked_in_at ?? now()) : null,
             'checked_in_by' => $status === 'checked_in' ? $actorId : null,
+        ]);
+    }
+
+    private function setPayment(EventRegistration $registration, string $status, int $actorId, array $data = []): void
+    {
+        $from = $registration->payment_status ?? ($registration->paid ? 'paid' : 'pending');
+        $settled = in_array($status, ['paid', 'exempt'], true);
+        $registration->update([
+            'paid'=>$settled, 'payment_status'=>$status,
+            'payment_confirmed_at'=>$settled ? now() : null, 'payment_confirmed_by'=>$settled ? $actorId : null,
+            'payment_amount'=>$data['payment_amount'] ?? $registration->payment_amount,
+            'payment_method'=>$data['payment_method'] ?? $registration->payment_method,
+            'payment_reference'=>$data['payment_reference'] ?? $registration->payment_reference,
+            'payment_note'=>$data['payment_note'] ?? $registration->payment_note,
+        ]);
+        EventPaymentAudit::create([
+            'event_registration_id'=>$registration->id, 'changed_by'=>$actorId, 'from_status'=>$from, 'to_status'=>$status,
+            'amount'=>$data['payment_amount'] ?? null, 'payment_method'=>$data['payment_method'] ?? null,
+            'payment_reference'=>$data['payment_reference'] ?? null, 'note'=>$data['payment_note'] ?? null,
         ]);
     }
 

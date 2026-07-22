@@ -7,6 +7,7 @@ use App\Models\Event;
 use App\Models\EventBadge;
 use App\Models\EventBadgeClaim;
 use App\Models\UserEventBadge;
+use App\Services\EventBadgeAwardService;
 use BaconQrCode\Renderer\Image\SvgImageBackEnd;
 use BaconQrCode\Renderer\ImageRenderer;
 use BaconQrCode\Renderer\RendererStyle\RendererStyle;
@@ -32,7 +33,8 @@ class EventBadgeController extends Controller
             ])
             ->latest()->get();
 
-        return view('organizer.badges.index', compact('event', 'badges'));
+        $groups = $event->groups()->orderBy('name')->get();
+        return view('organizer.badges.index', compact('event', 'badges', 'groups'));
     }
 
     public function store(Request $request, Event $event): RedirectResponse
@@ -45,9 +47,17 @@ class EventBadgeController extends Controller
             'icon' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:10240'],
             'type' => ['required', 'in:participant,finisher,staff,volunteer,special'],
             'eligibility' => ['required', 'in:any,registered,checked_in,scored'],
+            'award_rule' => ['nullable', 'in:manual,attendance,placement'],
+            'event_group_id' => ['nullable', 'integer', 'exists:event_groups,id'],
+            'placement' => ['nullable', 'integer', 'between:1,3'],
             'claim_starts_at' => ['nullable', 'date'],
             'claim_ends_at' => ['nullable', 'date', 'after:claim_starts_at'],
         ]);
+        $validated['award_rule'] ??= 'manual';
+        if ($validated['award_rule'] === 'placement') {
+            abort_unless(! empty($validated['event_group_id']) && ! empty($validated['placement']), 422, '名次 Badge 必須選擇組別與名次。');
+        }
+        if (! empty($validated['event_group_id'])) abort_unless($event->groups()->whereKey($validated['event_group_id'])->exists(), 422, '組別不屬於此賽事。');
 
         unset($validated['icon']);
         if ($request->hasFile('icon')) {
@@ -62,14 +72,28 @@ class EventBadgeController extends Controller
             ->with('success', 'Badge 已建立。');
     }
 
+    public function manualAward(Request $request, Event $event, EventBadge $badge, EventBadgeAwardService $service): RedirectResponse
+    {
+        $this->authorizeBadge($request, $event, $badge);
+        abort_unless($badge->award_rule === 'manual', 422, '只有主辦方授予的 Badge 可以手動發放。');
+        $validated = $request->validate(['user_ids'=>['required','array','min:1'],'user_ids.*'=>['integer'],'award_note'=>['nullable','string','max:1000']]);
+        $eligibleIds = $event->registrations()->whereIn('status',['registered','checked_in'])->whereIn('user_id',$validated['user_ids'])->pluck('user_id')->unique();
+        abort_if($eligibleIds->count() !== count(array_unique($validated['user_ids'])), 422, '選取名單包含非本賽事選手。');
+        foreach ($eligibleIds as $userId) $service->award($badge, $userId, 'manual', $request->user()->id, $validated['award_note'] ?? null);
+        return back()->with('success', '已授予 '.$eligibleIds->count().' 位選手。');
+    }
+
     public function show(Request $request, Event $event, EventBadge $badge): View
     {
         $this->authorizeBadge($request, $event, $badge);
 
         $claims = $badge->claims()->with('user')->latest()->get();
         $awards = $badge->awards()->with('user')->latest('awarded_at')->get();
+        $participants = $event->registrations()->with('event_group')->whereIn('status', ['registered','checked_in'])
+            ->when($badge->event_group_id, fn ($query) => $query->where('event_group_id', $badge->event_group_id))
+            ->orderBy('event_group_id')->orderBy('name')->get()->unique('user_id');
 
-        return view('organizer.badges.show', compact('event', 'badge', 'claims', 'awards'));
+        return view('organizer.badges.show', compact('event', 'badge', 'claims', 'awards', 'participants'));
     }
 
     public function update(Request $request, Event $event, EventBadge $badge): RedirectResponse

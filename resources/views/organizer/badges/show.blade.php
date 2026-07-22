@@ -15,21 +15,31 @@
 
     <div class="grid gap-6 lg:grid-cols-[320px_1fr]">
         <section class="rounded-2xl border bg-white p-5 shadow-sm">
-            <h2 class="font-semibold">申請 QR Code</h2>
-            <img src="{{ route('organizer.events.badges.qrcode', [$event, $badge]) }}" alt="申請 QR Code" class="mt-3 aspect-square w-full rounded-xl border p-2">
-            <p class="mt-2 text-xs text-gray-500">掃描只會送出申請，必須經過主辦方核准。</p>
+            <h2 class="font-semibold">發放方式</h2>
+            <p class="mt-3 rounded-xl bg-indigo-50 p-3 text-sm text-indigo-700">{{ ['attendance'=>'完成繳費並報到後自動發放','placement'=>'正式成績發布後依名次自動發放','manual'=>'由主辦方從參賽名單授予'][$badge->award_rule] ?? '主辦方授予' }}</p>
+            @if($badge->eventGroup)<p class="mt-2 text-sm text-gray-600">組別：{{ $badge->eventGroup->name }}</p>@endif
+            @if($badge->placement)<p class="mt-1 text-sm text-gray-600">名次：第 {{ $badge->placement }} 名</p>@endif
             <form method="POST" action="{{ route('organizer.events.badges.update', [$event, $badge]) }}" enctype="multipart/form-data" class="mt-5 space-y-3 border-t pt-4">
                 @csrf @method('PATCH')
-                <label class="flex items-center gap-2 text-sm"><input type="checkbox" name="claim_enabled" value="1" @checked($badge->claim_enabled) class="rounded"> 開放申請</label>
-                <div><label class="text-xs text-gray-600">開始時間</label><input type="datetime-local" name="claim_starts_at" value="{{ optional($badge->claim_starts_at)->format('Y-m-d\TH:i') }}" class="mt-1 w-full rounded-xl border-gray-300 text-sm"></div>
-                <div><label class="text-xs text-gray-600">截止時間</label><input type="datetime-local" name="claim_ends_at" value="{{ optional($badge->claim_ends_at)->format('Y-m-d\TH:i') }}" class="mt-1 w-full rounded-xl border-gray-300 text-sm"></div>
                 <div x-data="{ fileName: '尚未選擇', preview: null }"><label class="text-xs text-gray-600">更換圖示</label><div class="mt-1 flex items-center gap-3"><img :src="preview || '{{ $badge->icon_url }}'" alt="預覽" class="h-12 w-12 rounded-xl object-cover"><label class="inline-flex min-h-11 cursor-pointer items-center rounded-xl border border-indigo-200 bg-indigo-50 px-4 text-sm font-medium text-indigo-700 hover:bg-indigo-100">選擇圖片<input type="file" name="icon" accept="image/jpeg,image/png,image/webp" class="sr-only" @change="const file = $event.target.files[0]; fileName = file ? file.name : '尚未選擇'; preview = file ? URL.createObjectURL(file) : null"></label><span class="min-w-0 truncate text-xs text-gray-500" x-text="fileName"></span></div></div>
-                <button class="w-full rounded-xl bg-indigo-600 px-4 py-2 text-sm text-white">儲存申請設定</button>
+                <button class="w-full rounded-xl bg-indigo-600 px-4 py-2 text-sm text-white">儲存圖示</button>
             </form>
-            <form method="POST" action="{{ route('organizer.events.badges.regenerate-token', [$event, $badge]) }}" class="mt-3" onsubmit="return confirm('舊 QR Code 將立即失效，確定重新產生？')">@csrf<button class="w-full rounded-xl border px-4 py-2 text-sm text-red-600 hover:bg-red-50">讓舊 QR Code 失效</button></form>
         </section>
 
         <section class="min-w-0 rounded-2xl border bg-white shadow-sm">
+            @if($badge->award_rule === 'manual')
+            <div class="border-b p-5"><h2 class="font-semibold">授予特殊 Badge</h2><p class="mt-1 text-sm text-gray-500">選擇本賽事選手，可一次發放給多人。</p></div>
+            <form method="POST" action="{{ route('organizer.events.badges.award', [$event, $badge]) }}">@csrf
+                <div class="grid max-h-[32rem] gap-2 overflow-y-auto p-4 sm:grid-cols-2">
+                    @forelse($participants as $participant)<label class="flex min-h-12 items-center gap-3 rounded-xl border p-3"><input type="checkbox" name="user_ids[]" value="{{ $participant->user_id }}" class="rounded"><span class="min-w-0"><span class="block truncate font-medium">{{ $participant->name }}</span><span class="block text-xs text-gray-500">{{ $participant->event_group?->name }}</span></span></label>@empty<p class="text-sm text-gray-500">尚無可授予的參賽者。</p>@endforelse
+                </div>
+                @if($participants->isNotEmpty())<div class="flex flex-col gap-2 border-t p-4 sm:flex-row"><input name="award_note" class="min-h-11 flex-1 rounded-xl border-gray-300 text-sm" placeholder="授予原因（選填）"><button class="min-h-11 rounded-xl bg-indigo-600 px-5 text-sm text-white">批次授予</button></div>@endif
+            </form>
+            @else
+            <div class="p-6"><h2 class="font-semibold">系統自動發放</h2><p class="mt-2 text-sm text-gray-500">條件成立時會自動處理，同一位會員不會重複取得。</p></div>
+            @endif
+            @if($claims->isNotEmpty())
+            <div class="border-t">
             <div class="border-b p-5"><h2 class="font-semibold">申請審核</h2><p class="mt-1 text-sm text-gray-500">符合資格者會預先標示，仍由主辦方批次確認。</p></div>
             <form method="POST" action="{{ route('organizer.events.badges.review', [$event, $badge]) }}">@csrf
                 <div class="overflow-x-auto"><table class="min-w-full text-sm"><thead class="bg-gray-50 text-left text-xs text-gray-500"><tr><th class="p-3"><input type="checkbox" onclick="document.querySelectorAll('.claim-check').forEach(el => el.checked = this.checked)"></th><th class="p-3">會員</th><th class="p-3">資格判斷</th><th class="p-3">狀態</th><th class="p-3">申請時間</th></tr></thead>
@@ -37,6 +47,8 @@
                 </table></div>
                 @if($claims->whereIn('status', ['pending', 'needs_review'])->isNotEmpty())<div class="flex flex-wrap items-center gap-3 border-t p-4"><input name="review_note" class="min-w-56 flex-1 rounded-xl border-gray-300 text-sm" placeholder="審核備註（選填）"><button name="action" value="approve" class="rounded-xl bg-green-600 px-4 py-2 text-sm text-white">批次通過</button><button name="action" value="reject" class="rounded-xl border border-red-200 px-4 py-2 text-sm text-red-600">批次拒絕</button></div>@endif
             </form>
+            </div>
+            @endif
         </section>
     </div>
 

@@ -108,6 +108,7 @@ Route::prefix('organizer')->middleware('auth')->name('organizer.')->group(functi
     Route::post('staff-invitations/{event}/{role}', [OrganizerEventController::class, 'acceptStaffInvitation'])->middleware('signed')->name('staff-invitations.accept');
     Route::get('events/{event}/registrations', [OrganizerRegistrationController::class, 'index'])->name('events.registrations.index');
     Route::patch('events/{event}/registrations/bulk', [OrganizerRegistrationController::class, 'bulk'])->name('events.registrations.bulk');
+    Route::patch('events/{event}/registrations/payment', [OrganizerRegistrationController::class, 'bulkPayment'])->name('events.registrations.payment');
     Route::post('events/{event}/registrations/check-in', [OrganizerRegistrationController::class, 'checkIn'])->name('events.registrations.check-in');
     Route::patch('events/{event}/registrations/{registration}', [OrganizerRegistrationController::class, 'update'])->name('events.registrations.update');
     Route::get('events/{event}/results', [OrganizerResultController::class, 'index'])->name('events.results.index');
@@ -122,6 +123,7 @@ Route::prefix('organizer')->middleware('auth')->name('organizer.')->group(functi
         Route::post('badges/{badge}/regenerate-token', [OrganizerEventBadgeController::class, 'regenerateToken'])->name('badges.regenerate-token');
         Route::get('badges/{badge}/qrcode', [OrganizerEventBadgeController::class, 'qrCode'])->name('badges.qrcode');
         Route::post('badges/{badge}/review', [OrganizerEventBadgeController::class, 'bulkReview'])->name('badges.review');
+        Route::post('badges/{badge}/award', [OrganizerEventBadgeController::class, 'manualAward'])->name('badges.award');
     });
 });
 

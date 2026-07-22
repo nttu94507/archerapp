@@ -7,6 +7,7 @@ use App\Models\EventBadge;
 use App\Models\EventBadgeClaim;
 use App\Models\EventGroup;
 use App\Models\EventRegistration;
+use App\Models\EventScoreEntry;
 use App\Models\EventStaff;
 use App\Models\User;
 use App\Models\UserEventBadge;
@@ -18,6 +19,51 @@ use Tests\TestCase;
 class EventBadgeWorkflowTest extends TestCase
 {
     use RefreshDatabase;
+
+    public function test_paid_and_checked_in_registration_receives_attendance_badge_regardless_of_order(): void
+    {
+        [$owner, $event] = $this->eventWithOwner();
+        $member = User::factory()->create();
+        $registration = $this->register($event, $member, 'registered');
+        $badge = EventBadge::create(['event_id'=>$event->id,'created_by'=>$owner->id,'name'=>'參賽 Badge','type'=>'participant','eligibility'=>'checked_in','award_rule'=>'attendance']);
+
+        $this->actingAs($owner)->post(route('organizer.events.registrations.check-in',$event), ['uuid'=>$member->uuid]);
+        $this->assertDatabaseMissing('user_event_badges', ['event_badge_id'=>$badge->id,'user_id'=>$member->id]);
+        $this->actingAs($owner)->patch(route('organizer.events.registrations.payment',$event), ['registration_ids'=>[$registration->id],'payment_status'=>'paid']);
+
+        $this->assertDatabaseHas('user_event_badges', ['event_badge_id'=>$badge->id,'user_id'=>$member->id,'award_source'=>'attendance','revoked_at'=>null]);
+        $this->assertDatabaseHas('event_payment_audits', ['event_registration_id'=>$registration->id,'to_status'=>'paid','changed_by'=>$owner->id]);
+    }
+
+    public function test_publishing_verified_results_awards_placement_badge_once(): void
+    {
+        [$owner, $event] = $this->eventWithOwner();
+        $group = EventGroup::factory()->create(['event_id'=>$event->id]);
+        $members = User::factory()->count(3)->create();
+        foreach ([60, 50, 40] as $index => $score) {
+            $registration = EventRegistration::create(['event_id'=>$event->id,'event_group_id'=>$group->id,'user_id'=>$members[$index]->id,'name'=>$members[$index]->name,'email'=>$members[$index]->email,'status'=>'checked_in','score_submitted_at'=>now(),'score_verified_at'=>now()]);
+            EventScoreEntry::create(['event_id'=>$event->id,'event_registration_id'=>$registration->id,'user_id'=>$members[$index]->id,'end_number'=>1,'scores'=>[$score],'end_total'=>$score]);
+        }
+        $badge = EventBadge::create(['event_id'=>$event->id,'event_group_id'=>$group->id,'created_by'=>$owner->id,'name'=>'金牌','type'=>'special','eligibility'=>'scored','award_rule'=>'placement','placement'=>1]);
+
+        $this->actingAs($owner)->post(route('organizer.events.results.publish',$event))->assertSessionHas('success');
+        $this->actingAs($owner)->post(route('organizer.events.results.publish',$event))->assertSessionHas('success');
+
+        $this->assertDatabaseCount('user_event_badges', 1);
+        $this->assertDatabaseHas('user_event_badges', ['event_badge_id'=>$badge->id,'user_id'=>$members[0]->id,'award_source'=>'placement']);
+    }
+
+    public function test_organizer_can_bulk_award_special_badge_to_event_participants(): void
+    {
+        [$owner, $event] = $this->eventWithOwner();
+        $members = User::factory()->count(2)->create();
+        foreach ($members as $member) $this->register($event, $member, 'registered');
+        $badge = EventBadge::create(['event_id'=>$event->id,'created_by'=>$owner->id,'name'=>'最佳新人','type'=>'special','eligibility'=>'registered','award_rule'=>'manual']);
+
+        $this->actingAs($owner)->post(route('organizer.events.badges.award',[$event,$badge]), ['user_ids'=>$members->pluck('id')->all(),'award_note'=>'賽後評選'])->assertSessionHas('success');
+
+        $this->assertSame(2, UserEventBadge::where('event_badge_id',$badge->id)->where('award_source','manual')->count());
+    }
 
     public function test_event_owner_can_create_badge_but_unrelated_user_cannot_manage_it(): void
     {

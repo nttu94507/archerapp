@@ -9,7 +9,7 @@ class UserEventBadge extends Model
 {
     protected $fillable = [
         'event_badge_id', 'user_id', 'event_badge_claim_id', 'awarded_by', 'awarded_at',
-        'revoked_by', 'revoked_at', 'revoked_reason',
+        'award_source', 'award_note', 'revoked_by', 'revoked_at', 'revoked_reason',
     ];
 
     protected $casts = [

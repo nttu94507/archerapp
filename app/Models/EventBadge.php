@@ -10,7 +10,7 @@ use Illuminate\Support\Str;
 class EventBadge extends Model
 {
     protected $fillable = [
-        'event_id', 'created_by', 'name', 'description', 'icon_path', 'type', 'eligibility',
+        'event_id', 'event_group_id', 'created_by', 'name', 'description', 'icon_path', 'type', 'eligibility', 'award_rule', 'placement',
         'claim_token', 'claim_enabled', 'claim_starts_at', 'claim_ends_at', 'is_active',
     ];
 
@@ -32,6 +32,8 @@ class EventBadge extends Model
     {
         return $this->belongsTo(Event::class);
     }
+
+    public function eventGroup(): BelongsTo { return $this->belongsTo(EventGroup::class); }
 
     public function creator(): BelongsTo
     {

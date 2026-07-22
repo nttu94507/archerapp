@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Event;
 use App\Models\EventAuditLog;
 use App\Models\EventRegistration;
+use App\Services\EventBadgeAwardService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -32,14 +33,15 @@ class EventResultController extends Controller
         return back()->with('success','已確認 '.$items->count().' 筆成績。');
     }
 
-    public function publish(Request $request, Event $event): RedirectResponse
+    public function publish(Request $request, Event $event, EventBadgeAwardService $badges): RedirectResponse
     {
         $this->authorize('manageScores', $event);
         $verified = $event->registrations()->whereNotNull('score_verified_at')->get();
         abort_if($verified->isEmpty(),422,'至少確認一筆成績才能發布。');
         foreach ($verified as $registration) $registration->update(['result_published_at'=>now()]);
         $event->update(['completed_at'=>now()]);
+        $awarded = $badges->awardPlacementsFor($event);
         EventAuditLog::create(['event_id'=>$event->id,'user_id'=>$request->user()->id,'action'=>'results.published','metadata'=>['count'=>$verified->count()]]);
-        return back()->with('success','正式成績已發布。');
+        return back()->with('success','正式成績已發布，已發放 '.$awarded.' 個名次 Badge。');
     }
 }
