@@ -8,7 +8,7 @@
         <div>
             <a href="{{ route('organizer.events.show', $event) }}" class="text-sm text-indigo-600">← 返回賽事工作台</a>
             <h1 class="mt-2 text-2xl font-bold">Badge 發放管理</h1>
-            <p class="mt-1 text-sm text-gray-500">{{ $event->name }}・由會員掃碼申請，主辦方確認後正式派發。</p>
+            <p class="mt-1 text-sm text-gray-500">{{ $event->name }}</p>
         </div>
     </div>
 

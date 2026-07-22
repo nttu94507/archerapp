@@ -8,7 +8,6 @@
             <div>
                 <p class="text-xs uppercase tracking-widest text-indigo-600 font-semibold">Admin</p>
                 <h1 class="text-2xl font-bold text-gray-900">賽事管理</h1>
-                <p class="text-sm text-gray-500">集中檢視所有賽事並快速進入管理頁面。</p>
             </div>
             <a href="{{ route('admin.events.create') }}"
                class="inline-flex items-center justify-center rounded-xl bg-gray-900 px-5 py-2.5 text-sm font-medium text-white hover:bg-gray-800">
@@ -34,12 +33,12 @@
                     </select>
                 </div>
                 <div>
-                    <label for="verified" class="text-xs font-medium text-gray-600">驗證狀態</label>
+                    <label for="verified" class="text-xs font-medium text-gray-600">發布狀態</label>
                     <select id="verified" name="verified"
                             class="mt-1 block w-full rounded-xl border-gray-200 bg-gray-50 text-sm focus:border-indigo-500 focus:ring-indigo-500">
                         <option value="">全部</option>
-                        <option value="1" @selected(request('verified')==='1')>已驗證</option>
-                        <option value="0" @selected(request('verified')==='0')>草稿</option>
+                        <option value="1" @selected(request('verified')==='1')>已發布</option>
+                        <option value="0" @selected(request('verified')==='0')>未發布</option>
                     </select>
                 </div>
                 <div class="grid grid-cols-2 gap-2">
@@ -110,7 +109,7 @@
                             </td>
                             <td class="px-6 py-4">
                                 <span class="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium {{ $event->verified ? 'bg-emerald-100 text-emerald-700' : 'bg-yellow-100 text-yellow-700' }}">
-                                    {{ $event->verified ? '已驗證' : '草稿' }}
+                                    {{ $event->verified ? '已發布' : '未發布' }}
                                 </span>
                             </td>
                             <td class="px-6 py-4 text-gray-700">{{ $event->groups_count }}</td>

@@ -98,12 +98,22 @@ class EventController extends Controller
     public function submit(Request $request, Event $event): RedirectResponse
     {
         $this->authorize('update', $event);
-        abort_unless(in_array($event->status, ['draft', 'rejected'], true), 422);
-        abort_if($event->groups()->doesntExist(), 422, '至少建立一個組別才能送審。');
-        $event->update(['status' => 'pending', 'review_note' => null, 'published_at' => null, 'verified' => false]);
-        $this->audit($event, $request, 'event.submitted');
+        abort_unless(in_array($event->status, ['draft', 'pending', 'rejected'], true), 422);
+        abort_if($event->groups()->doesntExist(), 422, '至少建立一個組別才能發布。');
+        $event->update(['status' => 'approved', 'review_note' => null, 'published_at' => now(), 'verified' => true]);
+        $this->audit($event, $request, 'event.published');
 
-        return back()->with('success', '賽事已送交平台審核。');
+        return back()->with('success', '賽事已發布，參賽者現在可以查看與報名。');
+    }
+
+    public function unpublish(Request $request, Event $event): RedirectResponse
+    {
+        $this->authorize('update', $event);
+        abort_unless($event->isPublished(), 422, '目前賽事尚未發布。');
+        $event->update(['status' => 'draft', 'published_at' => null, 'verified' => false]);
+        $this->audit($event, $request, 'event.unpublished');
+
+        return back()->with('success', '賽事已下架並保留為草稿。');
     }
 
     public function cancel(Request $request, Event $event): RedirectResponse

@@ -277,24 +277,24 @@ class EventController extends Controller
     public function review(Event $event, Request $request): RedirectResponse
     {
         $validated = $request->validate([
-            'decision' => ['required', 'in:approve,reject'],
-            'review_note' => ['nullable', 'string', 'max:1000'],
+            'decision' => ['required', 'in:publish,unpublish,approve,reject'],
+            'review_note' => ['required', 'string', 'max:1000'],
         ]);
 
-        $approved = $validated['decision'] === 'approve';
+        $approved = in_array($validated['decision'], ['publish', 'approve'], true);
         $event->update([
-            'status' => $approved ? 'approved' : 'rejected',
+            'status' => $approved ? 'approved' : 'draft',
             'verified' => $approved,
             'published_at' => $approved ? now() : null,
             'review_note' => $validated['review_note'] ?? null,
         ]);
         \App\Models\EventAuditLog::create([
             'event_id' => $event->id, 'user_id' => $request->user()->id,
-            'action' => $approved ? 'event.approved' : 'event.rejected',
+            'action' => $approved ? 'admin.event_force_published' : 'admin.event_force_unpublished',
             'subject_type' => Event::class, 'subject_id' => $event->id,
             'metadata' => ['note' => $validated['review_note'] ?? null],
         ]);
 
-        return back()->with('success', $approved ? '賽事已核准並發布。' : '賽事已退回主辦方。');
+        return back()->with('success', $approved ? '管理員已緊急發布賽事。' : '管理員已緊急下架賽事。');
     }
 }

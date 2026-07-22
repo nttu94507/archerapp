@@ -23,7 +23,7 @@
 @endphp
 
             <div class="space-y-5 rounded-2xl border border-gray-200 bg-white p-4 shadow-sm sm:p-6">
-                <div><h2 class="text-lg font-semibold text-gray-900">基本資訊</h2><p class="mt-1 text-sm text-gray-500">先填寫賽事名稱、日期與主辦單位。</p></div>
+                <h2 class="text-lg font-semibold text-gray-900">基本資訊</h2>
 
                 <div>
                     <label for="name" class="block text-sm font-medium text-gray-700 mb-1">賽事名稱 *</label>
@@ -98,7 +98,7 @@
             </div>
 
             <div class="space-y-5 rounded-2xl border border-gray-200 bg-white p-4 shadow-sm sm:p-6">
-                <div><h2 class="text-lg font-semibold text-gray-900">報名資訊</h2><p class="mt-1 text-sm text-gray-500">未設定時，可以稍後在賽事工作台補上。</p></div>
+                <div><h2 class="text-lg font-semibold text-gray-900">報名資訊</h2><p class="mt-1 text-xs text-gray-500">可稍後設定</p></div>
                 <div class="grid grid-cols-1 gap-5 sm:grid-cols-2 sm:gap-4">
                     <div>
                         <label for="reg_start" class="block text-sm font-medium text-gray-700 mb-1">報名開始</label>
@@ -116,7 +116,7 @@
             </div>
 
             <div class="space-y-5 rounded-2xl border border-gray-200 bg-white p-4 shadow-sm sm:p-6">
-                <div><h2 class="text-lg font-semibold text-gray-900">場地資訊</h2><p class="mt-1 text-sm text-gray-500">提供清楚的場地名稱與地圖連結，方便參賽者導航。</p></div>
+                <h2 class="text-lg font-semibold text-gray-900">場地資訊</h2>
                 <div>
                     <label for="venue" class="block text-sm font-medium text-gray-700 mb-1">場地名稱</label>
                     <input type="text" name="venue" id="venue" value="{{ old('venue', $existing?->venue) }}"

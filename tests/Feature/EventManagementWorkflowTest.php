@@ -17,11 +17,10 @@ class EventManagementWorkflowTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_organizer_draft_requires_platform_approval_before_publication(): void
+    public function test_approved_organizer_can_publish_event_without_platform_review(): void
     {
         $owner = User::factory()->create();
         OrganizerProfile::create(['user_id'=>$owner->id,'organization_name'=>'測試主辦方','organization_type'=>'club','contact_name'=>$owner->name,'contact_email'=>$owner->email,'contact_phone'=>'0912345678','application_reason'=>'測試','status'=>'approved','approved_at'=>now()]);
-        $admin = User::factory()->create(['is_admin'=>true]);
         $response = $this->actingAs($owner)->post(route('organizer.events.store'), $this->eventPayload());
         $event = Event::firstOrFail();
         $response->assertRedirect(route('organizer.events.show',$event));
@@ -30,11 +29,13 @@ class EventManagementWorkflowTest extends TestCase
 
         EventGroup::factory()->create(['event_id'=>$event->id]);
         $this->actingAs($owner)->post(route('organizer.events.submit',$event))->assertSessionHas('success');
-        $this->assertSame('pending',$event->fresh()->status);
-
-        $this->actingAs($admin)->post(route('admin.events.review',$event),['decision'=>'approve'])->assertSessionHas('success');
         $this->assertTrue($event->fresh()->isPublished());
         $this->get(route('events.show',$event))->assertOk();
+
+        $this->actingAs($owner)->post(route('organizer.events.unpublish',$event))->assertSessionHas('success');
+        $this->assertSame('draft',$event->fresh()->status);
+        $this->app['auth']->logout();
+        $this->get(route('events.show',$event))->assertNotFound();
     }
 
     public function test_event_roles_control_management_access(): void
@@ -52,6 +53,25 @@ class EventManagementWorkflowTest extends TestCase
         $this->actingAs($staffUser)->get(route('organizer.events.registrations.index',$event))->assertOk();
         $this->actingAs($viewer)->get(route('organizer.events.registrations.index',$event))->assertForbidden();
         $this->actingAs($outsider)->get(route('organizer.events.show',$event))->assertForbidden();
+    }
+
+    public function test_admin_can_emergency_publish_or_unpublish_with_a_reason(): void
+    {
+        $admin = User::factory()->create(['is_admin'=>true]);
+        $event = Event::factory()->create(['status'=>'draft','verified'=>false,'published_at'=>null]);
+
+        $this->actingAs($admin)->post(route('admin.events.review',$event), [
+            'decision'=>'publish', 'review_note'=>'協助主辦方排除發布異常',
+        ])->assertSessionHas('success');
+        $this->assertTrue($event->fresh()->isPublished());
+
+        $this->actingAs($admin)->post(route('admin.events.review',$event), [
+            'decision'=>'unpublish', 'review_note'=>'主辦方回報需緊急下架修正',
+        ])->assertSessionHas('success');
+        $this->assertSame('draft',$event->fresh()->status);
+        $this->assertDatabaseHas('event_audit_logs', [
+            'event_id'=>$event->id, 'action'=>'admin.event_force_unpublished',
+        ]);
     }
 
     public function test_staff_can_check_in_member_by_uuid_and_audit_is_recorded(): void
