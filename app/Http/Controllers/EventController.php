@@ -25,7 +25,11 @@ class EventController extends Controller
 
     public function index(Request $request)
     {
-        $events = Event::query()
+        $events = Event::query()->published()
+            ->when($request->filled('q'), fn ($query) => $query->where(function ($q) use ($request) {
+                $q->where('name', 'like', '%'.$request->q.'%')->orWhere('organizer', 'like', '%'.$request->q.'%')->orWhere('venue', 'like', '%'.$request->q.'%');
+            }))
+            ->when($request->filled('mode'), fn ($query) => $query->where('mode', $request->mode))
             ->orderBy('start_date', 'desc')
             ->get();
 
@@ -158,6 +162,9 @@ class EventController extends Controller
 
     public function show(Request $request ,Event $event)
     {
+        if (! $event->isPublished()) {
+            abort_unless($request->user() && $request->user()->can('viewManagement', $event), 404);
+        }
         $event->load([
             'groups' => function ($q) {
                 $q->orderBy('name')
@@ -201,7 +208,7 @@ class EventController extends Controller
         }
 
         // 是否為本賽事工作人員
-        $canManage = auth()->check() && auth()->user()->isAdmin();
+        $canManage = auth()->check() && auth()->user()->can('viewManagement', $event);
 
         $eventEndAt = $event->end_date ? Carbon::parse($event->end_date)->endOfDay() : null;
         $isEventFinished = $eventEndAt ? $eventEndAt->lt($now) : false;
@@ -224,6 +231,9 @@ class EventController extends Controller
 
     public function live(Request $request, Event $event)
     {
+        if (! $event->isPublished()) {
+            abort_unless($request->user() && $request->user()->can('viewManagement', $event), 404);
+        }
         $event->load('groups');
         $now = Carbon::now();
 
@@ -239,10 +249,10 @@ class EventController extends Controller
             ->where('event_id', $event->id)
             ->orderBy('end_number')
             ->get()
-            ->groupBy('user_id');
+            ->groupBy('event_registration_id');
 
         $scoreboard = $registrations->map(function (EventRegistration $registration) use ($scoreEntries) {
-            $entries = $scoreEntries->get($registration->user_id, collect());
+            $entries = $scoreEntries->get($registration->id, collect());
 
             $entriesWithStats = $entries->map(function (EventScoreEntry $entry) {
                 $stats = $this->tallyScores($entry->scores ?? []);

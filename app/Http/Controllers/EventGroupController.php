@@ -11,12 +11,13 @@ class EventGroupController extends Controller
 {
     public function __construct()
     {
-        $this->middleware(['auth', 'admin']);
+        $this->middleware('auth');
     }
 
     //
     public function index(Event $event)
     {
+        $this->authorize('manageGroups', $event);
         return view('event-groups.index', [
             'event'       => $event,
             'groupsAll'   => $event->groups()
@@ -33,11 +34,13 @@ class EventGroupController extends Controller
 
     public function create(Event $event)
     {
+        $this->authorize('manageGroups', $event);
         return view('event-groups.create', ['event' => $event]);
     }
 
     public function store(Request $req, Event $event)
     {
+        $this->authorize('manageGroups', $event);
         $arrowRule = ['required','integer','min:6','max:180', function ($attribute, $value, $fail) {
             if ($value % 6 !== 0) {
                 $fail('箭數需為 6 的倍數');
@@ -52,6 +55,7 @@ class EventGroupController extends Controller
             'groups.*.age_class'           => ['nullable','string','max:50'],
             'groups.*.distance'            => ['nullable','string','max:50'],
             'groups.*.arrow_count'         => $arrowRule,
+            'groups.*.arrows_per_end'      => ['nullable','integer','in:3,6'],
             'groups.*.quota'               => ['nullable','integer','min:1'],
             'groups.*.fee'                 => ['nullable','integer','min:0'],
             'groups.*.is_team'             => ['boolean'],
@@ -72,11 +76,13 @@ class EventGroupController extends Controller
 
     public function edit(Event $event, EventGroup $group)
     {
+        $this->authorizeGroup($event, $group);
         return view('event-groups.edit', compact('event','group'));
     }
 
     public function update(Request $req, Event $event, EventGroup $group)
     {
+        $this->authorizeGroup($event, $group);
         $arrowRule = ['required','integer','min:6','max:180', function ($attribute, $value, $fail) {
             if ($value % 6 !== 0) {
                 $fail('箭數需為 6 的倍數');
@@ -90,6 +96,7 @@ class EventGroupController extends Controller
             'age_class' => ['nullable','string','max:50'],
             'distance'  => ['nullable','string','max:50'],
             'arrow_count' => $arrowRule,
+            'arrows_per_end' => ['nullable','integer','in:3,6'],
             'quota'     => ['nullable','integer','min:1'],
             'fee'       => ['nullable','integer','min:0'],
             'is_team'   => ['boolean'],
@@ -104,8 +111,17 @@ class EventGroupController extends Controller
 
     public function destroy(Event $event, EventGroup $group)
     {
+        $this->authorizeGroup($event, $group);
+        if ($group->registrations()->exists()) {
+            return back()->with('error', '已有報名資料的組別不能刪除，可改為停止報名。');
+        }
         $group->delete();
-        $group->registrations()->delete();
         return back()->with('success', '已刪除組別');
+    }
+
+    private function authorizeGroup(Event $event, EventGroup $group): void
+    {
+        abort_unless($group->event_id === $event->id, 404);
+        $this->authorize('manageGroups', $event);
     }
 }

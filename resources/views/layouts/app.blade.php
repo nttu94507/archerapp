@@ -34,6 +34,7 @@
 
         {{-- 中間主選單（桌機顯示） --}}
         <nav class="hidden md:flex items-center gap-6 text-sm font-medium">
+            <a href="{{ route('events.index') }}" class="px-2 py-1 rounded-lg hover:bg-gray-100 {{ request()->routeIs('events.*') ? 'text-gray-900' : 'text-gray-600' }}">賽事</a>
             <a href="{{ route('scores.index') }}"
                class="px-2 py-1 rounded-lg hover:bg-gray-100 {{ request()->routeIs('scores.*') ? 'text-gray-900' : 'text-gray-600' }}">
                 訓練紀錄
@@ -109,15 +110,21 @@
                         <div id="user-menu"
                              class="hidden absolute right-0 mt-2 w-48 rounded-xl border bg-white py-2 shadow-lg"
                              role="menu" aria-labelledby="user-menu-button">
-                            <a href="{{ route('user.profile.completion') }}"
+                            <a href="{{ route('member-profile.index') }}"
                                class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50" role="menuitem">
-                                個人資料
+                                會員資料
                             </a>
+                            <a href="{{ route('organizer.events.index') }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50" role="menuitem">主辦方中心</a>
                             @if(auth()->user()->isAdmin())
                                 <a href="{{ route('admin.users.index') }}"
                                    class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50" role="menuitem">
                                     使用者列表
                                 </a>
+                                <a href="{{ route('admin.badges.index') }}"
+                                   class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50" role="menuitem">
+                                    Badge 監控
+                                </a>
+                                <a href="{{ route('admin.organizers.index') }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50" role="menuitem">主辦方審核</a>
                             @endif
                             <form method="POST" action="{{ route('logout') }}" class="mt-1" role="none">
                                 @csrf
@@ -159,6 +166,7 @@
 
         <nav class="p-3 space-y-1 text-sm">
             {{-- 主要導覽 --}}
+            <a href="{{ route('events.index') }}" class="flex items-center gap-2 rounded-lg px-3 py-2 hover:bg-gray-50 {{ request()->routeIs('events.*') ? 'font-semibold text-gray-900' : 'text-gray-700' }}">賽事</a>
             <a href="{{ route('scores.index') }}"
                class="flex items-center gap-2 rounded-lg px-3 py-2 hover:bg-gray-50 {{ request()->routeIs('scores.*') ? 'font-semibold text-gray-900' : 'text-gray-700' }}">
                 訓練紀錄
@@ -199,6 +207,11 @@
                        class="flex items-center gap-2 rounded-lg px-3 py-2 hover:bg-gray-50 {{ request()->routeIs('admin.users.*') ? 'font-semibold text-gray-900' : 'text-gray-700' }}">
                         使用者列表
                     </a>
+                    <a href="{{ route('admin.badges.index') }}"
+                       class="flex items-center gap-2 rounded-lg px-3 py-2 hover:bg-gray-50 {{ request()->routeIs('admin.badges.*') ? 'font-semibold text-gray-900' : 'text-gray-700' }}">
+                        Badge 監控
+                    </a>
+                    <a href="{{ route('admin.organizers.index') }}" class="flex items-center gap-2 rounded-lg px-3 py-2 hover:bg-gray-50 {{ request()->routeIs('admin.organizers.*') ? 'font-semibold text-gray-900' : 'text-gray-700' }}">主辦方審核</a>
                 @endif
             @endauth
         </nav>
@@ -208,8 +221,9 @@
             @auth
                 <div class="px-3 py-2 text-xs text-gray-500">使用者</div>
                 <div class="px-3 py-2 font-medium">{{ auth()->user()->display_name }}</div>
-                <a href="{{ route('user.profile.completion') }}"
-                   class="block rounded-lg px-3 py-2 text-sm hover:bg-gray-50 text-gray-700">個人資料</a>
+                <a href="{{ route('organizer.events.index') }}" class="block rounded-lg px-3 py-2 text-sm hover:bg-gray-50 text-gray-700">主辦方中心</a>
+                <a href="{{ route('member-profile.index') }}"
+                   class="block rounded-lg px-3 py-2 text-sm hover:bg-gray-50 text-gray-700">會員資料</a>
                 <form method="POST" action="{{ route('logout') }}" class="mt-1">
                     @csrf
                     <button type="submit"

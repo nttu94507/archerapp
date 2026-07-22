@@ -48,18 +48,18 @@ class MyEventController extends Controller
         ]);
     }
 
-    public function score(Event $event): View
+    public function score(EventRegistration $registration): View
     {
         $userId = Auth::id();
-        $registration = $this->ensureRegistration($event, $userId);
+        $registration = $this->ensureRegistration($registration, $userId);
+        $event = $registration->event;
 
         $now = Carbon::now();
         $scoreable = $this->isWithinWindow($event, $now);
         $finalized = (bool) $registration->score_submitted_at;
 
         $entries = EventScoreEntry::query()
-            ->where('event_id', $event->id)
-            ->where('user_id', $userId)
+            ->where('event_registration_id', $registration->id)
             ->orderBy('end_number')
             ->get()
             ->keyBy('end_number');
@@ -91,18 +91,19 @@ class MyEventController extends Controller
         ]);
     }
 
-    public function storeScore(Request $request, Event $event): RedirectResponse
+    public function storeScore(Request $request, EventRegistration $registration): RedirectResponse
     {
         $userId = Auth::id();
-        $registration = $this->ensureRegistration($event, $userId);
+        $registration = $this->ensureRegistration($registration, $userId);
+        $event = $registration->event;
 
         if ($registration->score_submitted_at) {
-            return redirect()->route('my-events.score', $event)
+            return redirect()->route('my-events.score', $registration)
                 ->with('error', '已送出整局成績，無法再修改。');
         }
 
         if (!$this->isWithinWindow($event, Carbon::now())) {
-            return redirect()->route('my-events.score', $event)
+            return redirect()->route('my-events.score', $registration)
                 ->with('error', '目前不在可計分時間內。');
         }
 
@@ -134,28 +135,28 @@ class MyEventController extends Controller
 
         EventScoreEntry::updateOrCreate(
             [
-                'event_id' => $event->id,
-                'user_id' => $userId,
+                'event_registration_id' => $registration->id,
                 'end_number' => $validated['end_number'],
             ],
             [
-                'scores' => $rawScores,
+                'event_id' => $event->id, 'user_id' => $userId, 'scores' => $rawScores,
                 'end_total' => $endTotal,
             ]
         );
 
         return redirect()
-            ->route('my-events.score', $event)
+            ->route('my-events.score', $registration)
             ->with('success', "已儲存第 {$validated['end_number']} 趟成績，整局送出前仍可修改。");
     }
 
-    public function submitAll(Event $event): RedirectResponse
+    public function submitAll(EventRegistration $registration): RedirectResponse
     {
         $userId = Auth::id();
-        $registration = $this->ensureRegistration($event, $userId);
+        $registration = $this->ensureRegistration($registration, $userId);
+        $event = $registration->event;
 
         if ($registration->score_submitted_at) {
-            return redirect()->route('my-events.score', $event)
+            return redirect()->route('my-events.score', $registration)
                 ->with('success', '整局成績已送出。');
         }
 
@@ -163,48 +164,40 @@ class MyEventController extends Controller
         $totalEnds = (int) ceil($totalArrows / $arrowsPerEnd);
 
         $entries = EventScoreEntry::query()
-            ->where('event_id', $event->id)
-            ->where('user_id', $userId)
+            ->where('event_registration_id', $registration->id)
             ->get()
             ->keyBy('end_number');
 
         foreach (range(1, $totalEnds) as $end) {
             if (!$entries->has($end)) {
-                return redirect()->route('my-events.score', $event)
+                return redirect()->route('my-events.score', $registration)
                     ->with('error', '還有趟次未填寫，無法送出整局成績。');
             }
         }
 
         $registration->update(['score_submitted_at' => Carbon::now()]);
 
-        return redirect()->route('my-events.score', $event)
+        return redirect()->route('my-events.score', $registration)
             ->with('success', '整局成績已送出，將無法再修改。');
     }
 
-    private function ensureRegistration(Event $event, int $userId): EventRegistration
+    private function ensureRegistration(EventRegistration $registration, int $userId): EventRegistration
     {
-        $registration = EventRegistration::query()
-            ->with('event_group')
-            ->where('event_id', $event->id)
-            ->where('user_id', $userId)
-            ->first();
-
-        abort_unless($registration, 403, '尚未報名此賽事');
-
-        return $registration;
+        abort_unless($registration->user_id === $userId && in_array($registration->status,['registered','checked_in'],true), 403, '無法存取此報名');
+        return $registration->load(['event','event_group']);
     }
 
     private function isWithinWindow(Event $event, Carbon $now): bool
     {
         $start = $event->start_date ? Carbon::parse($event->start_date) : null;
-        $end = $event->end_date ? Carbon::parse($event->end_date) : null;
+        $end = $event->end_date ? Carbon::parse($event->end_date)->endOfDay() : null;
 
         return $start && $end ? $now->between($start, $end) : false;
     }
 
     private function resolveArrowSettings(Event $event, EventRegistration $registration): array
     {
-        $arrowsPerEnd = 6;
+        $arrowsPerEnd = $registration->event_group?->arrows_per_end ?: 6;
         $default = $event->mode === 'indoor' ? 30 : 36;
         $arrowCount = $registration->event_group?->arrow_count ?: $default;
 

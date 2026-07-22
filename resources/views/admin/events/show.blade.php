@@ -17,6 +17,7 @@
             </div>
             <div class="flex flex-wrap gap-3">
                 <a href="{{ route('admin.events.index') }}" class="inline-flex items-center rounded-xl border border-gray-200 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">返回列表</a>
+                <a href="{{ route('organizer.events.badges.index', $event) }}" class="inline-flex items-center rounded-xl border border-indigo-200 bg-indigo-50 px-4 py-2 text-sm font-semibold text-indigo-700 hover:bg-indigo-100">Badge 管理</a>
                 <a href="{{ route('events.groups.create', $event) }}" class="inline-flex items-center rounded-xl bg-gray-900 px-4 py-2 text-sm font-semibold text-white hover:bg-gray-800">新增組別</a>
             </div>
         </div>
@@ -25,6 +26,14 @@
             <div class="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
                 {{ session('success') }}
             </div>
+        @endif
+
+        @if(in_array($event->status, ['pending','approved','rejected']))
+            <section class="rounded-2xl border border-indigo-200 bg-indigo-50 p-5">
+                <h2 class="font-semibold text-indigo-900">平台審核</h2>
+                <p class="mt-1 text-sm text-indigo-700">目前狀態：{{ ['pending'=>'待審核','approved'=>'已核准發布','rejected'=>'已退回'][$event->status] ?? $event->status }}</p>
+                <form method="POST" action="{{ route('admin.events.review',$event) }}" class="mt-4 flex flex-wrap gap-2">@csrf<input name="review_note" class="min-w-64 flex-1 rounded-xl border-indigo-200 text-sm" placeholder="審核備註（退回時建議填寫）"><button name="decision" value="approve" class="rounded-xl bg-green-600 px-4 py-2 text-sm text-white">核准並發布</button><button name="decision" value="reject" class="rounded-xl border border-red-200 bg-white px-4 py-2 text-sm text-red-600">退回修改</button></form>
+            </section>
         @endif
 
         <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">

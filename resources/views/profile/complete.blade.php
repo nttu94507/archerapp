@@ -1,14 +1,15 @@
 {{-- resources/views/profile/complete.blade.php --}}
 @extends('layouts.app')
 
-@section('title', '個人資料')
+@section('title', '編輯會員資料')
 
 @section('content')
     <div class="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8 py-8">
 
         {{-- Page Header --}}
         <div class="mb-6">
-            <h1 class="text-2xl font-bold tracking-tight text-gray-900">個人資料</h1>
+            <a href="{{ route('member-profile.index') }}" class="text-sm text-indigo-600 hover:text-indigo-500">← 返回會員資料</a>
+            <h1 class="mt-2 text-2xl font-bold tracking-tight text-gray-900">編輯會員資料</h1>
             <p class="text-sm text-gray-500 mt-1">可設定顯示暱稱；若未設定，系統會預設使用 Google 名稱。</p>
         </div>
 

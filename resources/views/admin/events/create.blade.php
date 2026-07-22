@@ -12,7 +12,7 @@
 
         <form action="{{ route('admin.events.store') }}" method="POST" class="space-y-8">
             @csrf
-            @include('events.partials._form-fields', ['event' => null, 'cancelRoute' => route('admin.events.index')])
+            @include('events.partials._form-fields', ['event' => null, 'cancelRoute' => route('admin.events.index'), 'showVerification' => true])
         </form>
     </div>
 @endsection

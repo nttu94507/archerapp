@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Event;
 use App\Models\User;
+use App\Models\OrganizerProfile;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -43,6 +44,7 @@ class EventControllerTest extends TestCase
     public function test_store_creates_event_and_assigns_owner_as_staff(): void
     {
         $user = User::factory()->create(['profile_completed_at' => now()]);
+        OrganizerProfile::create(['user_id'=>$user->id,'organization_name'=>'Archery Taiwan','organization_type'=>'association','contact_name'=>$user->name,'contact_email'=>$user->email,'contact_phone'=>'0912345678','application_reason'=>'既有主辦方','status'=>'approved','approved_at'=>now()]);
 
         $payload = [
             'name' => '全國巡迴賽',
@@ -62,13 +64,14 @@ class EventControllerTest extends TestCase
 
         $event = Event::first();
 
-        $response->assertRedirect(route('events.groups.create', $event));
+        $response->assertRedirect(route('organizer.events.show', $event));
 
         $this->assertNotNull($event);
         $this->assertDatabaseHas('events', [
             'name' => '全國巡迴賽',
             'organizer' => 'Archery Taiwan',
-            'verified' => true,
+            'verified' => false,
+            'status' => 'draft',
         ]);
 
         $this->assertDatabaseHas('event_staff', [

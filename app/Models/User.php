@@ -5,13 +5,22 @@ namespace App\Models;
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Str;
 
 class User extends Authenticatable
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
     use HasFactory, Notifiable;
+
+    protected static function booted(): void
+    {
+        static::creating(function (User $user): void {
+            $user->uuid ??= (string) Str::uuid();
+        });
+    }
 
     /**
      * The attributes that are mass assignable.
@@ -67,6 +76,26 @@ class User extends Authenticatable
     public function achievementProgress(): HasMany
     {
         return $this->hasMany(UserAchievementProgress::class);
+    }
+
+    public function eventBadgeClaims(): HasMany
+    {
+        return $this->hasMany(EventBadgeClaim::class);
+    }
+
+    public function eventBadges(): HasMany
+    {
+        return $this->hasMany(UserEventBadge::class);
+    }
+
+    public function organizerProfile(): HasOne
+    {
+        return $this->hasOne(OrganizerProfile::class);
+    }
+
+    public function canCreateEvents(): bool
+    {
+        return $this->isAdmin() || $this->organizerProfile()->where('status', 'approved')->exists();
     }
 
     public function hasCompletedProfile(): bool

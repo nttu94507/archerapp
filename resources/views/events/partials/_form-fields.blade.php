@@ -68,6 +68,7 @@
                         </select>
                         @error('mode') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
                     </div>
+                    @if($showVerification ?? false)
                     <div>
                         <label for="verified" class="block text-sm font-medium text-gray-700 mb-1">是否驗證</label>
                         <select name="verified" id="verified"
@@ -76,7 +77,7 @@
                             <option value="0" @selected(old('verified', strval($existing?->verified ?? '1'))==='0')>否</option>
                         </select>
                         @error('verified') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
-                    </div>
+                    </div>@endif
                 </div>
 
                 <div>

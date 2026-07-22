@@ -28,11 +28,11 @@
                             <div class="flex items-center gap-2">
                                 @if($row['scoreable'])
                                     <span class="inline-flex items-center rounded-full bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-700">可計分</span>
-                                    <a href="{{ route('my-events.score', $event) }}"
+                                    <a href="{{ route('my-events.score', $row['registration']) }}"
                                        class="inline-flex items-center rounded-xl bg-indigo-600 px-3 py-2 text-sm font-semibold text-white hover:bg-indigo-500">前往計分</a>
                                 @else
                                     <span class="inline-flex items-center rounded-full bg-gray-100 px-3 py-1 text-xs font-medium text-gray-600">目前不可計分</span>
-                                    <a href="{{ route('my-events.score', $event) }}"
+                                    <a href="{{ route('my-events.score', $row['registration']) }}"
                                        class="inline-flex items-center rounded-xl border px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50">查看計分表</a>
                                 @endif
                             </div>

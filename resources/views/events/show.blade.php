@@ -72,7 +72,7 @@
                                         <p class="text-sm font-semibold text-gray-900">{{ optional($registration->event_group)->name ?? '未指定組別' }}</p>
                                         <p class="text-xs text-gray-500">{{ optional($registration->created_at)->format('Y-m-d H:i') }}</p>
                                     </div>
-                                    <div class="flex items-center gap-2">
+                                <div class="flex items-center gap-2">
                                         <span class="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium
                                             @class([
                                                 'bg-yellow-100 text-yellow-700' => $registration->status === 'pending',
@@ -88,6 +88,7 @@
                                         </span>
                                     </div>
                                 </div>
+                                @if($registration->status === 'registered')<form method="POST" action="{{ route('event-registrations.withdraw',$registration) }}" onsubmit="return confirm('確定取消報名？')">@csrf @method('PATCH')<button class="text-xs text-red-600">取消報名</button></form>@endif
                             @endforeach
                         </div>
                     </div>
@@ -100,7 +101,7 @@
                 <ul class="divide-y divide-gray-100">
                     @foreach($groups as $g)
                         @php
-                            $cap = $g->capacity ?? null; // 名額（若無就顯示「—」）
+                            $cap = $g->quota ?? null;
                             $registered = $g->registered_count ?? 0; // 來自 withCount
                             $full = $cap !== null && $registered >= $cap;
 

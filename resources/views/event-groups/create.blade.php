@@ -93,6 +93,11 @@
                 </div>
 
                 <div>
+                    <label class="block text-xs text-gray-600 mb-1">每趟箭數</label>
+                    <select name="groups[__INDEX__][arrows_per_end]" class="w-full rounded-lg border px-3 py-2 text-sm"><option value="6">6 箭</option><option value="3">3 箭</option></select>
+                </div>
+
+                <div>
                     <label class="block text-xs text-gray-600 mb-1">名額</label>
                     <input type="number" min="1" class="w-full rounded-lg border px-3 py-2 text-sm"
                            name="groups[__INDEX__][quota]">
@@ -112,6 +117,8 @@
                     </div>
                     <span class="text-xs text-gray-500 mt-5">此組別為隊際</span>
                 </div>
+                <div><label class="block text-xs text-gray-600 mb-1">組別報名開始（選填）</label><input type="datetime-local" name="groups[__INDEX__][reg_start]" class="w-full rounded-lg border px-3 py-2 text-sm"></div>
+                <div><label class="block text-xs text-gray-600 mb-1">組別報名截止（選填）</label><input type="datetime-local" name="groups[__INDEX__][reg_end]" class="w-full rounded-lg border px-3 py-2 text-sm"></div>
             </div>
         </div>
     </template>

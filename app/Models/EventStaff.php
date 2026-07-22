@@ -6,8 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class EventStaff extends Model
 {
-    //
-//    protected $table = 'event_staff';
+    protected $table = 'event_staff';
     protected $fillable = [
         'event_id',
         'user_id',
@@ -18,4 +17,9 @@ class EventStaff extends Model
         'invited_by',
         'accepted_at',
     ];
+
+    protected $casts = ['permissions' => 'array', 'invited_at' => 'datetime', 'accepted_at' => 'datetime'];
+
+    public function user() { return $this->belongsTo(User::class); }
+    public function event() { return $this->belongsTo(Event::class); }
 }
