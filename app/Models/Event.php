@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Carbon\Carbon;
 
 class Event extends Model
 {
@@ -49,5 +50,32 @@ class Event extends Model
 
     public function isPublished(): bool {
         return $this->status === 'approved' && $this->published_at !== null && $this->cancelled_at === null;
+    }
+
+    public function registrationStatus(?Carbon $at = null): string
+    {
+        $at ??= now();
+        $groups = $this->relationLoaded('groups') ? $this->groups : $this->groups()->with('event')->get();
+        if ($groups->isEmpty()) return 'unset';
+
+        $windows = $groups->map(function (EventGroup $group): array {
+            $group->setRelation('event', $this);
+            return [$group->effectiveRegStart(), $group->effectiveRegEnd()];
+        })
+            ->filter(fn (array $window) => $window[0] !== null && $window[1] !== null);
+        if ($windows->isEmpty()) return 'unset';
+        if ($windows->contains(fn (array $window) => $at->between($window[0], $window[1]))) return 'open';
+        if ($windows->contains(fn (array $window) => $at->lt($window[0]))) return 'upcoming';
+
+        return 'closed';
+    }
+
+    public function registrationClosesAt(): ?Carbon
+    {
+        $groups = $this->relationLoaded('groups') ? $this->groups : $this->groups()->with('event')->get();
+        return $groups->map(function (EventGroup $group) {
+            $group->setRelation('event', $this);
+            return $group->effectiveRegEnd();
+        })->filter()->max();
     }
 }

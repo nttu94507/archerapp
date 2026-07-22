@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Carbon\Carbon;
 
 class EventGroup extends Model
 {
@@ -30,6 +31,29 @@ class EventGroup extends Model
 
         // 若你的外鍵其實叫 group_id，請改成：
         // return $this->hasMany(Registration::class, 'group_id', 'id');
+    }
+
+    public function usesCustomRegistrationWindow(): bool
+    {
+        return $this->reg_start !== null && $this->reg_end !== null;
+    }
+
+    public function effectiveRegStart(): ?Carbon
+    {
+        return $this->reg_start ?? $this->event?->reg_start;
+    }
+
+    public function effectiveRegEnd(): ?Carbon
+    {
+        return $this->reg_end ?? $this->event?->reg_end;
+    }
+
+    public function isRegistrationOpen(?Carbon $at = null): bool
+    {
+        $start = $this->effectiveRegStart();
+        $end = $this->effectiveRegEnd();
+
+        return $start !== null && $end !== null && ($at ?? now())->between($start, $end);
     }
 
 }

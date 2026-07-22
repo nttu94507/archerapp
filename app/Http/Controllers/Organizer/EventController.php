@@ -178,7 +178,7 @@ class EventController extends Controller
             'name' => ['required', 'string', 'max:120'], 'start_date' => ['required', 'date'],
             'end_date' => ['required', 'date', 'after_or_equal:start_date'], 'mode' => ['required', 'in:indoor,outdoor'],
             'level' => ['nullable', 'string', 'max:50'], 'organizer' => ['required', 'string', 'max:120'],
-            'reg_start' => ['nullable', 'date'], 'reg_end' => ['nullable', 'date', 'after_or_equal:reg_start'],
+            'reg_start' => ['nullable', 'date', 'required_with:reg_end'], 'reg_end' => ['nullable', 'date', 'required_with:reg_start', 'after_or_equal:reg_start'],
             'venue' => ['nullable', 'string', 'max:255'], 'map_link' => ['nullable', 'url'],
             'lat' => ['nullable', 'numeric', 'between:-90,90'], 'lng' => ['nullable', 'numeric', 'between:-180,180'],
         ]);

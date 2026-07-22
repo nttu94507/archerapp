@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\Event;
 use App\Models\EventGroup;
 use App\Models\EventRegistration;
+use App\Models\EventStaff;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -110,5 +111,37 @@ class EventRegistrationQuickRegisterTest extends TestCase
             'user_id' => $admin->id,
             'status' => 'registered',
         ]);
+    }
+
+    public function test_event_registration_status_uses_effective_group_windows(): void
+    {
+        $event = Event::factory()->create([
+            'reg_start' => now()->subDays(3), 'reg_end' => now()->subDays(2),
+        ]);
+        EventGroup::factory()->create([
+            'event_id'=>$event->id, 'reg_start'=>now()->subHour(), 'reg_end'=>now()->addHour(),
+        ]);
+        EventGroup::factory()->create([
+            'event_id'=>$event->id, 'reg_start'=>null, 'reg_end'=>null,
+        ]);
+
+        $this->assertSame('open', $event->fresh()->registrationStatus());
+        $this->assertTrue($event->groups()->first()->isRegistrationOpen());
+    }
+
+    public function test_custom_group_registration_window_requires_both_dates(): void
+    {
+        $owner = User::factory()->create();
+        $event = Event::factory()->create();
+        EventStaff::create(['event_id'=>$event->id,'user_id'=>$owner->id,'role'=>'owner','status'=>'active','invited_by'=>$owner->id]);
+
+        $this->actingAs($owner)->post(route('events.groups.store',$event), [
+            'groups'=>[0=>[
+                'name'=>'測試組','gender'=>'open','arrow_count'=>36,'use_custom_reg_window'=>1,
+                'reg_start'=>now()->toDateTimeString(),
+            ]],
+        ])->assertSessionHasErrors('groups.0.reg_end');
+
+        $this->assertDatabaseCount('event_groups',0);
     }
 }

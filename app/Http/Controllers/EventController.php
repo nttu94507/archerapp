@@ -25,7 +25,7 @@ class EventController extends Controller
 
     public function index(Request $request)
     {
-        $events = Event::query()->published()
+        $events = Event::query()->published()->with('groups')
             ->when($request->filled('q'), fn ($query) => $query->where(function ($q) use ($request) {
                 $q->where('name', 'like', '%'.$request->q.'%')->orWhere('organizer', 'like', '%'.$request->q.'%')->orWhere('venue', 'like', '%'.$request->q.'%');
             }))
@@ -54,18 +54,9 @@ class EventController extends Controller
             ->values();
 
         $openEvents = $events
-            ->filter(function ($event) use ($now) {
-                if (!$event->reg_start || !$event->reg_end) {
-                    return false;
-                }
-
-                $regStart = Carbon::parse($event->reg_start);
-                $regEnd   = Carbon::parse($event->reg_end);
-
-                return $now->between($regStart, $regEnd);
-            })
+            ->filter(fn ($event) => $event->registrationStatus($now) === 'open')
             ->sortBy(function ($event) {
-                return $event->reg_end ? Carbon::parse($event->reg_end) : Carbon::parse($event->start_date);
+                return $event->registrationClosesAt() ?? Carbon::parse($event->start_date);
             })
             ->values();
 
@@ -116,8 +107,8 @@ class EventController extends Controller
             'verified'   => 'boolean',
             'level'      => 'nullable|string|max:50',
             'organizer'  => 'required|string|max:120',
-            'reg_start'  => 'nullable|date',
-            'reg_end'    => 'nullable|date|after_or_equal:reg_start',
+            'reg_start'  => 'nullable|date|required_with:reg_end',
+            'reg_end'    => 'nullable|date|required_with:reg_start|after_or_equal:reg_start',
             'venue'      => 'nullable|string|max:255',
             'map_link'   => 'nullable|url',
             'lat'        => 'nullable|numeric|between:-90,90',
@@ -183,10 +174,9 @@ class EventController extends Controller
         $isBetween = $regStartAt && $regEndAt && $now->between($regStartAt, $regEndAt);
         $isAfter   = $regEndAt && $now->gt($regEndAt);
 
-        $regStatus = null;
-        if ($regStartAt && $regEndAt) {
-            $regStatus = $isBefore ? '尚未開始' : ($isBetween ? '報名中' : '已截止');
-        }
+        $regStatus = match ($event->registrationStatus($now)) {
+            'open' => '報名中', 'upcoming' => '尚未開始', 'closed' => '已截止', default => null,
+        };
 
         // 目前登入者已經報名哪些 group（有效狀態）
         $myGroupIds = [];

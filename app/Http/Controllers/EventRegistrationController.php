@@ -28,12 +28,8 @@ class EventRegistrationController extends Controller
 
         // 檢查報名期間
         $now = now();
-        $start = $group->reg_start ?: $event->reg_start;
-        $end   = $group->reg_end ?: $event->reg_end;
-        $start = $start ? Carbon::parse($start) : null;
-        $end   = $end ? Carbon::parse($end) : null;
-
-        if (!($start && $end && $now->between($start, $end))) {
+        $group->setRelation('event', $event);
+        if (! $group->isRegistrationOpen($now)) {
             return back()->with('error', '目前非報名期間。');
         }
 

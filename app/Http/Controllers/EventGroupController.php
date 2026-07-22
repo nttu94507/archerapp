@@ -59,12 +59,14 @@ class EventGroupController extends Controller
             'groups.*.quota'               => ['nullable','integer','min:1'],
             'groups.*.fee'                 => ['nullable','integer','min:0'],
             'groups.*.is_team'             => ['boolean'],
-            'groups.*.reg_start'           => ['nullable','date'],
-            'groups.*.reg_end'             => ['nullable','date','after_or_equal:groups.*.reg_start'],
+            'groups.*.use_custom_reg_window' => ['nullable','boolean'],
+            'groups.*.reg_start'           => ['nullable','date','required_if:groups.*.use_custom_reg_window,1','required_with:groups.*.reg_end'],
+            'groups.*.reg_end'             => ['nullable','date','required_if:groups.*.use_custom_reg_window,1','required_with:groups.*.reg_start','after_or_equal:groups.*.reg_start'],
         ]);
 
         DB::transaction(function () use ($event, $data) {
             foreach ($data['groups'] as $g) {
+                unset($g['use_custom_reg_window']);
                 $event->groups()->create($g);
             }
         });
@@ -100,10 +102,16 @@ class EventGroupController extends Controller
             'quota'     => ['nullable','integer','min:1'],
             'fee'       => ['nullable','integer','min:0'],
             'is_team'   => ['boolean'],
-            'reg_start' => ['nullable','date'],
-            'reg_end'   => ['nullable','date','after_or_equal:reg_start'],
+            'use_custom_reg_window' => ['nullable','boolean'],
+            'reg_start' => ['nullable','date','required_if:use_custom_reg_window,1','required_with:reg_end'],
+            'reg_end'   => ['nullable','date','required_if:use_custom_reg_window,1','required_with:reg_start','after_or_equal:reg_start'],
         ]);
 
+        if (! $req->boolean('use_custom_reg_window')) {
+            $g['reg_start'] = null;
+            $g['reg_end'] = null;
+        }
+        unset($g['use_custom_reg_window']);
         $group->update($g);
 
         return back()->with('success', '已更新組別');
