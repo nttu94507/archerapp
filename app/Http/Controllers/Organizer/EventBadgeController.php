@@ -34,7 +34,8 @@ class EventBadgeController extends Controller
             ->latest()->get();
 
         $groups = $event->groups()->orderBy('name')->get();
-        return view('organizer.badges.index', compact('event', 'badges', 'groups'));
+        $teamCounts = $event->staff()->where('status','active')->selectRaw('role, count(*) as total')->groupBy('role')->pluck('total','role');
+        return view('organizer.badges.index', compact('event', 'badges', 'groups', 'teamCounts'));
     }
 
     public function store(Request $request, Event $event, EventBadgeAwardService $service): RedirectResponse
@@ -50,10 +51,18 @@ class EventBadgeController extends Controller
             'award_rule' => ['nullable', 'in:manual,attendance,placement,staff,volunteer'],
             'event_group_id' => ['nullable', 'integer', 'exists:event_groups,id'],
             'placement' => ['nullable', 'integer', 'between:1,3'],
+            'staff_roles' => ['nullable', 'array', 'min:1'],
+            'staff_roles.*' => ['in:owner,manager,staff'],
             'claim_starts_at' => ['nullable', 'date'],
             'claim_ends_at' => ['nullable', 'date', 'after:claim_starts_at'],
         ]);
-        $validated['award_rule'] ??= 'manual';
+        $validated['award_rule'] = match ($validated['type']) {
+            'staff' => 'staff',
+            'volunteer' => 'volunteer',
+            default => $validated['award_rule'] ?? 'manual',
+        };
+        if ($validated['award_rule'] === 'staff') $validated['staff_roles'] ??= ['owner','manager','staff'];
+        else $validated['staff_roles'] = null;
         $validated['eligibility'] = in_array($validated['award_rule'], ['staff', 'volunteer'], true)
             ? 'any'
             : ($validated['eligibility'] ?? 'registered');

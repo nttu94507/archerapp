@@ -35,6 +35,23 @@ class EventBadgeWorkflowTest extends TestCase
         $this->assertDatabaseHas('user_event_badges',['event_badge_id'=>$badge->id,'user_id'=>$staff->id,'award_source'=>'staff']);
     }
 
+    public function test_staff_badge_can_be_limited_to_selected_team_roles(): void
+    {
+        [$owner, $event] = $this->eventWithOwner();
+        $staff = User::factory()->create();
+        EventStaff::create(['event_id'=>$event->id,'user_id'=>$staff->id,'role'=>'staff','status'=>'active','invited_by'=>$owner->id]);
+
+        $this->actingAs($owner)->post(route('organizer.events.badges.store',$event), [
+            'name'=>'現場工作人員', 'type'=>'staff', 'award_rule'=>'placement', 'staff_roles'=>['staff'],
+        ]);
+
+        $badge = EventBadge::where('name','現場工作人員')->firstOrFail();
+        $this->assertSame('staff',$badge->award_rule);
+        $this->assertSame(['staff'],$badge->staff_roles);
+        $this->assertDatabaseHas('user_event_badges',['event_badge_id'=>$badge->id,'user_id'=>$staff->id]);
+        $this->assertDatabaseMissing('user_event_badges',['event_badge_id'=>$badge->id,'user_id'=>$owner->id]);
+    }
+
     public function test_accepting_volunteer_invitation_automatically_awards_volunteer_badge(): void
     {
         [$owner, $event] = $this->eventWithOwner();

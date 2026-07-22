@@ -10,7 +10,7 @@ use Illuminate\Support\Str;
 class EventBadge extends Model
 {
     protected $fillable = [
-        'event_id', 'event_group_id', 'created_by', 'name', 'description', 'icon_path', 'type', 'eligibility', 'award_rule', 'placement',
+        'event_id', 'event_group_id', 'created_by', 'name', 'description', 'icon_path', 'type', 'eligibility', 'award_rule', 'staff_roles', 'placement',
         'claim_token', 'claim_enabled', 'claim_starts_at', 'claim_ends_at', 'is_active',
     ];
 
@@ -19,6 +19,7 @@ class EventBadge extends Model
         'claim_starts_at' => 'datetime',
         'claim_ends_at' => 'datetime',
         'is_active' => 'boolean',
+        'staff_roles' => 'array',
     ];
 
     protected static function booted(): void
