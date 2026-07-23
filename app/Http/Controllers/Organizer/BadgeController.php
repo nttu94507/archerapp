@@ -47,4 +47,16 @@ class BadgeController extends Controller
         $issued=$service->award($badge,$user->id,$badge->issuer_type==='platform'?'platform':'manual',$request->user()->id,$data['note']??null);
         return back()->with($issued?'success':'error',$issued?'Badge 已發放。':($badge->fresh()->isAtCapacity()?'徽章數量已達到最大值。':'會員已取得這枚 Badge。'));
     }
+
+    public function toggleClaim(Request $request, EventBadge $badge): RedirectResponse
+    {
+        abort_unless($request->user()->canCreateEvents(),403);
+        abort_unless($badge->event_id===null && $badge->issuer_type==='organizer' && $badge->created_by===$request->user()->id,403);
+        abort_if($badge->claim_lat===null || $badge->claim_lng===null,422,'此 Badge 未設定定位領取。');
+
+        $enabled=!$badge->location_claim_enabled;
+        $badge->update(['location_claim_enabled'=>$enabled]);
+
+        return back()->with('success',$enabled?'自行領取已重新開放。':'自行領取已停用，既有 QR Code 暫時無法領取。');
+    }
 }

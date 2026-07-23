@@ -102,6 +102,7 @@ Route::prefix('organizer')->middleware('auth')->name('organizer.')->group(functi
     Route::get('badges', [OrganizerBadgeController::class,'index'])->name('badges.index');
     Route::post('badges', [OrganizerBadgeController::class,'store'])->name('badges.store');
     Route::post('badges/{badge}/award', [OrganizerBadgeController::class,'award'])->name('badges.award');
+    Route::patch('badges/{badge}/claim-toggle', [OrganizerBadgeController::class,'toggleClaim'])->name('badges.claim-toggle');
     Route::get('qualification', [QualificationController::class, 'show'])->name('qualification.show');
     Route::put('qualification', [QualificationController::class, 'update'])->name('qualification.update');
     Route::post('qualification/submit', [QualificationController::class, 'submit'])->name('qualification.submit');
