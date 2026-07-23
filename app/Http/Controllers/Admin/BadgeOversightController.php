@@ -16,11 +16,24 @@ class BadgeOversightController extends Controller
 {
     public function index(Request $request): View
     {
+        $source=in_array($request->query('source'),['official','organization'],true)?$request->query('source'):'all';
         $badges = EventBadge::with('event')
+            ->when($source==='official',fn($query)=>$query->where('issuer_type','platform'))
+            ->when($source==='organization',fn($query)=>$query->where('issuer_type','!=','platform'))
             ->withCount(['claims', 'awards as active_awards_count' => fn ($query) => $query->whereNull('revoked_at')])
-            ->latest()->paginate(20);
+            ->latest()->paginate(20)->withQueryString();
+        $sourceCounts=[
+            'all'=>EventBadge::count(),
+            'official'=>EventBadge::where('issuer_type','platform')->count(),
+            'organization'=>EventBadge::where('issuer_type','!=','platform')->count(),
+        ];
 
-        return view('admin.badges.index', compact('badges'));
+        return view('admin.badges.index', compact('badges','source','sourceCounts'));
+    }
+
+    public function create(): View
+    {
+        return view('admin.badges.create');
     }
 
     public function toggle(EventBadge $badge): RedirectResponse
@@ -32,7 +45,7 @@ class BadgeOversightController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
-        $data=$request->validate(['name'=>['required','string','max:120'],'description'=>['nullable','string','max:1000'],'max_supply'=>['nullable','integer','min:1'],'icon'=>['nullable','image','mimes:jpg,jpeg,png,webp','max:10240'],'location_claim_enabled'=>['nullable','boolean'],'claim_lat'=>['nullable','required_if:location_claim_enabled,1','numeric','between:-90,90'],'claim_lng'=>['nullable','required_if:location_claim_enabled,1','numeric','between:-180,180'],'claim_radius_km'=>['nullable','numeric','between:1,50'],'claim_date'=>['nullable','date'],'claim_starts_at'=>['nullable','date'],'claim_ends_at'=>['nullable','date','after:claim_starts_at']]);
+        $data=$request->validate(['name'=>['required','string','max:120'],'description'=>['nullable','string','max:1000'],'max_supply'=>['nullable','integer','min:1'],'icon'=>['nullable','image','mimes:jpg,jpeg,png,webp','max:10240'],'location_claim_enabled'=>['nullable','boolean'],'claim_lat'=>['nullable','required_if:location_claim_enabled,1','numeric','between:-90,90'],'claim_lng'=>['nullable','required_if:location_claim_enabled,1','numeric','between:-180,180'],'claim_radius_km'=>['nullable','numeric','between:1,50'],'claim_date'=>['nullable','date']]);
         unset($data['icon']); if($request->hasFile('icon')) $data['icon_path']=$request->file('icon')->store('badge-icons','public');
         $data['location_claim_enabled']=$request->boolean('location_claim_enabled'); $data['claim_radius_km']??=10;
         $claimDate=$data['claim_date']??null; unset($data['claim_date']);
@@ -40,9 +53,11 @@ class BadgeOversightController extends Controller
             $data['claim_starts_at']=null; $data['claim_ends_at']=null;
         } elseif($claimDate) {
             $data['claim_starts_at']=Carbon::parse($claimDate)->startOfDay(); $data['claim_ends_at']=Carbon::parse($claimDate)->endOfDay();
+        } else {
+            $data['claim_starts_at']=null; $data['claim_ends_at']=null;
         }
         EventBadge::create($data+['created_by'=>$request->user()->id,'issuer_type'=>'platform','issuer_name'=>'ArrowTrack 官方','type'=>'special','eligibility'=>'any','award_rule'=>'manual','claim_enabled'=>false]);
-        return back()->with('success','官方 Badge 已建立。');
+        return redirect()->route('admin.badges.index',['source'=>'official'])->with('success','官方 Badge 已建立。');
     }
 
     public function award(Request $request, EventBadge $badge, EventBadgeAwardService $service): RedirectResponse

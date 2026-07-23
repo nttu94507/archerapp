@@ -1,51 +1,39 @@
 @extends('layouts.app')
-@section('title', 'Badge 管理')
+@section('title','Badge 管理')
 @section('content')
-<div class="mx-auto max-w-7xl space-y-6 px-4 py-6 sm:px-6 sm:py-8">
-    <div><p class="text-xs font-semibold uppercase tracking-widest text-indigo-600">Platform Admin</p><h1 class="mt-1 text-2xl font-bold">Badge 管理</h1></div>
-    @if(session('success'))<div class="rounded-xl border border-green-200 bg-green-50 p-4 text-sm text-green-700">{{ session('success') }}</div>@endif
-    @if(session('error'))<div class="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">{{ session('error') }}</div>@endif
-    @if($errors->any())<div class="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">{{ $errors->first() }}</div>@endif
+<div class="mx-auto max-w-7xl space-y-6 px-4 py-6 sm:px-6" x-data="{qr:null}">
+    <div class="flex items-center justify-between gap-4"><div><p class="text-xs font-semibold uppercase tracking-widest text-indigo-600">Platform Admin</p><h1 class="mt-1 text-2xl font-bold">Badge 管理</h1></div><a href="{{route('admin.badges.create')}}" class="inline-flex min-h-11 items-center rounded-xl bg-indigo-600 px-5 text-sm font-medium text-white">新增官方 Badge</a></div>
+    @if(session('success'))<div class="rounded-xl bg-green-50 p-4 text-sm text-green-700">{{session('success')}}</div>@endif
+    @if(session('error'))<div class="rounded-xl bg-red-50 p-4 text-sm text-red-700">{{session('error')}}</div>@endif
 
-    <section class="rounded-2xl border bg-white p-5 shadow-sm sm:p-6">
-        <div><h2 class="text-lg font-semibold">建立官方限量 Badge</h2><p class="mt-1 text-sm text-gray-500">由 ArrowTrack 官方認證並發放。</p></div>
-        <form method="POST" action="{{ route('admin.badges.store') }}" enctype="multipart/form-data" class="mt-5 grid gap-4 lg:grid-cols-2" x-data="{ locationEnabled: {{ old('location_claim_enabled') ? 'true' : 'false' }}, locating: false, lat: '{{ old('claim_lat') }}', lng: '{{ old('claim_lng') }}', locate(){ if(!navigator.geolocation){ alert('此瀏覽器無法取得位置'); return } this.locating=true; navigator.geolocation.getCurrentPosition(p=>{this.lat=p.coords.latitude.toFixed(7);this.lng=p.coords.longitude.toFixed(7);this.locating=false},()=>{this.locating=false;alert('無法取得位置，請允許定位後再試一次。')},{enableHighAccuracy:false,timeout:15000,maximumAge:60000}) } }">
-            @csrf
-            <div><label class="text-sm font-medium">Badge 名稱</label><input name="name" required value="{{ old('name') }}" class="mt-1 min-h-11 w-full rounded-xl border-gray-300" placeholder="例：ArrowTrack 週年紀念"></div>
-            <div><label class="text-sm font-medium">限量數量</label><input type="number" min="1" name="max_supply" value="{{ old('max_supply') }}" class="mt-1 min-h-11 w-full rounded-xl border-gray-300" placeholder="未填寫則不限制"></div>
-            <div class="lg:col-span-2" x-data="{ fileName: '尚未選擇圖片', preview: null }">
-                <label class="text-sm font-medium">Badge 圖示</label>
-                <div class="mt-2 flex flex-col gap-3 rounded-2xl border border-dashed border-indigo-200 bg-indigo-50/60 p-4 sm:flex-row sm:items-center">
-                    <div class="flex items-center gap-3"><div class="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-white ring-1 ring-indigo-100"><img x-show="preview" :src="preview" alt="圖示預覽" class="h-full w-full object-cover"><svg x-show="!preview" class="h-7 w-7 text-indigo-300" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4-4 4 4 3-3 5 5M14 8h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg></div><div class="min-w-0"><p class="truncate text-sm font-medium text-gray-700" x-text="fileName"></p><p class="mt-1 text-xs text-gray-500">JPG、PNG、WebP，最大 10MB</p></div></div>
-                    <label class="inline-flex min-h-11 cursor-pointer items-center justify-center rounded-xl bg-indigo-600 px-5 text-sm font-medium text-white hover:bg-indigo-500 sm:ml-auto">選擇圖片<input type="file" name="icon" accept="image/jpeg,image/png,image/webp" class="sr-only" @change="const file=$event.target.files[0]; fileName=file?file.name:'尚未選擇圖片'; preview=file?URL.createObjectURL(file):null"></label>
+    <nav class="grid grid-cols-3 gap-2 rounded-2xl bg-gray-100 p-1">
+        @foreach(['all'=>'全部','official'=>'官方發放','organization'=>'單位發放'] as $value=>$label)
+            <a href="{{route('admin.badges.index',$value==='all'?[]:['source'=>$value])}}" class="rounded-xl px-3 py-3 text-center text-sm font-medium {{$source===$value?'bg-white text-indigo-700 shadow-sm':'text-gray-600'}}">{{$label}} <span class="ml-1 text-xs">{{$sourceCounts[$value]}}</span></a>
+        @endforeach
+    </nav>
+
+    <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+        @forelse($badges as $badge)
+            @php($official=$badge->issuer_type==='platform')
+            <article class="flex flex-col rounded-2xl border bg-white p-5 shadow-sm">
+                <div class="flex items-start gap-3"><img src="{{$badge->icon_url}}" class="h-16 w-16 shrink-0 rounded-2xl object-cover"><div class="min-w-0 flex-1"><div class="flex items-start justify-between gap-2"><h2 class="break-words font-semibold">{{$badge->name}}</h2><span class="shrink-0 rounded-full px-2 py-1 text-xs {{$official?'bg-purple-100 text-purple-700':'bg-blue-100 text-blue-700'}}">{{$official?'官方發放':'單位發放'}}</span></div><p class="mt-1 text-xs text-gray-500">{{$badge->issuer_name ?: '未設定單位'}}{{ $badge->display_activity_name ? '・'.$badge->display_activity_name : '' }}</p><span class="mt-2 inline-flex rounded-full px-2 py-1 text-xs {{$badge->is_active?'bg-green-100 text-green-700':'bg-red-100 text-red-700'}}">{{$badge->is_active?'正常':'平台停用'}}</span></div></div>
+                @if($badge->description)<p class="mt-4 line-clamp-2 text-sm text-gray-600">{{$badge->description}}</p>@endif
+                <div class="mt-4 grid grid-cols-3 gap-2 text-center"><div class="rounded-xl bg-gray-50 p-2"><p class="font-semibold">{{$badge->claims_count}}</p><p class="text-xs text-gray-500">申請</p></div><div class="rounded-xl bg-gray-50 p-2"><p class="font-semibold">{{$badge->active_awards_count}}</p><p class="text-xs text-gray-500">已發放</p></div><div class="rounded-xl bg-gray-50 p-2"><p class="font-semibold">{{$badge->max_supply??'∞'}}</p><p class="text-xs text-gray-500">上限</p></div></div>
+
+                @if($official && !$badge->isAtCapacity() && $badge->is_active)<form method="POST" action="{{route('admin.badges.award',$badge)}}" class="mt-4 grid gap-2 border-t pt-4">@csrf<input name="member" required class="min-h-11 rounded-xl border border-gray-300 px-3 text-sm" placeholder="會員 UUID 或 Email"><input name="note" class="min-h-11 rounded-xl border border-gray-300 px-3 text-sm" placeholder="授予原因（選填）"><button class="min-h-11 rounded-xl bg-gray-900 text-sm text-white">發放給會員</button></form>@endif
+
+                <div class="mt-auto grid grid-cols-2 gap-2 pt-4">
+                    <button type="button" @if($badge->claim_lat!==null) @click="qr={{Illuminate\Support\Js::from(['name'=>$badge->name,'url'=>route('badge-drops.qrcode',$badge->claim_token),'enabled'=>$badge->is_active&&$badge->location_claim_enabled])}}" @else disabled @endif class="min-h-11 rounded-xl border text-sm {{$badge->claim_lat!==null?'border-indigo-200 text-indigo-700':'cursor-not-allowed border-gray-200 text-gray-400'}}">顯示 QR Code</button>
+                    <form method="POST" action="{{route('admin.badges.toggle',$badge)}}">@csrf @method('PATCH')<button class="min-h-11 w-full rounded-xl border text-sm {{$badge->is_active?'border-red-200 text-red-600':'border-green-200 text-green-700'}}">{{$badge->is_active?'平台停用':'重新啟用'}}</button></form>
                 </div>
-            </div>
-            <div class="lg:col-span-2"><label class="text-sm font-medium">說明</label><textarea name="description" rows="2" class="mt-1 w-full rounded-xl border-gray-300" placeholder="Badge 的紀念意義或取得方式">{{ old('description') }}</textarea></div>
-            <div class="rounded-2xl border bg-gray-50 p-4 lg:col-span-2"><label class="flex items-center gap-2 font-medium"><input type="checkbox" name="location_claim_enabled" value="1" x-model="locationEnabled" class="rounded"> 開放掃描 QR Code 定位領取</label><div x-show="locationEnabled" class="mt-4 grid gap-3 sm:grid-cols-3"><div><label class="text-xs text-gray-500">緯度</label><input name="claim_lat" x-model="lat" :required="locationEnabled" class="mt-1 w-full rounded-xl border-gray-300" placeholder="22.9997280"></div><div><label class="text-xs text-gray-500">經度</label><input name="claim_lng" x-model="lng" :required="locationEnabled" class="mt-1 w-full rounded-xl border-gray-300" placeholder="120.2270280"></div><div><label class="text-xs text-gray-500">允許距離</label><select name="claim_radius_km" class="mt-1 w-full rounded-xl border-gray-300"><option value="5">5 公里</option><option value="10" selected>10 公里</option><option value="20">20 公里</option><option value="30">30 公里</option></select></div><div class="sm:col-span-3"><label class="text-xs text-gray-500">單日領取（選填）</label><input type="date" name="claim_date" value="{{ old('claim_date') }}" class="mt-1 min-h-11 w-full rounded-xl border-gray-300"><p class="mt-1 text-xs text-gray-500">適合活動當天；若需跨日，改填下方期間</p></div><div><label class="text-xs text-gray-500">開始時間（選填）</label><input type="datetime-local" name="claim_starts_at" value="{{ old('claim_starts_at') }}" class="mt-1 min-h-11 w-full rounded-xl border-gray-300"></div><div><label class="text-xs text-gray-500">結束時間（選填）</label><input type="datetime-local" name="claim_ends_at" value="{{ old('claim_ends_at') }}" class="mt-1 min-h-11 w-full rounded-xl border-gray-300"></div><p class="self-end pb-3 text-xs text-gray-500">日期與期間都未填則長期開放</p><button type="button" @click="locate()" class="min-h-11 rounded-xl border border-indigo-200 bg-white px-4 text-sm font-medium text-indigo-700 sm:col-span-3" x-text="locating ? '正在取得位置…' : '使用目前位置'"></button></div></div>
-            <div class="lg:col-span-2"><button class="min-h-11 w-full rounded-xl bg-indigo-600 px-5 text-sm font-medium text-white hover:bg-indigo-500 sm:w-auto">建立官方 Badge</button></div>
-        </form>
-    </section>
+                @if($badge->event)<a href="{{route('organizer.events.badges.show',[$badge->event,$badge])}}" class="mt-2 inline-flex min-h-11 items-center justify-center rounded-xl border text-sm">查看發放紀錄</a>@endif
+            </article>
+        @empty
+            <p class="rounded-2xl border border-dashed bg-white p-10 text-center text-gray-500 md:col-span-2 xl:col-span-3">目前沒有符合篩選條件的 Badge。</p>
+        @endforelse
+    </div>
+    {{$badges->links()}}
 
-    <section><div class="mb-4 flex items-center justify-between"><h2 class="text-lg font-semibold">Badge 列表</h2><span class="text-sm text-gray-500">{{ $badges->total() }} 個</span></div>
-        <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-            @forelse($badges as $badge)
-                <article class="flex flex-col rounded-2xl border bg-white p-5 shadow-sm">
-                    <div class="flex items-start gap-3"><img src="{{ $badge->icon_url }}" alt="{{ $badge->name }}" class="h-16 w-16 shrink-0 rounded-2xl object-cover ring-1 ring-gray-200"><div class="min-w-0 flex-1"><div class="flex items-start justify-between gap-2"><h3 class="break-words font-semibold">{{ $badge->name }}</h3><span class="shrink-0 rounded-full px-2 py-1 text-xs {{ $badge->is_active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700' }}">{{ $badge->is_active ? '正常' : '已停用' }}</span></div><p class="mt-1 text-xs text-gray-500">{{ $badge->issuer_name }}{{ $badge->display_activity_name ? '・'.$badge->display_activity_name : '' }}</p></div></div>
-                    @if($badge->description)<p class="mt-4 line-clamp-2 text-sm text-gray-600">{{ $badge->description }}</p>@endif
-                    <div class="mt-4 grid grid-cols-3 gap-2 text-center"><div class="rounded-xl bg-gray-50 p-2"><p class="font-semibold">{{ $badge->claims_count }}</p><p class="text-xs text-gray-500">申請</p></div><div class="rounded-xl bg-gray-50 p-2"><p class="font-semibold">{{ $badge->active_awards_count }}</p><p class="text-xs text-gray-500">已發放</p></div><div class="rounded-xl {{ $badge->isAtCapacity() ? 'bg-yellow-50' : 'bg-gray-50' }} p-2"><p class="font-semibold {{ $badge->isAtCapacity() ? 'text-yellow-700' : '' }}">{{ $badge->max_supply ?? '∞' }}</p><p class="text-xs text-gray-500">上限</p></div></div>
-                    @if($badge->isAtCapacity())<p class="mt-3 rounded-xl bg-yellow-50 p-3 text-sm font-medium text-yellow-800">徽章數量已達到最大值</p>@endif
-                    @if($badge->claim_lat !== null && $badge->claim_lng !== null)<div class="mt-4 rounded-xl p-3 text-center {{ !$badge->is_active ? 'bg-red-50' : ($badge->location_claim_enabled ? 'bg-indigo-50' : 'bg-yellow-50') }}">@if(!$badge->is_active)<p class="font-medium text-red-700">平台已停用 Badge</p><p class="mt-1 text-xs text-red-600">自行領取與發放均不可使用</p>@elseif(!$badge->location_claim_enabled)<p class="font-medium text-yellow-800">主辦方已停用自行領取</p><p class="mt-1 text-xs text-yellow-700">Badge 本身仍為正常狀態</p>@else<p class="text-sm font-medium text-indigo-800">定位 QR Code・開放中</p><img src="{{route('badge-drops.qrcode',$badge->claim_token)}}" alt="定位領取 QR Code" class="mx-auto mt-2 h-40 w-40 rounded-xl bg-white p-2"><p class="mt-2 text-xs text-indigo-700">允許範圍 {{$badge->claim_radius_km}} 公里</p>@if($badge->claim_starts_at || $badge->claim_ends_at)<p class="mt-1 text-xs text-indigo-700">{{ $badge->claim_starts_at?->format('Y/m/d H:i') ?? '現在' }}－{{ $badge->claim_ends_at?->format('Y/m/d H:i') ?? '不限' }}</p>@else<p class="mt-1 text-xs text-indigo-700">不限領取期間</p>@endif @endif</div>@endif
-
-                    <div class="mt-auto space-y-3 border-t pt-4">
-                        @if($badge->issuer_type === 'platform' && !$badge->isAtCapacity() && $badge->is_active)
-                            <form method="POST" action="{{ route('admin.badges.award', $badge) }}" class="grid gap-2">@csrf<input name="member" required class="min-h-11 w-full rounded-xl border-gray-300 text-sm" placeholder="會員 UUID 或 Email"><input name="note" class="min-h-11 w-full rounded-xl border-gray-300 text-sm" placeholder="授予原因（選填）"><button class="min-h-11 rounded-xl bg-gray-900 text-sm font-medium text-white">發放給會員</button></form>
-                        @endif
-                        <div class="grid grid-cols-2 gap-2">@if($badge->event)<a href="{{ route('organizer.events.badges.show', [$badge->event, $badge]) }}" class="inline-flex min-h-11 items-center justify-center rounded-xl border text-sm">查看紀錄</a>@else<span></span>@endif<form method="POST" action="{{ route('admin.badges.toggle', $badge) }}">@csrf @method('PATCH')<button class="min-h-11 w-full rounded-xl border text-sm {{ $badge->is_active ? 'border-red-200 text-red-600' : 'border-green-200 text-green-700' }}">{{ $badge->is_active ? '停用' : '重新啟用' }}</button></form></div>
-                    </div>
-                </article>
-            @empty <p class="text-sm text-gray-500">尚無 Badge。</p> @endforelse
-        </div>
-        <div class="mt-6">{{ $badges->links() }}</div>
-    </section>
+    <div x-show="qr" x-cloak class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" @click.self="qr=null" @keydown.escape.window="qr=null"><div class="w-full max-w-sm rounded-3xl bg-white p-6 text-center"><div class="flex justify-between gap-3"><h2 class="font-semibold" x-text="qr?.name"></h2><button @click="qr=null">✕</button></div><img :src="qr?.url" alt="定位 QR Code" class="mx-auto mt-4 h-64 w-64 rounded-2xl border p-3"><p class="mt-3 rounded-xl p-3 text-sm" :class="qr?.enabled?'bg-green-50 text-green-700':'bg-yellow-50 text-yellow-800'" x-text="qr?.enabled?'目前可掃描領取':'目前無法領取'"></p></div></div>
 </div>
 @endsection

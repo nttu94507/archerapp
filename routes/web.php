@@ -82,6 +82,7 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->name('admin.')->group(fun
 
     Route::get('users', [AdminUserController::class, 'index'])->name('users.index');
     Route::get('badges', [BadgeOversightController::class, 'index'])->name('badges.index');
+    Route::get('badges/create', [BadgeOversightController::class, 'create'])->name('badges.create');
     Route::post('badges', [BadgeOversightController::class, 'store'])->name('badges.store');
     Route::post('badges/{badge}/award', [BadgeOversightController::class, 'award'])->name('badges.award');
     Route::patch('badges/{badge}/toggle', [BadgeOversightController::class, 'toggle'])->name('badges.toggle');

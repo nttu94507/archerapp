@@ -109,7 +109,7 @@ class EventBadgeWorkflowTest extends TestCase
         $this->travelBack();
     }
 
-    public function test_location_badge_accepts_a_custom_period_without_blocking_manual_awards(): void
+    public function test_official_location_badge_uses_one_claim_date_without_blocking_manual_awards(): void
     {
         $this->travelTo(now()->setDate(2026, 10, 1)->setTime(12, 0));
         $admin=User::factory()->create(['is_admin'=>true]);
@@ -121,13 +121,12 @@ class EventBadgeWorkflowTest extends TestCase
             'claim_lat'=>22.999728,
             'claim_lng'=>120.227028,
             'claim_radius_km'=>10,
-            'claim_starts_at'=>'2026-10-03 09:00',
-            'claim_ends_at'=>'2026-10-04 18:00',
+            'claim_date'=>'2026-10-03',
         ])->assertSessionHas('success');
 
         $badge=EventBadge::where('name','跨日定位 Badge')->firstOrFail();
-        $this->assertSame('2026-10-03 09:00',$badge->claim_starts_at->format('Y-m-d H:i'));
-        $this->assertSame('2026-10-04 18:00',$badge->claim_ends_at->format('Y-m-d H:i'));
+        $this->assertSame('2026-10-03 00:00',$badge->claim_starts_at->format('Y-m-d H:i'));
+        $this->assertSame('2026-10-03 23:59',$badge->claim_ends_at->format('Y-m-d H:i'));
 
         $this->actingAs($admin)->post(route('admin.badges.award',$badge),['member'=>$member->uuid])
             ->assertSessionHas('success','官方 Badge 已發放。');
@@ -213,7 +212,7 @@ class EventBadgeWorkflowTest extends TestCase
         $this->actingAs($organizer)->get(route('organizer.badges.index'))
             ->assertOk()->assertSee('平台停用');
         $this->actingAs($admin)->get(route('admin.badges.index'))
-            ->assertOk()->assertSee('平台已停用 Badge');
+            ->assertOk()->assertSee('平台停用');
         $this->actingAs($organizer)->patch(route('organizer.badges.claim-toggle',$badge))
             ->assertSessionHas('error','此 Badge 已由平台停用，無法變更自行領取狀態。');
         $this->actingAs($organizer)->post(route('organizer.badges.award',$badge),['member'=>$secondMember->uuid])
@@ -230,6 +229,21 @@ class EventBadgeWorkflowTest extends TestCase
         $award=UserEventBadge::firstOrFail();
         $this->assertNotNull($award->public_id); $this->assertSame(1,$award->limited_serial);
         $this->get(route('badge-certificates.show',$award->public_id))->assertOk()->assertSee('有效認證')->assertSee('官方限量');
+    }
+
+    public function test_admin_badge_management_separates_official_and_organization_badges(): void
+    {
+        $admin=User::factory()->create(['is_admin'=>true]);
+        $organizer=User::factory()->create();
+        EventBadge::create(['created_by'=>$admin->id,'issuer_type'=>'platform','issuer_name'=>'ArrowTrack 官方','name'=>'官方測試 Badge','type'=>'special','eligibility'=>'any','award_rule'=>'manual']);
+        EventBadge::create(['created_by'=>$organizer->id,'issuer_type'=>'organizer','issuer_name'=>'測試單位','name'=>'單位測試 Badge','type'=>'special','eligibility'=>'any','award_rule'=>'manual']);
+
+        $this->actingAs($admin)->get(route('admin.badges.create'))
+            ->assertOk()->assertSee('新增官方 Badge')->assertSee('可領取日期')->assertDontSee('開始時間');
+        $this->actingAs($admin)->get(route('admin.badges.index',['source'=>'official']))
+            ->assertOk()->assertSee('官方測試 Badge')->assertSee('官方發放')->assertDontSee('單位測試 Badge');
+        $this->actingAs($admin)->get(route('admin.badges.index',['source'=>'organization']))
+            ->assertOk()->assertSee('單位測試 Badge')->assertSee('單位發放')->assertDontSee('官方測試 Badge');
     }
 
     public function test_republished_corrected_scores_reconcile_placement_badge(): void
