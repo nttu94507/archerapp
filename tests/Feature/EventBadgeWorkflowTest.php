@@ -173,7 +173,7 @@ class EventBadgeWorkflowTest extends TestCase
         $this->actingAs($organizer)->get(route('organizer.badges.index'))
             ->assertOk()->assertSee('Badge 列表')->assertSee('新增 Badge')->assertSee('顯示 QR Code')->assertSee('停用');
         $this->actingAs($organizer)->get(route('organizer.badges.create'))
-            ->assertOk()->assertSee('新增 Badge');
+            ->assertOk()->assertSee('新增 Badge')->assertSee('可領取日期')->assertDontSee('開始時間');
         $this->actingAs($organizer)->get(route('organizer.badges.edit',$badge))
             ->assertOk()->assertSee('編輯 主辦方自行領取')->assertSee('人工發放');
         $this->actingAs($organizer)->put(route('organizer.badges.update',$badge),[
@@ -184,8 +184,11 @@ class EventBadgeWorkflowTest extends TestCase
             'claim_lat'=>22.999728,
             'claim_lng'=>120.227028,
             'claim_radius_km'=>10,
+            'claim_date'=>'2026-11-02',
         ])->assertRedirect(route('organizer.badges.index'))->assertSessionHas('success','Badge 已更新。');
         $this->assertDatabaseHas('event_badges',['id'=>$badge->id,'external_activity_location'=>'台南']);
+        $this->assertSame('2026-11-02 00:00:00',$badge->fresh()->claim_starts_at->format('Y-m-d H:i:s'));
+        $this->assertSame('2026-11-02 23:59:59',$badge->fresh()->claim_ends_at->format('Y-m-d H:i:s'));
 
         $this->actingAs($otherOrganizer)->patch(route('organizer.badges.claim-toggle',$badge))
             ->assertForbidden();

@@ -97,7 +97,6 @@ class BadgeController extends Controller
             'claim_lat'=>['nullable','required_if:location_claim_enabled,1','numeric','between:-90,90'],
             'claim_lng'=>['nullable','required_if:location_claim_enabled,1','numeric','between:-180,180'],
             'claim_radius_km'=>['nullable','numeric','between:1,50'],'claim_date'=>['nullable','date'],
-            'claim_starts_at'=>['nullable','date'],'claim_ends_at'=>['nullable','date','after:claim_starts_at'],
         ]);
     }
 
@@ -112,6 +111,8 @@ class BadgeController extends Controller
         } elseif($claimDate) {
             $data['claim_starts_at']=Carbon::parse($claimDate)->startOfDay();
             $data['claim_ends_at']=Carbon::parse($claimDate)->endOfDay();
+        } else {
+            $data['claim_starts_at']=null; $data['claim_ends_at']=null;
         }
         return $data;
     }
