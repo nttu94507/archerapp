@@ -42,7 +42,7 @@ class EventBadgeWorkflowTest extends TestCase
         $this->assertDatabaseMissing('user_event_badges',['event_badge_id'=>$badge->id,'user_id'=>$farAway->id]);
     }
 
-    public function test_location_badge_can_be_limited_to_an_optional_claim_date(): void
+    public function test_location_badge_can_be_limited_to_a_single_day_range(): void
     {
         $this->travelTo(now()->setDate(2026, 8, 1)->setTime(12, 0));
         $admin=User::factory()->create(['is_admin'=>true]);
@@ -54,7 +54,9 @@ class EventBadgeWorkflowTest extends TestCase
             'claim_lat'=>22.999728,
             'claim_lng'=>120.227028,
             'claim_radius_km'=>10,
-            'claim_date'=>'2026-08-02',
+            'claim_period'=>'range',
+            'claim_start_date'=>'2026-08-02',
+            'claim_end_date'=>'2026-08-02',
         ])->assertSessionHas('success');
 
         $badge=EventBadge::where('name','限定日期定位 Badge')->firstOrFail();
@@ -109,7 +111,7 @@ class EventBadgeWorkflowTest extends TestCase
         $this->travelBack();
     }
 
-    public function test_official_location_badge_uses_one_claim_date_without_blocking_manual_awards(): void
+    public function test_official_location_badge_uses_a_date_range_without_blocking_manual_awards(): void
     {
         $this->travelTo(now()->setDate(2026, 10, 1)->setTime(12, 0));
         $admin=User::factory()->create(['is_admin'=>true]);
@@ -121,12 +123,14 @@ class EventBadgeWorkflowTest extends TestCase
             'claim_lat'=>22.999728,
             'claim_lng'=>120.227028,
             'claim_radius_km'=>10,
-            'claim_date'=>'2026-10-03',
+            'claim_period'=>'range',
+            'claim_start_date'=>'2026-10-03',
+            'claim_end_date'=>'2026-10-04',
         ])->assertSessionHas('success');
 
         $badge=EventBadge::where('name','跨日定位 Badge')->firstOrFail();
         $this->assertSame('2026-10-03 00:00',$badge->claim_starts_at->format('Y-m-d H:i'));
-        $this->assertSame('2026-10-03 23:59',$badge->claim_ends_at->format('Y-m-d H:i'));
+        $this->assertSame('2026-10-04 23:59',$badge->claim_ends_at->format('Y-m-d H:i'));
 
         $this->actingAs($admin)->post(route('admin.badges.award',$badge),['member'=>$member->uuid])
             ->assertSessionHas('success','官方 Badge 已發放。');
@@ -172,7 +176,7 @@ class EventBadgeWorkflowTest extends TestCase
         $this->actingAs($organizer)->get(route('organizer.badges.index'))
             ->assertOk()->assertSee('Badge 列表')->assertSee('新增 Badge')->assertSee('顯示 QR Code')->assertSee('停用');
         $this->actingAs($organizer)->get(route('organizer.badges.create'))
-            ->assertOk()->assertSee('新增 Badge')->assertSee('可領取日期')->assertDontSee('開始時間');
+            ->assertOk()->assertSee('新增 Badge')->assertSee('不限日期')->assertSee('指定日期範圍')->assertSee('同一天即為單日領取');
         $this->actingAs($organizer)->get(route('organizer.badges.edit',$badge))
             ->assertOk()->assertSee('編輯 主辦方自行領取')->assertSee('人工發放');
         $this->actingAs($organizer)->put(route('organizer.badges.update',$badge),[
@@ -183,11 +187,13 @@ class EventBadgeWorkflowTest extends TestCase
             'claim_lat'=>22.999728,
             'claim_lng'=>120.227028,
             'claim_radius_km'=>10,
-            'claim_date'=>'2026-11-02',
+            'claim_period'=>'range',
+            'claim_start_date'=>'2026-11-02',
+            'claim_end_date'=>'2026-11-04',
         ])->assertRedirect(route('organizer.badges.index'))->assertSessionHas('success','Badge 已更新。');
         $this->assertDatabaseHas('event_badges',['id'=>$badge->id,'external_activity_location'=>'台南']);
         $this->assertSame('2026-11-02 00:00:00',$badge->fresh()->claim_starts_at->format('Y-m-d H:i:s'));
-        $this->assertSame('2026-11-02 23:59:59',$badge->fresh()->claim_ends_at->format('Y-m-d H:i:s'));
+        $this->assertSame('2026-11-04 23:59:59',$badge->fresh()->claim_ends_at->format('Y-m-d H:i:s'));
 
         $this->actingAs($otherOrganizer)->patch(route('organizer.badges.claim-toggle',$badge))
             ->assertForbidden();
@@ -239,7 +245,7 @@ class EventBadgeWorkflowTest extends TestCase
         EventBadge::create(['created_by'=>$organizer->id,'issuer_type'=>'organizer','issuer_name'=>'測試單位','name'=>'單位測試 Badge','type'=>'special','eligibility'=>'any','award_rule'=>'manual']);
 
         $this->actingAs($admin)->get(route('admin.badges.create'))
-            ->assertOk()->assertSee('新增官方 Badge')->assertSee('可領取日期')->assertDontSee('開始時間');
+            ->assertOk()->assertSee('新增官方 Badge')->assertSee('不限日期')->assertSee('指定日期範圍')->assertSee('同一天即為單日領取');
         $this->actingAs($admin)->get(route('admin.badges.index',['source'=>'official']))
             ->assertOk()->assertSee('官方測試 Badge')->assertSee('官方發放')->assertDontSee('單位測試 Badge');
         $this->actingAs($admin)->get(route('admin.badges.index',['source'=>'organization']))

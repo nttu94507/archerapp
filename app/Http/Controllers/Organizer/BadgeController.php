@@ -96,7 +96,9 @@ class BadgeController extends Controller
             'icon'=>['nullable','image','mimes:jpg,jpeg,png,webp','max:10240'],'location_claim_enabled'=>['nullable','boolean'],
             'claim_lat'=>['nullable','required_if:location_claim_enabled,1','numeric','between:-90,90'],
             'claim_lng'=>['nullable','required_if:location_claim_enabled,1','numeric','between:-180,180'],
-            'claim_radius_km'=>['nullable','numeric','between:1,50'],'claim_date'=>['nullable','date'],
+            'claim_radius_km'=>['nullable','numeric','between:1,50'],'claim_period'=>['nullable','in:unlimited,range'],
+            'claim_start_date'=>['nullable','required_if:claim_period,range','date'],
+            'claim_end_date'=>['nullable','required_if:claim_period,range','date','after_or_equal:claim_start_date'],
         ]);
     }
 
@@ -104,13 +106,15 @@ class BadgeController extends Controller
     {
         $data['location_claim_enabled']=$request->boolean('location_claim_enabled');
         $data['claim_radius_km']??=10;
-        $claimDate=$data['claim_date']??null;
-        unset($data['claim_date']);
+        $claimPeriod=$data['claim_period']??'unlimited';
+        $claimStartDate=$data['claim_start_date']??null;
+        $claimEndDate=$data['claim_end_date']??null;
+        unset($data['claim_period'],$data['claim_start_date'],$data['claim_end_date']);
         if(! $data['location_claim_enabled']) {
             $data['claim_starts_at']=null; $data['claim_ends_at']=null;
-        } elseif($claimDate) {
-            $data['claim_starts_at']=Carbon::parse($claimDate)->startOfDay();
-            $data['claim_ends_at']=Carbon::parse($claimDate)->endOfDay();
+        } elseif($claimPeriod==='range') {
+            $data['claim_starts_at']=Carbon::parse($claimStartDate)->startOfDay();
+            $data['claim_ends_at']=Carbon::parse($claimEndDate)->endOfDay();
         } else {
             $data['claim_starts_at']=null; $data['claim_ends_at']=null;
         }
