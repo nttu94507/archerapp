@@ -139,7 +139,9 @@ class EventBadgeWorkflowTest extends TestCase
     {
         $organizer=User::factory()->create();
         $otherOrganizer=User::factory()->create();
+        $admin=User::factory()->create(['is_admin'=>true]);
         $member=User::factory()->create();
+        $secondMember=User::factory()->create();
         foreach([$organizer,$otherOrganizer] as $user) {
             OrganizerProfile::create([
                 'user_id'=>$user->id,
@@ -183,6 +185,19 @@ class EventBadgeWorkflowTest extends TestCase
         $this->actingAs($organizer)->patch(route('organizer.badges.claim-toggle',$badge))
             ->assertSessionHas('success','自行領取已重新開放。');
         $this->assertTrue($badge->fresh()->location_claim_enabled);
+
+        $this->actingAs($admin)->patch(route('admin.badges.toggle',$badge))
+            ->assertSessionHas('success','Badge 已由平台停用，所有自行領取暫停。');
+        $this->assertFalse($badge->fresh()->is_active);
+        $this->assertTrue($badge->fresh()->location_claim_enabled);
+        $this->actingAs($organizer)->get(route('organizer.badges.index'))
+            ->assertOk()->assertSee('平台已停用此 Badge');
+        $this->actingAs($admin)->get(route('admin.badges.index'))
+            ->assertOk()->assertSee('平台已停用 Badge');
+        $this->actingAs($organizer)->patch(route('organizer.badges.claim-toggle',$badge))
+            ->assertSessionHas('error','此 Badge 已由平台停用，無法變更自行領取狀態。');
+        $this->actingAs($organizer)->post(route('organizer.badges.award',$badge),['member'=>$secondMember->uuid])
+            ->assertSessionHas('error','此 Badge 已由平台停用。');
     }
 
     public function test_platform_limited_badge_stops_at_maximum_and_has_public_certificate(): void
@@ -480,7 +495,7 @@ class EventBadgeWorkflowTest extends TestCase
 
         $this->actingAs($admin)->patch(route('admin.badges.toggle', $badge));
         $this->assertFalse($badge->fresh()->is_active);
-        $this->assertFalse($badge->fresh()->claim_enabled);
+        $this->assertTrue($badge->fresh()->claim_enabled);
 
         $this->actingAs($admin)->patch(route('admin.badge-awards.revoke', $award), ['reason' => '主辦方誤發']);
         $this->assertNotNull($award->fresh()->revoked_at);

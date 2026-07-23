@@ -25,9 +25,9 @@ class BadgeOversightController extends Controller
 
     public function toggle(EventBadge $badge): RedirectResponse
     {
-        $badge->update(['is_active' => ! $badge->is_active, 'claim_enabled' => false]);
+        $badge->update(['is_active' => ! $badge->is_active]);
 
-        return back()->with('success', $badge->is_active ? 'Badge 已重新啟用。' : 'Badge 與申請 QR Code 已停用。');
+        return back()->with('success', $badge->is_active ? 'Badge 已重新啟用，原本的發放設定已恢復。' : 'Badge 已由平台停用，所有自行領取暫停。');
     }
 
     public function store(Request $request): RedirectResponse

@@ -40,6 +40,7 @@ class BadgeController extends Controller
     public function award(Request $request, EventBadge $badge, EventBadgeAwardService $service): RedirectResponse
     {
         abort_unless($badge->event_id===null && ($badge->created_by===$request->user()->id || $request->user()->isAdmin()),403);
+        if(!$badge->is_active) return back()->with('error','此 Badge 已由平台停用。');
         $data=$request->validate(['member'=>['required','string','max:255'],'note'=>['nullable','string','max:1000']]);
         if($badge->isAtCapacity()) return back()->with('error','徽章數量已達到最大值。');
         $user=User::where('uuid',$data['member'])->orWhere('email',$data['member'])->first();
@@ -53,6 +54,7 @@ class BadgeController extends Controller
         abort_unless($request->user()->canCreateEvents(),403);
         abort_unless($badge->event_id===null && $badge->issuer_type==='organizer' && $badge->created_by===$request->user()->id,403);
         abort_if($badge->claim_lat===null || $badge->claim_lng===null,422,'此 Badge 未設定定位領取。');
+        if(!$badge->is_active) return back()->with('error','此 Badge 已由平台停用，無法變更自行領取狀態。');
 
         $enabled=!$badge->location_claim_enabled;
         $badge->update(['location_claim_enabled'=>$enabled]);
