@@ -18,6 +18,7 @@ use App\Http\Controllers\EventBadgeClaimController;
 use App\Http\Controllers\Organizer\EventBadgeController as OrganizerEventBadgeController;
 use App\Http\Controllers\Organizer\BadgeController as OrganizerBadgeController;
 use App\Http\Controllers\BadgeCertificateController;
+use App\Http\Controllers\BadgeDropController;
 use App\Http\Controllers\Organizer\EventController as OrganizerEventController;
 use App\Http\Controllers\Organizer\EventRegistrationController as OrganizerRegistrationController;
 use App\Http\Controllers\Organizer\EventResultController as OrganizerResultController;
@@ -65,6 +66,11 @@ Route::middleware('auth')->group(function () {
 });
 Route::get('/second-hand/{secondHandItem}', [SecondHandItemController::class, 'show'])->name('second-hand.show');
 Route::get('/badge-certificates/{publicId}', [BadgeCertificateController::class,'show'])->name('badge-certificates.show');
+Route::middleware('auth')->group(function () {
+    Route::get('/badge-drops/{token}', [BadgeDropController::class,'show'])->name('badge-drops.show');
+    Route::post('/badge-drops/{token}', [BadgeDropController::class,'claim'])->name('badge-drops.claim');
+});
+Route::get('/badge-drops/{token}/qrcode', [BadgeDropController::class,'qrCode'])->name('badge-drops.qrcode');
 
 Route::prefix('admin')->middleware(['auth', 'admin'])->name('admin.')->group(function () {
     Route::get('/', function () {

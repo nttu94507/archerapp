@@ -20,6 +20,27 @@ class EventBadgeWorkflowTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_member_can_scan_location_qr_and_receive_badge_inside_radius_but_not_from_another_city(): void
+    {
+        $admin=User::factory()->create(['is_admin'=>true]); $nearby=User::factory()->create(); $farAway=User::factory()->create();
+        $this->actingAs($admin)->post(route('admin.badges.store'),[
+            'name'=>'台南定位 Badge','location_claim_enabled'=>1,'claim_lat'=>22.999728,'claim_lng'=>120.227028,'claim_radius_km'=>10,
+        ])->assertSessionHas('success');
+        $badge=EventBadge::where('name','台南定位 Badge')->firstOrFail();
+
+        $this->actingAs($admin)->get(route('admin.badges.index'))->assertOk()->assertSee('定位 QR Code');
+        $this->get(route('badge-drops.qrcode',$badge->claim_token))->assertOk()->assertHeader('Content-Type','image/svg+xml');
+        $this->actingAs($nearby)->post(route('badge-drops.claim',$badge->claim_token),[
+            'lat'=>23.0005,'lng'=>120.2200,'accuracy'=>120,
+        ])->assertSessionHas('success','位置驗證成功，Badge 已取得。');
+        $this->actingAs($farAway)->post(route('badge-drops.claim',$badge->claim_token),[
+            'lat'=>25.0330,'lng'=>121.5654,'accuracy'=>800,
+        ])->assertSessionHas('error','目前不在 Badge 發放區域內。');
+
+        $this->assertDatabaseHas('user_event_badges',['event_badge_id'=>$badge->id,'user_id'=>$nearby->id,'award_source'=>'location_qr','limited_serial'=>1]);
+        $this->assertDatabaseMissing('user_event_badges',['event_badge_id'=>$badge->id,'user_id'=>$farAway->id]);
+    }
+
     public function test_platform_limited_badge_stops_at_maximum_and_has_public_certificate(): void
     {
         $admin=User::factory()->create(['is_admin'=>true]); $first=User::factory()->create(); $second=User::factory()->create();

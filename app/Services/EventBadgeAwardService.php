@@ -88,7 +88,7 @@ class EventBadgeAwardService
             if ($wasActive || ($award->exists && ! $allowRestore && $source !== 'manual')) return false;
             if (! $award->exists && $locked->max_supply !== null && $locked->awards()->count() >= $locked->max_supply) return false;
             $serial = $award->limited_serial;
-            if (! $award->exists && $locked->max_supply !== null) $serial = ((int)$locked->awards()->max('limited_serial')) + 1;
+            if ($serial === null) $serial = ((int)$locked->awards()->max('limited_serial')) + 1;
             $award->fill(array_merge([
                 'awarded_by'=>$actorId,'awarded_at'=>now(),'award_source'=>$source,'limited_serial'=>$serial,'award_note'=>$note,
                 'issuer_name_snapshot'=>$locked->issuer_name ?: $locked->event?->organizer ?: 'ArrowTrack',

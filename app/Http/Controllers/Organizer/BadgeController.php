@@ -23,8 +23,9 @@ class BadgeController extends Controller
     public function store(Request $request): RedirectResponse
     {
         abort_unless($request->user()->canCreateEvents(),403);
-        $data=$request->validate(['name'=>['required','string','max:120'],'description'=>['nullable','string','max:1000'],'external_activity_name'=>['required','string','max:160'],'external_activity_date'=>['nullable','date'],'external_activity_location'=>['nullable','string','max:255'],'max_supply'=>['nullable','integer','min:1'],'icon'=>['nullable','image','mimes:jpg,jpeg,png,webp','max:10240']]);
+        $data=$request->validate(['name'=>['required','string','max:120'],'description'=>['nullable','string','max:1000'],'external_activity_name'=>['required','string','max:160'],'external_activity_date'=>['nullable','date'],'external_activity_location'=>['nullable','string','max:255'],'max_supply'=>['nullable','integer','min:1'],'icon'=>['nullable','image','mimes:jpg,jpeg,png,webp','max:10240'],'location_claim_enabled'=>['nullable','boolean'],'claim_lat'=>['nullable','required_if:location_claim_enabled,1','numeric','between:-90,90'],'claim_lng'=>['nullable','required_if:location_claim_enabled,1','numeric','between:-180,180'],'claim_radius_km'=>['nullable','numeric','between:1,50']]);
         unset($data['icon']); if($request->hasFile('icon')) $data['icon_path']=$request->file('icon')->store('badge-icons','public');
+        $data['location_claim_enabled']=$request->boolean('location_claim_enabled'); $data['claim_radius_km']??=10;
         EventBadge::create($data+['created_by'=>$request->user()->id,'issuer_type'=>'organizer','issuer_name'=>$request->user()->organizerProfile?->organization_name ?: $request->user()->display_name,'type'=>'special','eligibility'=>'any','award_rule'=>'manual','claim_enabled'=>false]);
         return back()->with('success','Badge 已建立，可直接發放給會員。');
     }

@@ -9,7 +9,7 @@
 
     <section class="rounded-2xl border bg-white p-5 shadow-sm sm:p-6">
         <div><h2 class="text-lg font-semibold">建立官方限量 Badge</h2><p class="mt-1 text-sm text-gray-500">由 ArrowTrack 官方認證並發放。</p></div>
-        <form method="POST" action="{{ route('admin.badges.store') }}" enctype="multipart/form-data" class="mt-5 grid gap-4 lg:grid-cols-2">
+        <form method="POST" action="{{ route('admin.badges.store') }}" enctype="multipart/form-data" class="mt-5 grid gap-4 lg:grid-cols-2" x-data="{ locationEnabled: {{ old('location_claim_enabled') ? 'true' : 'false' }}, locating: false, lat: '{{ old('claim_lat') }}', lng: '{{ old('claim_lng') }}', locate(){ if(!navigator.geolocation){ alert('此瀏覽器無法取得位置'); return } this.locating=true; navigator.geolocation.getCurrentPosition(p=>{this.lat=p.coords.latitude.toFixed(7);this.lng=p.coords.longitude.toFixed(7);this.locating=false},()=>{this.locating=false;alert('無法取得位置，請允許定位後再試一次。')},{enableHighAccuracy:false,timeout:15000,maximumAge:60000}) } }">
             @csrf
             <div><label class="text-sm font-medium">Badge 名稱</label><input name="name" required value="{{ old('name') }}" class="mt-1 min-h-11 w-full rounded-xl border-gray-300" placeholder="例：ArrowTrack 週年紀念"></div>
             <div><label class="text-sm font-medium">限量數量</label><input type="number" min="1" name="max_supply" value="{{ old('max_supply') }}" class="mt-1 min-h-11 w-full rounded-xl border-gray-300" placeholder="未填寫則不限制"></div>
@@ -21,6 +21,7 @@
                 </div>
             </div>
             <div class="lg:col-span-2"><label class="text-sm font-medium">說明</label><textarea name="description" rows="2" class="mt-1 w-full rounded-xl border-gray-300" placeholder="Badge 的紀念意義或取得方式">{{ old('description') }}</textarea></div>
+            <div class="rounded-2xl border bg-gray-50 p-4 lg:col-span-2"><label class="flex items-center gap-2 font-medium"><input type="checkbox" name="location_claim_enabled" value="1" x-model="locationEnabled" class="rounded"> 開放掃描 QR Code 定位領取</label><div x-show="locationEnabled" class="mt-4 grid gap-3 sm:grid-cols-3"><div><label class="text-xs text-gray-500">緯度</label><input name="claim_lat" x-model="lat" :required="locationEnabled" class="mt-1 w-full rounded-xl border-gray-300" placeholder="22.9997280"></div><div><label class="text-xs text-gray-500">經度</label><input name="claim_lng" x-model="lng" :required="locationEnabled" class="mt-1 w-full rounded-xl border-gray-300" placeholder="120.2270280"></div><div><label class="text-xs text-gray-500">允許距離</label><select name="claim_radius_km" class="mt-1 w-full rounded-xl border-gray-300"><option value="5">5 公里</option><option value="10" selected>10 公里</option><option value="20">20 公里</option><option value="30">30 公里</option></select></div><button type="button" @click="locate()" class="min-h-11 rounded-xl border border-indigo-200 bg-white px-4 text-sm font-medium text-indigo-700 sm:col-span-3" x-text="locating ? '正在取得位置…' : '使用目前位置'"></button></div></div>
             <div class="lg:col-span-2"><button class="min-h-11 w-full rounded-xl bg-indigo-600 px-5 text-sm font-medium text-white hover:bg-indigo-500 sm:w-auto">建立官方 Badge</button></div>
         </form>
     </section>
@@ -33,6 +34,7 @@
                     @if($badge->description)<p class="mt-4 line-clamp-2 text-sm text-gray-600">{{ $badge->description }}</p>@endif
                     <div class="mt-4 grid grid-cols-3 gap-2 text-center"><div class="rounded-xl bg-gray-50 p-2"><p class="font-semibold">{{ $badge->claims_count }}</p><p class="text-xs text-gray-500">申請</p></div><div class="rounded-xl bg-gray-50 p-2"><p class="font-semibold">{{ $badge->active_awards_count }}</p><p class="text-xs text-gray-500">已發放</p></div><div class="rounded-xl {{ $badge->isAtCapacity() ? 'bg-yellow-50' : 'bg-gray-50' }} p-2"><p class="font-semibold {{ $badge->isAtCapacity() ? 'text-yellow-700' : '' }}">{{ $badge->max_supply ?? '∞' }}</p><p class="text-xs text-gray-500">上限</p></div></div>
                     @if($badge->isAtCapacity())<p class="mt-3 rounded-xl bg-yellow-50 p-3 text-sm font-medium text-yellow-800">徽章數量已達到最大值</p>@endif
+                    @if($badge->location_claim_enabled)<div class="mt-4 rounded-xl bg-indigo-50 p-3 text-center"><p class="text-sm font-medium text-indigo-800">定位 QR Code</p><img src="{{route('badge-drops.qrcode',$badge->claim_token)}}" alt="定位領取 QR Code" class="mx-auto mt-2 h-40 w-40 rounded-xl bg-white p-2"><p class="mt-2 text-xs text-indigo-700">允許範圍 {{$badge->claim_radius_km}} 公里</p></div>@endif
 
                     <div class="mt-auto space-y-3 border-t pt-4">
                         @if($badge->issuer_type === 'platform' && !$badge->isAtCapacity() && $badge->is_active)
