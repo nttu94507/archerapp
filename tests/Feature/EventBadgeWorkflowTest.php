@@ -20,6 +20,30 @@ class EventBadgeWorkflowTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_platform_limited_badge_stops_at_maximum_and_has_public_certificate(): void
+    {
+        $admin=User::factory()->create(['is_admin'=>true]); $first=User::factory()->create(); $second=User::factory()->create();
+        $this->actingAs($admin)->post(route('admin.badges.store'),['name'=>'官方限量','max_supply'=>1])->assertSessionHas('success');
+        $badge=EventBadge::where('name','官方限量')->firstOrFail();
+        $this->actingAs($admin)->post(route('admin.badges.award',$badge),['member'=>$first->uuid])->assertSessionHas('success');
+        $this->actingAs($admin)->post(route('admin.badges.award',$badge),['member'=>$second->uuid])->assertSessionHas('error','徽章數量已達到最大值。');
+        $award=UserEventBadge::firstOrFail();
+        $this->assertNotNull($award->public_id); $this->assertSame(1,$award->limited_serial);
+        $this->get(route('badge-certificates.show',$award->public_id))->assertOk()->assertSee('有效認證')->assertSee('官方限量');
+    }
+
+    public function test_republished_corrected_scores_reconcile_placement_badge(): void
+    {
+        [$owner,$event]=$this->eventWithOwner(); $group=EventGroup::factory()->create(['event_id'=>$event->id]); $members=User::factory()->count(2)->create();
+        $registrations=[]; foreach([50,40] as $i=>$score){$registrations[$i]=EventRegistration::create(['event_id'=>$event->id,'event_group_id'=>$group->id,'user_id'=>$members[$i]->id,'name'=>$members[$i]->name,'email'=>$members[$i]->email,'status'=>'checked_in','score_submitted_at'=>now(),'score_verified_at'=>now()]); EventScoreEntry::create(['event_id'=>$event->id,'event_registration_id'=>$registrations[$i]->id,'user_id'=>$members[$i]->id,'end_number'=>1,'scores'=>[$score],'end_total'=>$score]);}
+        $badge=EventBadge::create(['event_id'=>$event->id,'event_group_id'=>$group->id,'created_by'=>$owner->id,'name'=>'金牌修正','type'=>'special','eligibility'=>'scored','award_rule'=>'placement','placement'=>1]);
+        $this->actingAs($owner)->post(route('organizer.events.results.publish',$event));
+        EventScoreEntry::where('event_registration_id',$registrations[1]->id)->update(['end_total'=>60,'scores'=>[60]]);
+        $this->actingAs($owner)->post(route('organizer.events.results.publish',$event));
+        $this->assertDatabaseHas('user_event_badges',['event_badge_id'=>$badge->id,'user_id'=>$members[0]->id,'revoked_reason'=>'正式成績修正，名次重新判定']);
+        $this->assertDatabaseHas('user_event_badges',['event_badge_id'=>$badge->id,'user_id'=>$members[1]->id,'revoked_at'=>null,'score_snapshot'=>60]);
+    }
+
     public function test_creating_staff_badge_awards_existing_active_work_team_without_application(): void
     {
         [$owner, $event] = $this->eventWithOwner();

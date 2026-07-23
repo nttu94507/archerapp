@@ -7,6 +7,7 @@ use App\Models\EventBadge;
 use App\Models\EventRegistration;
 use App\Models\EventStaff;
 use App\Models\UserEventBadge;
+use Illuminate\Support\Facades\DB;
 
 class EventBadgeAwardService
 {
@@ -50,29 +51,60 @@ class EventBadgeAwardService
         $count = 0;
         $badges = $event->badges()->where('award_rule', 'placement')->where('is_active', true)->get();
         foreach ($badges as $badge) {
-            $ranked = $event->registrations()->with('scoreEntries')
+            $ranked = $event->registrations()->with(['scoreEntries','event_group'])
                 ->where('event_group_id', $badge->event_group_id)
                 ->whereIn('status', ['registered', 'checked_in'])
                 ->whereNotNull('score_verified_at')->whereNotNull('result_published_at')->get()
                 ->sortByDesc(fn ($registration) => $registration->scoreEntries->sum('end_total'))->values();
-            $rank = 1;
+            $rank = 1; $winnerIds = [];
             foreach ($ranked->groupBy(fn ($registration) => (string) $registration->scoreEntries->sum('end_total')) as $sameScore) {
                 if ($rank === (int) $badge->placement) {
-                    foreach ($sameScore as $winner) if ($this->award($badge, $winner->user_id, 'placement')) $count++;
+                    foreach ($sameScore as $winner) {
+                        $winnerIds[] = $winner->user_id;
+                        if ($this->award($badge, $winner->user_id, 'placement', null, null, [
+                            'group_name_snapshot'=>$winner->event_group?->name,
+                            'placement_snapshot'=>$badge->placement,
+                            'score_snapshot'=>$winner->scoreEntries->sum('end_total'),
+                            'criteria_snapshot'=>'正式成績第 '.$badge->placement.' 名',
+                        ], true)) $count++;
+                    }
                     break;
                 }
                 $rank += $sameScore->count();
             }
+            $badge->awards()->where('award_source','placement')->whereNull('revoked_at')->whereNotIn('user_id',$winnerIds)->update([
+                'revoked_at'=>now(), 'revoked_reason'=>'正式成績修正，名次重新判定',
+            ]);
         }
         return $count;
     }
 
-    public function award(EventBadge $badge, int $userId, string $source, ?int $actorId = null, ?string $note = null): bool
+    public function award(EventBadge $badge, int $userId, string $source, ?int $actorId = null, ?string $note = null, array $snapshots = [], bool $allowRestore = false): bool
     {
-        $award = UserEventBadge::firstOrNew(['event_badge_id' => $badge->id, 'user_id' => $userId]);
-        $wasActive = $award->exists && $award->revoked_at === null;
-        if ($award->exists && $award->revoked_at !== null && $source !== 'manual') return false;
-        $award->fill(['awarded_by'=>$actorId, 'awarded_at'=>now(), 'award_source'=>$source, 'award_note'=>$note, 'revoked_by'=>null, 'revoked_at'=>null, 'revoked_reason'=>null])->save();
-        return ! $wasActive;
+        return DB::transaction(function () use ($badge,$userId,$source,$actorId,$note,$snapshots,$allowRestore): bool {
+            $locked = EventBadge::whereKey($badge->id)->lockForUpdate()->firstOrFail();
+            $award = UserEventBadge::firstOrNew(['event_badge_id'=>$locked->id,'user_id'=>$userId]);
+            $wasActive = $award->exists && $award->revoked_at === null;
+            if ($wasActive || ($award->exists && ! $allowRestore && $source !== 'manual')) return false;
+            if (! $award->exists && $locked->max_supply !== null && $locked->awards()->count() >= $locked->max_supply) return false;
+            $serial = $award->limited_serial;
+            if (! $award->exists && $locked->max_supply !== null) $serial = ((int)$locked->awards()->max('limited_serial')) + 1;
+            $award->fill(array_merge([
+                'awarded_by'=>$actorId,'awarded_at'=>now(),'award_source'=>$source,'limited_serial'=>$serial,'award_note'=>$note,
+                'issuer_name_snapshot'=>$locked->issuer_name ?: $locked->event?->organizer ?: 'ArrowTrack',
+                'event_name_snapshot'=>$locked->display_activity_name,
+                'criteria_snapshot'=>$this->criteriaLabel($locked,$source),
+                'revoked_by'=>null,'revoked_at'=>null,'revoked_reason'=>null,
+            ],$snapshots))->save();
+            return true;
+        });
+    }
+
+    private function criteriaLabel(EventBadge $badge, string $source): string
+    {
+        return match ($source) {
+            'attendance'=>'完成繳費並報到','placement'=>'正式成績名次','staff'=>'加入賽事工作團隊',
+            'volunteer'=>'成為賽事志工','platform'=>'平台官方發放',default=>'主辦方授予',
+        };
     }
 }

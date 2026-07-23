@@ -39,10 +39,6 @@
                class="px-2 py-1 rounded-lg hover:bg-gray-100 {{ request()->routeIs('scores.*') ? 'text-gray-900' : 'text-gray-600' }}">
                 訓練紀錄
             </a>
-            <a href="{{ route('achievements.index') }}"
-               class="px-2 py-1 rounded-lg hover:bg-gray-100 {{ request()->routeIs('achievements.*') ? 'text-gray-900' : 'text-gray-600' }}">
-                成就
-            </a>
             <a href="{{ route('second-hand.index') }}"
                class="px-2 py-1 rounded-lg hover:bg-gray-100 {{ request()->routeIs('second-hand.*') ? 'text-gray-900' : 'text-gray-600' }}">
                 二手市集
@@ -115,6 +111,7 @@
                                 會員資料
                             </a>
                             <a href="{{ route('organizer.events.index') }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50" role="menuitem">主辦方中心</a>
+                            @if(auth()->user()->canCreateEvents())<a href="{{route('organizer.badges.index')}}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50" role="menuitem">Badge 發放</a>@endif
                             @if(auth()->user()->isAdmin())
                                 <a href="{{ route('admin.users.index') }}"
                                    class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50" role="menuitem">
@@ -164,54 +161,34 @@
             </button>
         </div>
 
-        <nav class="p-3 space-y-1 text-sm">
-            {{-- 主要導覽 --}}
-            <a href="{{ route('events.index') }}" class="flex items-center gap-2 rounded-lg px-3 py-2 hover:bg-gray-50 {{ request()->routeIs('events.*') ? 'font-semibold text-gray-900' : 'text-gray-700' }}">賽事</a>
-            <a href="{{ route('scores.index') }}"
-               class="flex items-center gap-2 rounded-lg px-3 py-2 hover:bg-gray-50 {{ request()->routeIs('scores.*') ? 'font-semibold text-gray-900' : 'text-gray-700' }}">
-                訓練紀錄
-            </a>
-            <a href="{{ route('achievements.index') }}"
-               class="flex items-center gap-2 rounded-lg px-3 py-2 hover:bg-gray-50 {{ request()->routeIs('achievements.*') ? 'font-semibold text-gray-900' : 'text-gray-700' }}">
-                成就
-            </a>
-            <a href="{{ route('second-hand.index') }}"
-               class="flex items-center gap-2 rounded-lg px-3 py-2 hover:bg-gray-50 {{ request()->routeIs('second-hand.*') ? 'font-semibold text-gray-900' : 'text-gray-700' }}">
-                二手市集
-            </a>
-{{--            <a href="{{ route('events.index') }}" class="flex items-center gap-2 rounded-lg px-3 py-2 hover:bg-gray-50 {{ request()->routeIs('events.*') ? 'font-semibold text-gray-900' : 'text-gray-700' }}">--}}
-{{--                賽事--}}
-{{--            </a>--}}
-{{--            @auth--}}
-{{--                <a href="{{ route('my-events.index') }}" class="flex items-center gap-2 rounded-lg px-3 py-2 hover:bg-gray-50 {{ request()->routeIs('my-events.*') ? 'font-semibold text-gray-900' : 'text-gray-700' }}">--}}
-{{--                    我的賽事--}}
-{{--                </a>--}}
-{{--            @endauth--}}
-            {{--            <a href="{{ route('leaderboards.index') }}" class="flex items-center gap-2 rounded-lg px-3 py-2 hover:bg-gray-50 {{ request()->routeIs('leaderboards.*') ? 'font-semibold text-gray-900' : 'text-gray-700' }}">--}}
-            {{--                排行榜--}}
-            {{--            </a>--}}
-            {{--            <a href="{{ route('events.index') }}" class="flex items-center gap-2 rounded-lg px-3 py-2 hover:bg-gray-50 {{ request()->routeIs('events.*') ? 'font-semibold text-gray-900' : 'text-gray-700' }}">--}}
-            {{--                賽事--}}
-            {{--            </a>--}}
-{{--            <a href="{{ route('team-posts.index') }}"--}}
-{{--               class="flex items-center gap-2 rounded-lg px-3 py-2 hover:bg-gray-50 {{ request()->routeIs('events.*') ? 'font-semibold text-gray-900' : 'text-gray-700' }}">--}}
-{{--                組隊區--}}
-{{--            </a>--}}
+        <nav class="flex-1 overflow-y-auto p-3 text-sm">
             @auth
+                <div class="px-3 pb-1 pt-2 text-xs font-medium text-gray-400">我的功能</div>
+                <a href="{{ route('member-profile.index') }}" class="flex min-h-11 items-center rounded-lg px-3 hover:bg-gray-50 {{ request()->routeIs('member-profile.*') || request()->routeIs('members.*') ? 'bg-gray-50 font-semibold text-gray-900' : 'text-gray-700' }}">會員資料</a>
+                @if(auth()->user()->hasCompletedProfile())<a href="{{ route('my-events.index') }}" class="flex min-h-11 items-center rounded-lg px-3 hover:bg-gray-50 {{ request()->routeIs('my-events.*') ? 'bg-gray-50 font-semibold text-gray-900' : 'text-gray-700' }}">我的賽事</a>@endif
+                <a href="{{ route('scores.index') }}" class="flex min-h-11 items-center rounded-lg px-3 hover:bg-gray-50 {{ request()->routeIs('scores.*') ? 'bg-gray-50 font-semibold text-gray-900' : 'text-gray-700' }}">訓練紀錄</a>
+            @endauth
+
+            <div class="mt-3 border-t px-3 pb-1 pt-4 text-xs font-medium text-gray-400">探索</div>
+            <a href="{{ route('events.index') }}" class="flex min-h-11 items-center rounded-lg px-3 hover:bg-gray-50 {{ request()->routeIs('events.index') || request()->routeIs('events.show') ? 'bg-gray-50 font-semibold text-gray-900' : 'text-gray-700' }}">賽事</a>
+            <a href="{{ route('second-hand.index') }}" class="flex min-h-11 items-center rounded-lg px-3 hover:bg-gray-50 {{ request()->routeIs('second-hand.*') ? 'bg-gray-50 font-semibold text-gray-900' : 'text-gray-700' }}">二手市集</a>
+
+            @auth
+                <div class="mt-3 border-t px-3 pb-1 pt-4 text-xs font-medium text-gray-400">主辦方工具</div>
+                @if(auth()->user()->canCreateEvents())
+                    <a href="{{ route('organizer.events.index') }}" class="flex min-h-11 items-center rounded-lg px-3 hover:bg-gray-50 {{ request()->routeIs('organizer.events.index') || request()->routeIs('organizer.events.show') ? 'bg-gray-50 font-semibold text-gray-900' : 'text-gray-700' }}">我的主辦賽事</a>
+                    <a href="{{ route('organizer.badges.index') }}" class="flex min-h-11 items-center rounded-lg px-3 hover:bg-gray-50 {{ request()->routeIs('organizer.badges.*') ? 'bg-gray-50 font-semibold text-gray-900' : 'text-gray-700' }}">Badge 發放</a>
+                    <a href="{{ route('organizer.events.create') }}" class="flex min-h-11 items-center rounded-lg px-3 hover:bg-gray-50 {{ request()->routeIs('organizer.events.create') ? 'bg-gray-50 font-semibold text-gray-900' : 'text-gray-700' }}">建立賽事</a>
+                @else
+                    <a href="{{ route('organizer.qualification.show') }}" class="flex min-h-11 items-center rounded-lg px-3 text-indigo-700 hover:bg-indigo-50 {{ request()->routeIs('organizer.qualification.*') ? 'bg-indigo-50 font-semibold' : '' }}">申請成為主辦方</a>
+                @endif
+
                 @if(auth()->user()->isAdmin())
-                    <a href="{{ route('admin.events.index') }}"
-                       class="flex items-center gap-2 rounded-lg px-3 py-2 hover:bg-gray-50 {{ request()->routeIs('admin.events.*') ? 'font-semibold text-gray-900' : 'text-gray-700' }}">
-                        賽事管理
-                    </a>
-                    <a href="{{ route('admin.users.index') }}"
-                       class="flex items-center gap-2 rounded-lg px-3 py-2 hover:bg-gray-50 {{ request()->routeIs('admin.users.*') ? 'font-semibold text-gray-900' : 'text-gray-700' }}">
-                        使用者列表
-                    </a>
-                    <a href="{{ route('admin.badges.index') }}"
-                       class="flex items-center gap-2 rounded-lg px-3 py-2 hover:bg-gray-50 {{ request()->routeIs('admin.badges.*') ? 'font-semibold text-gray-900' : 'text-gray-700' }}">
-                        Badge 監控
-                    </a>
-                    <a href="{{ route('admin.organizers.index') }}" class="flex items-center gap-2 rounded-lg px-3 py-2 hover:bg-gray-50 {{ request()->routeIs('admin.organizers.*') ? 'font-semibold text-gray-900' : 'text-gray-700' }}">主辦方審核</a>
+                    <div class="mt-3 border-t px-3 pb-1 pt-4 text-xs font-medium text-gray-400">平台管理</div>
+                    <a href="{{ route('admin.organizers.index') }}" class="flex min-h-11 items-center rounded-lg px-3 hover:bg-gray-50 {{ request()->routeIs('admin.organizers.*') ? 'bg-gray-50 font-semibold text-gray-900' : 'text-gray-700' }}">主辦方審核</a>
+                    <a href="{{ route('admin.events.index') }}" class="flex min-h-11 items-center rounded-lg px-3 hover:bg-gray-50 {{ request()->routeIs('admin.events.*') ? 'bg-gray-50 font-semibold text-gray-900' : 'text-gray-700' }}">賽事管理</a>
+                    <a href="{{ route('admin.badges.index') }}" class="flex min-h-11 items-center rounded-lg px-3 hover:bg-gray-50 {{ request()->routeIs('admin.badges.*') ? 'bg-gray-50 font-semibold text-gray-900' : 'text-gray-700' }}">Badge 管理</a>
+                    <a href="{{ route('admin.users.index') }}" class="flex min-h-11 items-center rounded-lg px-3 hover:bg-gray-50 {{ request()->routeIs('admin.users.*') ? 'bg-gray-50 font-semibold text-gray-900' : 'text-gray-700' }}">使用者管理</a>
                 @endif
             @endauth
         </nav>
@@ -221,9 +198,6 @@
             @auth
                 <div class="px-3 py-2 text-xs text-gray-500">使用者</div>
                 <div class="px-3 py-2 font-medium">{{ auth()->user()->display_name }}</div>
-                <a href="{{ route('organizer.events.index') }}" class="block rounded-lg px-3 py-2 text-sm hover:bg-gray-50 text-gray-700">主辦方中心</a>
-                <a href="{{ route('member-profile.index') }}"
-                   class="block rounded-lg px-3 py-2 text-sm hover:bg-gray-50 text-gray-700">會員資料</a>
                 <form method="POST" action="{{ route('logout') }}" class="mt-1">
                     @csrf
                     <button type="submit"

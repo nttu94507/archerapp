@@ -10,7 +10,7 @@ use Illuminate\Support\Str;
 class EventBadge extends Model
 {
     protected $fillable = [
-        'event_id', 'event_group_id', 'created_by', 'name', 'description', 'icon_path', 'type', 'eligibility', 'award_rule', 'staff_roles', 'placement',
+        'event_id', 'event_group_id', 'created_by', 'issuer_type', 'issuer_name', 'external_activity_name', 'external_activity_date', 'external_activity_location', 'name', 'description', 'icon_path', 'type', 'eligibility', 'award_rule', 'staff_roles', 'placement', 'max_supply',
         'claim_token', 'claim_enabled', 'claim_starts_at', 'claim_ends_at', 'is_active',
     ];
 
@@ -20,6 +20,7 @@ class EventBadge extends Model
         'claim_ends_at' => 'datetime',
         'is_active' => 'boolean',
         'staff_roles' => 'array',
+        'external_activity_date' => 'date',
     ];
 
     protected static function booted(): void
@@ -63,4 +64,7 @@ class EventBadge extends Model
     {
         return $this->icon_path ? asset('storage/'.$this->icon_path) : asset('images/default-badge.svg');
     }
+
+    public function isAtCapacity(): bool { return $this->max_supply !== null && $this->awards()->count() >= $this->max_supply; }
+    public function getDisplayActivityNameAttribute(): ?string { return $this->event?->name ?? $this->external_activity_name; }
 }

@@ -39,14 +39,8 @@
     </div>
 
     <section class="mt-6 rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
-        <div class="flex items-center justify-between gap-4"><div><h2 class="text-lg font-semibold">賽事 Badge</h2><p class="mt-1 text-sm text-gray-500">由賽事主辦方驗證並授予。</p></div><span class="text-sm text-gray-500">{{ $user->eventBadges->count() }} 枚</span></div>
-        <div class="mt-5 grid gap-4 sm:grid-cols-2">
-            @forelse($user->eventBadges as $award)
-                <article class="flex items-center gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4"><img src="{{ $award->badge->icon_url }}" alt="" class="h-16 w-16 shrink-0 rounded-xl object-cover"><div><p class="text-xs font-medium text-amber-700">主辦方驗證</p><h3 class="mt-1 font-semibold">{{ $award->badge->name }}</h3><p class="mt-1 text-sm text-gray-600">{{ $award->badge->event->name }}</p><p class="mt-2 text-xs text-gray-500">{{ $award->awarded_at->format('Y-m-d') }}</p></div></article>
-            @empty
-                <p class="text-sm text-gray-500">尚未取得賽事 Badge。</p>
-            @endforelse
-        </div>
+        <div class="flex items-center justify-between gap-4"><div><h2 class="text-lg font-semibold">Badge</h2><p class="mt-1 text-sm text-gray-500">點一下 Icon 查看認證資料。</p></div><span class="text-sm text-gray-500">{{ $user->eventBadges->count() }} 枚</span></div>
+        <div class="mt-5"><x-badge-gallery :awards="$user->eventBadges" /></div>
     </section>
 </div>
 @endsection

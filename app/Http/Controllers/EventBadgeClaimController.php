@@ -39,6 +39,7 @@ class EventBadgeClaimController extends Controller
         if ($badge->awards()->where('user_id', $request->user()->id)->whereNull('revoked_at')->exists()) {
             return back()->with('error', '你已經取得這枚 Badge。');
         }
+        if ($badge->isAtCapacity()) return back()->with('error', '徽章數量已達到最大值。');
 
         [$eligible, $note] = $this->eligibility($badge, $request->user()->id);
         $claim = EventBadgeClaim::firstOrNew(

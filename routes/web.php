@@ -13,10 +13,11 @@ use App\Http\Controllers\LoginController;
 use App\Http\Controllers\ProfileCompletionController;
 use App\Http\Controllers\ScoreController;
 use App\Http\Controllers\TeamPostController;
-use App\Http\Controllers\AchievementController;
 use App\Http\Controllers\SecondHandItemController;
 use App\Http\Controllers\EventBadgeClaimController;
 use App\Http\Controllers\Organizer\EventBadgeController as OrganizerEventBadgeController;
+use App\Http\Controllers\Organizer\BadgeController as OrganizerBadgeController;
+use App\Http\Controllers\BadgeCertificateController;
 use App\Http\Controllers\Organizer\EventController as OrganizerEventController;
 use App\Http\Controllers\Organizer\EventRegistrationController as OrganizerRegistrationController;
 use App\Http\Controllers\Organizer\EventResultController as OrganizerResultController;
@@ -63,6 +64,7 @@ Route::middleware('auth')->group(function () {
     Route::delete('/second-hand/{secondHandItem}', [SecondHandItemController::class, 'destroy'])->name('second-hand.destroy');
 });
 Route::get('/second-hand/{secondHandItem}', [SecondHandItemController::class, 'show'])->name('second-hand.show');
+Route::get('/badge-certificates/{publicId}', [BadgeCertificateController::class,'show'])->name('badge-certificates.show');
 
 Route::prefix('admin')->middleware(['auth', 'admin'])->name('admin.')->group(function () {
     Route::get('/', function () {
@@ -74,6 +76,8 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->name('admin.')->group(fun
 
     Route::get('users', [AdminUserController::class, 'index'])->name('users.index');
     Route::get('badges', [BadgeOversightController::class, 'index'])->name('badges.index');
+    Route::post('badges', [BadgeOversightController::class, 'store'])->name('badges.store');
+    Route::post('badges/{badge}/award', [BadgeOversightController::class, 'award'])->name('badges.award');
     Route::patch('badges/{badge}/toggle', [BadgeOversightController::class, 'toggle'])->name('badges.toggle');
     Route::patch('badge-awards/{award}/revoke', [BadgeOversightController::class, 'revoke'])->name('badge-awards.revoke');
 
@@ -89,6 +93,9 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->name('admin.')->group(fun
 });
 
 Route::prefix('organizer')->middleware('auth')->name('organizer.')->group(function () {
+    Route::get('badges', [OrganizerBadgeController::class,'index'])->name('badges.index');
+    Route::post('badges', [OrganizerBadgeController::class,'store'])->name('badges.store');
+    Route::post('badges/{badge}/award', [OrganizerBadgeController::class,'award'])->name('badges.award');
     Route::get('qualification', [QualificationController::class, 'show'])->name('qualification.show');
     Route::put('qualification', [QualificationController::class, 'update'])->name('qualification.update');
     Route::post('qualification/submit', [QualificationController::class, 'submit'])->name('qualification.submit');
@@ -166,10 +173,6 @@ Route::middleware('auth')->group(function () {
 Route::middleware(['auth'])->group(function () {
     Route::get('scores/setup', [ScoreController::class, 'setup'])->name('scores.setup');
     Route::resource('scores', \App\Http\Controllers\ScoreController::class);
-});
-
-Route::middleware(['auth'])->group(function () {
-    Route::get('achievements', [AchievementController::class, 'index'])->name('achievements.index');
 });
 
 Route::middleware(['auth', 'profile.completed'])->group(function () {

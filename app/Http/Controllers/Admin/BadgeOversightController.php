@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\EventBadge;
 use App\Models\UserEventBadge;
+use App\Models\User;
+use App\Services\EventBadgeAwardService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -25,6 +27,25 @@ class BadgeOversightController extends Controller
         $badge->update(['is_active' => ! $badge->is_active, 'claim_enabled' => false]);
 
         return back()->with('success', $badge->is_active ? 'Badge 已重新啟用。' : 'Badge 與申請 QR Code 已停用。');
+    }
+
+    public function store(Request $request): RedirectResponse
+    {
+        $data=$request->validate(['name'=>['required','string','max:120'],'description'=>['nullable','string','max:1000'],'max_supply'=>['nullable','integer','min:1'],'icon'=>['nullable','image','mimes:jpg,jpeg,png,webp','max:10240']]);
+        unset($data['icon']); if($request->hasFile('icon')) $data['icon_path']=$request->file('icon')->store('badge-icons','public');
+        EventBadge::create($data+['created_by'=>$request->user()->id,'issuer_type'=>'platform','issuer_name'=>'ArrowTrack 官方','type'=>'special','eligibility'=>'any','award_rule'=>'manual','claim_enabled'=>false]);
+        return back()->with('success','官方 Badge 已建立。');
+    }
+
+    public function award(Request $request, EventBadge $badge, EventBadgeAwardService $service): RedirectResponse
+    {
+        abort_unless($badge->issuer_type==='platform',422);
+        $data=$request->validate(['member'=>['required','string','max:255'],'note'=>['nullable','string','max:1000']]);
+        if($badge->isAtCapacity()) return back()->with('error','徽章數量已達到最大值。');
+        $user=User::where('uuid',$data['member'])->orWhere('email',$data['member'])->first();
+        if(!$user) return back()->with('error','找不到會員。');
+        $issued=$service->award($badge,$user->id,'platform',$request->user()->id,$data['note']??null);
+        return back()->with($issued?'success':'error',$issued?'官方 Badge 已發放。':($badge->fresh()->isAtCapacity()?'徽章數量已達到最大值。':'會員已取得這枚 Badge。'));
     }
 
     public function revoke(Request $request, UserEventBadge $award): RedirectResponse

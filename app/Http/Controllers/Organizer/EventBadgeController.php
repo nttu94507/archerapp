@@ -147,7 +147,7 @@ class EventBadgeController extends Controller
         return response($svg)->header('Content-Type', 'image/svg+xml')->header('Cache-Control', 'private, no-store');
     }
 
-    public function bulkReview(Request $request, Event $event, EventBadge $badge): RedirectResponse
+    public function bulkReview(Request $request, Event $event, EventBadge $badge, EventBadgeAwardService $service): RedirectResponse
     {
         $this->authorizeBadge($request, $event, $badge);
         $validated = $request->validate([
@@ -163,7 +163,7 @@ class EventBadgeController extends Controller
             ->get();
         abort_if($claims->count() !== count(array_unique($validated['claim_ids'])), 422, '包含無效的申請。');
 
-        DB::transaction(function () use ($claims, $validated, $request, $badge): void {
+        DB::transaction(function () use ($claims, $validated, $request, $badge, $service): void {
             foreach ($claims as $claim) {
                 $approved = $validated['action'] === 'approve';
                 $claim->update([
@@ -174,17 +174,7 @@ class EventBadgeController extends Controller
                 ]);
 
                 if ($approved) {
-                    UserEventBadge::updateOrCreate(
-                        ['event_badge_id' => $badge->id, 'user_id' => $claim->user_id],
-                        [
-                            'event_badge_claim_id' => $claim->id,
-                            'awarded_by' => $request->user()->id,
-                            'awarded_at' => now(),
-                            'revoked_by' => null,
-                            'revoked_at' => null,
-                            'revoked_reason' => null,
-                        ]
-                    );
+                    $service->award($badge,$claim->user_id,'manual',$request->user()->id,$validated['review_note']??null,['event_badge_claim_id'=>$claim->id]);
                 }
             }
         });
