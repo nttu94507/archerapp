@@ -19,11 +19,27 @@
             <p class="mt-3 rounded-xl bg-indigo-50 p-3 text-sm text-indigo-700">{{ ['attendance'=>'完成繳費並報到後自動發放','placement'=>'正式成績發布後依名次自動發放','staff'=>'加入工作團隊後自動發放','volunteer'=>'成為賽事志工後自動發放','manual'=>'由主辦方從參賽名單授予'][$badge->award_rule] ?? '主辦方授予' }}</p>
             @if($badge->eventGroup)<p class="mt-2 text-sm text-gray-600">組別：{{ $badge->eventGroup->name }}</p>@endif
             @if($badge->placement)<p class="mt-1 text-sm text-gray-600">名次：第 {{ $badge->placement }} 名</p>@endif
-            <form method="POST" action="{{ route('organizer.events.badges.update', [$event, $badge]) }}" enctype="multipart/form-data" class="mt-5 space-y-3 border-t pt-4">
+            <form method="POST" action="{{ route('organizer.events.badges.update', [$event, $badge]) }}" enctype="multipart/form-data" class="mt-5 space-y-4 border-t pt-4" x-data="{ claimEnabled: {{ $badge->claim_enabled ? 'true' : 'false' }} }">
                 @csrf @method('PATCH')
                 <div x-data="{ fileName: '尚未選擇', preview: null }"><label class="text-xs text-gray-600">更換圖示</label><div class="mt-1 flex items-center gap-3"><img :src="preview || '{{ $badge->icon_url }}'" alt="預覽" class="h-12 w-12 rounded-xl object-cover"><label class="inline-flex min-h-11 cursor-pointer items-center rounded-xl border border-indigo-200 bg-indigo-50 px-4 text-sm font-medium text-indigo-700 hover:bg-indigo-100">選擇圖片<input type="file" name="icon" accept="image/jpeg,image/png,image/webp" class="sr-only" @change="const file = $event.target.files[0]; fileName = file ? file.name : '尚未選擇'; preview = file ? URL.createObjectURL(file) : null"></label><span class="min-w-0 truncate text-xs text-gray-500" x-text="fileName"></span></div></div>
-                <button class="w-full rounded-xl bg-indigo-600 px-4 py-2 text-sm text-white">儲存圖示</button>
+                <div class="rounded-xl border bg-gray-50 p-3">
+                    <label class="flex items-center gap-2 text-sm font-medium"><input type="checkbox" name="claim_enabled" value="1" x-model="claimEnabled" class="rounded"> 開放會員掃描 QR Code 申請</label>
+                    <div x-show="claimEnabled" class="mt-3 space-y-3">
+                        <div><label class="text-xs text-gray-600">開始時間（選填）</label><input type="datetime-local" name="claim_starts_at" value="{{ old('claim_starts_at', $badge->claim_starts_at?->format('Y-m-d\TH:i')) }}" class="mt-1 min-h-11 w-full rounded-xl border-gray-300 text-sm"></div>
+                        <div><label class="text-xs text-gray-600">結束時間（選填）</label><input type="datetime-local" name="claim_ends_at" value="{{ old('claim_ends_at', $badge->claim_ends_at?->format('Y-m-d\TH:i')) }}" class="mt-1 min-h-11 w-full rounded-xl border-gray-300 text-sm"></div>
+                        <p class="text-xs text-gray-500">未填寫則長期開放。自動發放或人工授予不受此期間限制。</p>
+                    </div>
+                </div>
+                <button class="w-full rounded-xl bg-indigo-600 px-4 py-2.5 text-sm text-white">儲存設定</button>
             </form>
+            @if($badge->claim_enabled)
+                <div class="mt-4 rounded-xl bg-indigo-50 p-3 text-center">
+                    <p class="text-sm font-medium text-indigo-800">會員申請 QR Code</p>
+                    <img src="{{ route('organizer.events.badges.qrcode', [$event, $badge]) }}" alt="Badge 申請 QR Code" class="mx-auto mt-2 h-44 w-44 rounded-xl bg-white p-2">
+                    @if($badge->claim_starts_at || $badge->claim_ends_at)<p class="mt-2 text-xs text-indigo-700">{{ $badge->claim_starts_at?->format('Y/m/d H:i') ?? '現在' }}－{{ $badge->claim_ends_at?->format('Y/m/d H:i') ?? '不限' }}</p>@else<p class="mt-2 text-xs text-indigo-700">目前為長期開放</p>@endif
+                </div>
+                <form method="POST" action="{{ route('organizer.events.badges.regenerate-token', [$event, $badge]) }}" class="mt-3" onsubmit="return confirm('重新產生後，舊 QR Code 會立即失效。確定繼續？')">@csrf<button class="min-h-11 w-full rounded-xl border border-red-200 text-sm text-red-600">讓舊 QR Code 失效</button></form>
+            @endif
         </section>
 
         <section class="min-w-0 rounded-2xl border bg-white shadow-sm">

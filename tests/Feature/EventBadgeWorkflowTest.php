@@ -41,6 +41,99 @@ class EventBadgeWorkflowTest extends TestCase
         $this->assertDatabaseMissing('user_event_badges',['event_badge_id'=>$badge->id,'user_id'=>$farAway->id]);
     }
 
+    public function test_location_badge_can_be_limited_to_an_optional_claim_date(): void
+    {
+        $this->travelTo(now()->setDate(2026, 8, 1)->setTime(12, 0));
+        $admin=User::factory()->create(['is_admin'=>true]);
+        $member=User::factory()->create();
+
+        $this->actingAs($admin)->post(route('admin.badges.store'),[
+            'name'=>'限定日期定位 Badge',
+            'location_claim_enabled'=>1,
+            'claim_lat'=>22.999728,
+            'claim_lng'=>120.227028,
+            'claim_radius_km'=>10,
+            'claim_date'=>'2026-08-02',
+        ])->assertSessionHas('success');
+
+        $badge=EventBadge::where('name','限定日期定位 Badge')->firstOrFail();
+        $this->assertSame('2026-08-02 00:00:00',$badge->claim_starts_at->format('Y-m-d H:i:s'));
+        $this->assertSame('2026-08-02 23:59:59',$badge->claim_ends_at->format('Y-m-d H:i:s'));
+
+        $claim=['lat'=>23.0005,'lng'=>120.2200,'accuracy'=>120];
+        $this->actingAs($member)->post(route('badge-drops.claim',$badge->claim_token),$claim)
+            ->assertSessionHas('error','Badge 尚未開放領取。');
+
+        $this->travelTo(now()->addDay());
+        $this->actingAs($member)->post(route('badge-drops.claim',$badge->claim_token),$claim)
+            ->assertSessionHas('success','位置驗證成功，Badge 已取得。');
+        $this->travelBack();
+    }
+
+    public function test_event_badge_qr_application_can_use_a_period_and_be_closed_immediately(): void
+    {
+        $this->travelTo(now()->setDate(2026, 9, 1)->setTime(12, 0));
+        [$owner,$event]=$this->eventWithOwner();
+        $first=User::factory()->create();
+        $second=User::factory()->create();
+        $this->register($event,$first,'registered');
+        $this->register($event,$second,'registered');
+        $badge=EventBadge::create([
+            'event_id'=>$event->id,
+            'created_by'=>$owner->id,
+            'name'=>'期間限定申請',
+            'type'=>'special',
+            'eligibility'=>'registered',
+            'award_rule'=>'manual',
+        ]);
+
+        $this->actingAs($owner)->patch(route('organizer.events.badges.update',[$event,$badge]),[
+            'claim_enabled'=>1,
+            'claim_starts_at'=>'2026-09-02 09:00',
+            'claim_ends_at'=>'2026-09-02 18:00',
+        ])->assertSessionHas('success');
+
+        $this->actingAs($first)->post(route('badge-claims.store',$badge->claim_token))
+            ->assertSessionHas('error','此 Badge 目前未開放申請。');
+
+        $this->travelTo(now()->addDay());
+        $this->actingAs($first)->post(route('badge-claims.store',$badge->claim_token))
+            ->assertSessionHas('success','申請已送出，等待主辦方確認。');
+
+        $this->actingAs($owner)->patch(route('organizer.events.badges.update',[$event,$badge]),[])
+            ->assertSessionHas('success');
+        $this->assertFalse($badge->fresh()->claim_enabled);
+        $this->actingAs($second)->post(route('badge-claims.store',$badge->claim_token))
+            ->assertSessionHas('error','此 Badge 目前未開放申請。');
+        $this->travelBack();
+    }
+
+    public function test_location_badge_accepts_a_custom_period_without_blocking_manual_awards(): void
+    {
+        $this->travelTo(now()->setDate(2026, 10, 1)->setTime(12, 0));
+        $admin=User::factory()->create(['is_admin'=>true]);
+        $member=User::factory()->create();
+
+        $this->actingAs($admin)->post(route('admin.badges.store'),[
+            'name'=>'跨日定位 Badge',
+            'location_claim_enabled'=>1,
+            'claim_lat'=>22.999728,
+            'claim_lng'=>120.227028,
+            'claim_radius_km'=>10,
+            'claim_starts_at'=>'2026-10-03 09:00',
+            'claim_ends_at'=>'2026-10-04 18:00',
+        ])->assertSessionHas('success');
+
+        $badge=EventBadge::where('name','跨日定位 Badge')->firstOrFail();
+        $this->assertSame('2026-10-03 09:00',$badge->claim_starts_at->format('Y-m-d H:i'));
+        $this->assertSame('2026-10-04 18:00',$badge->claim_ends_at->format('Y-m-d H:i'));
+
+        $this->actingAs($admin)->post(route('admin.badges.award',$badge),['member'=>$member->uuid])
+            ->assertSessionHas('success','官方 Badge 已發放。');
+        $this->assertDatabaseHas('user_event_badges',['event_badge_id'=>$badge->id,'user_id'=>$member->id]);
+        $this->travelBack();
+    }
+
     public function test_platform_limited_badge_stops_at_maximum_and_has_public_certificate(): void
     {
         $admin=User::factory()->create(['is_admin'=>true]); $first=User::factory()->create(); $second=User::factory()->create();
