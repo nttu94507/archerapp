@@ -111,7 +111,7 @@
                                 會員資料
                             </a>
                             <a href="{{ route('organizer.events.index') }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50" role="menuitem">主辦方中心</a>
-                            @if(auth()->user()->canCreateEvents())<a href="{{route('organizer.badges.index')}}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50" role="menuitem">Badge 發放</a>@endif
+                            @if(auth()->user()->canCreateEvents())<a href="{{route('organizer.badges.index')}}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50" role="menuitem">Badge 列表</a>@endif
                             @if(auth()->user()->isAdmin())
                                 <a href="{{ route('admin.users.index') }}"
                                    class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50" role="menuitem">
@@ -177,7 +177,7 @@
                 <div class="mt-3 border-t px-3 pb-1 pt-4 text-xs font-medium text-gray-400">主辦方工具</div>
                 @if(auth()->user()->canCreateEvents())
                     <a href="{{ route('organizer.events.index') }}" class="flex min-h-11 items-center rounded-lg px-3 hover:bg-gray-50 {{ request()->routeIs('organizer.events.index') || request()->routeIs('organizer.events.show') ? 'bg-gray-50 font-semibold text-gray-900' : 'text-gray-700' }}">我的主辦賽事</a>
-                    <a href="{{ route('organizer.badges.index') }}" class="flex min-h-11 items-center rounded-lg px-3 hover:bg-gray-50 {{ request()->routeIs('organizer.badges.*') ? 'bg-gray-50 font-semibold text-gray-900' : 'text-gray-700' }}">Badge 發放</a>
+                    <a href="{{ route('organizer.badges.index') }}" class="flex min-h-11 items-center rounded-lg px-3 hover:bg-gray-50 {{ request()->routeIs('organizer.badges.*') ? 'bg-gray-50 font-semibold text-gray-900' : 'text-gray-700' }}">Badge 列表</a>
                     <a href="{{ route('organizer.events.create') }}" class="flex min-h-11 items-center rounded-lg px-3 hover:bg-gray-50 {{ request()->routeIs('organizer.events.create') ? 'bg-gray-50 font-semibold text-gray-900' : 'text-gray-700' }}">建立賽事</a>
                 @else
                     <a href="{{ route('organizer.qualification.show') }}" class="flex min-h-11 items-center rounded-lg px-3 text-indigo-700 hover:bg-indigo-50 {{ request()->routeIs('organizer.qualification.*') ? 'bg-indigo-50 font-semibold' : '' }}">申請成為主辦方</a>

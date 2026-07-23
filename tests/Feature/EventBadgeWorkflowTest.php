@@ -170,6 +170,23 @@ class EventBadgeWorkflowTest extends TestCase
             'claim_radius_km'=>10,
         ]);
 
+        $this->actingAs($organizer)->get(route('organizer.badges.index'))
+            ->assertOk()->assertSee('Badge 列表')->assertSee('新增 Badge')->assertSee('顯示 QR Code')->assertSee('停用');
+        $this->actingAs($organizer)->get(route('organizer.badges.create'))
+            ->assertOk()->assertSee('新增 Badge');
+        $this->actingAs($organizer)->get(route('organizer.badges.edit',$badge))
+            ->assertOk()->assertSee('編輯 主辦方自行領取')->assertSee('人工發放');
+        $this->actingAs($organizer)->put(route('organizer.badges.update',$badge),[
+            'name'=>'主辦方自行領取',
+            'external_activity_name'=>'場地活動',
+            'external_activity_location'=>'台南',
+            'location_claim_enabled'=>1,
+            'claim_lat'=>22.999728,
+            'claim_lng'=>120.227028,
+            'claim_radius_km'=>10,
+        ])->assertRedirect(route('organizer.badges.index'))->assertSessionHas('success','Badge 已更新。');
+        $this->assertDatabaseHas('event_badges',['id'=>$badge->id,'external_activity_location'=>'台南']);
+
         $this->actingAs($otherOrganizer)->patch(route('organizer.badges.claim-toggle',$badge))
             ->assertForbidden();
         $this->actingAs($organizer)->patch(route('organizer.badges.claim-toggle',$badge))
@@ -191,7 +208,7 @@ class EventBadgeWorkflowTest extends TestCase
         $this->assertFalse($badge->fresh()->is_active);
         $this->assertTrue($badge->fresh()->location_claim_enabled);
         $this->actingAs($organizer)->get(route('organizer.badges.index'))
-            ->assertOk()->assertSee('平台已停用此 Badge');
+            ->assertOk()->assertSee('平台停用');
         $this->actingAs($admin)->get(route('admin.badges.index'))
             ->assertOk()->assertSee('平台已停用 Badge');
         $this->actingAs($organizer)->patch(route('organizer.badges.claim-toggle',$badge))

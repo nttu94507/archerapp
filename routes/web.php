@@ -100,7 +100,10 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->name('admin.')->group(fun
 
 Route::prefix('organizer')->middleware('auth')->name('organizer.')->group(function () {
     Route::get('badges', [OrganizerBadgeController::class,'index'])->name('badges.index');
+    Route::get('badges/create', [OrganizerBadgeController::class,'create'])->name('badges.create');
     Route::post('badges', [OrganizerBadgeController::class,'store'])->name('badges.store');
+    Route::get('badges/{badge}/edit', [OrganizerBadgeController::class,'edit'])->name('badges.edit');
+    Route::put('badges/{badge}', [OrganizerBadgeController::class,'update'])->name('badges.update');
     Route::post('badges/{badge}/award', [OrganizerBadgeController::class,'award'])->name('badges.award');
     Route::patch('badges/{badge}/claim-toggle', [OrganizerBadgeController::class,'toggleClaim'])->name('badges.claim-toggle');
     Route::get('qualification', [QualificationController::class, 'show'])->name('qualification.show');

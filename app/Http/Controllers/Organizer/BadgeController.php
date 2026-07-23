@@ -21,20 +21,40 @@ class BadgeController extends Controller
         return view('organizer.badge-hub.index',compact('badges'));
     }
 
+    public function create(Request $request): View
+    {
+        abort_unless($request->user()->canCreateEvents(),403);
+        return view('organizer.badge-hub.create');
+    }
+
     public function store(Request $request): RedirectResponse
     {
         abort_unless($request->user()->canCreateEvents(),403);
-        $data=$request->validate(['name'=>['required','string','max:120'],'description'=>['nullable','string','max:1000'],'external_activity_name'=>['required','string','max:160'],'external_activity_date'=>['nullable','date'],'external_activity_location'=>['nullable','string','max:255'],'max_supply'=>['nullable','integer','min:1'],'icon'=>['nullable','image','mimes:jpg,jpeg,png,webp','max:10240'],'location_claim_enabled'=>['nullable','boolean'],'claim_lat'=>['nullable','required_if:location_claim_enabled,1','numeric','between:-90,90'],'claim_lng'=>['nullable','required_if:location_claim_enabled,1','numeric','between:-180,180'],'claim_radius_km'=>['nullable','numeric','between:1,50'],'claim_date'=>['nullable','date'],'claim_starts_at'=>['nullable','date'],'claim_ends_at'=>['nullable','date','after:claim_starts_at']]);
+        $data=$this->validated($request);
         unset($data['icon']); if($request->hasFile('icon')) $data['icon_path']=$request->file('icon')->store('badge-icons','public');
-        $data['location_claim_enabled']=$request->boolean('location_claim_enabled'); $data['claim_radius_km']??=10;
-        $claimDate=$data['claim_date']??null; unset($data['claim_date']);
-        if(! $data['location_claim_enabled']) {
-            $data['claim_starts_at']=null; $data['claim_ends_at']=null;
-        } elseif($claimDate) {
-            $data['claim_starts_at']=Carbon::parse($claimDate)->startOfDay(); $data['claim_ends_at']=Carbon::parse($claimDate)->endOfDay();
-        }
+        $data=$this->claimSettings($request,$data);
         EventBadge::create($data+['created_by'=>$request->user()->id,'issuer_type'=>'organizer','issuer_name'=>$request->user()->organizerProfile?->organization_name ?: $request->user()->display_name,'type'=>'special','eligibility'=>'any','award_rule'=>'manual','claim_enabled'=>false]);
-        return back()->with('success','Badge 已建立，可直接發放給會員。');
+        return redirect()->route('organizer.badges.index')->with('success','Badge 已建立。');
+    }
+
+    public function edit(Request $request, EventBadge $badge): View
+    {
+        $this->authorizeBadge($request,$badge);
+        return view('organizer.badge-hub.edit',compact('badge'));
+    }
+
+    public function update(Request $request, EventBadge $badge): RedirectResponse
+    {
+        $this->authorizeBadge($request,$badge);
+        $data=$this->validated($request);
+        unset($data['icon']);
+        if($request->hasFile('icon')) {
+            $newPath=$request->file('icon')->store('badge-icons','public');
+            if($badge->icon_path) Storage::disk('public')->delete($badge->icon_path);
+            $data['icon_path']=$newPath;
+        }
+        $badge->update($this->claimSettings($request,$data));
+        return redirect()->route('organizer.badges.index')->with('success','Badge 已更新。');
     }
 
     public function award(Request $request, EventBadge $badge, EventBadgeAwardService $service): RedirectResponse
@@ -51,8 +71,7 @@ class BadgeController extends Controller
 
     public function toggleClaim(Request $request, EventBadge $badge): RedirectResponse
     {
-        abort_unless($request->user()->canCreateEvents(),403);
-        abort_unless($badge->event_id===null && $badge->issuer_type==='organizer' && $badge->created_by===$request->user()->id,403);
+        $this->authorizeBadge($request,$badge);
         abort_if($badge->claim_lat===null || $badge->claim_lng===null,422,'此 Badge 未設定定位領取。');
         if(!$badge->is_active) return back()->with('error','此 Badge 已由平台停用，無法變更自行領取狀態。');
 
@@ -60,5 +79,40 @@ class BadgeController extends Controller
         $badge->update(['location_claim_enabled'=>$enabled]);
 
         return back()->with('success',$enabled?'自行領取已重新開放。':'自行領取已停用，既有 QR Code 暫時無法領取。');
+    }
+
+    private function authorizeBadge(Request $request,EventBadge $badge): void
+    {
+        abort_unless($request->user()->canCreateEvents(),403);
+        abort_unless($badge->event_id===null && $badge->issuer_type==='organizer' && $badge->created_by===$request->user()->id,403);
+    }
+
+    private function validated(Request $request): array
+    {
+        return $request->validate([
+            'name'=>['required','string','max:120'],'description'=>['nullable','string','max:1000'],
+            'external_activity_name'=>['required','string','max:160'],'external_activity_date'=>['nullable','date'],
+            'external_activity_location'=>['nullable','string','max:255'],'max_supply'=>['nullable','integer','min:1'],
+            'icon'=>['nullable','image','mimes:jpg,jpeg,png,webp','max:10240'],'location_claim_enabled'=>['nullable','boolean'],
+            'claim_lat'=>['nullable','required_if:location_claim_enabled,1','numeric','between:-90,90'],
+            'claim_lng'=>['nullable','required_if:location_claim_enabled,1','numeric','between:-180,180'],
+            'claim_radius_km'=>['nullable','numeric','between:1,50'],'claim_date'=>['nullable','date'],
+            'claim_starts_at'=>['nullable','date'],'claim_ends_at'=>['nullable','date','after:claim_starts_at'],
+        ]);
+    }
+
+    private function claimSettings(Request $request,array $data): array
+    {
+        $data['location_claim_enabled']=$request->boolean('location_claim_enabled');
+        $data['claim_radius_km']??=10;
+        $claimDate=$data['claim_date']??null;
+        unset($data['claim_date']);
+        if(! $data['location_claim_enabled']) {
+            $data['claim_starts_at']=null; $data['claim_ends_at']=null;
+        } elseif($claimDate) {
+            $data['claim_starts_at']=Carbon::parse($claimDate)->startOfDay();
+            $data['claim_ends_at']=Carbon::parse($claimDate)->endOfDay();
+        }
+        return $data;
     }
 }
