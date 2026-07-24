@@ -96,7 +96,11 @@ class ScoringStationController extends Controller
     {
         return EventScoringTarget::query()
             ->where('access_token', $token)
-            ->with(['session.event', 'session.group', 'assignments.registration'])
+            ->with([
+                'session.event',
+                'session.group',
+                'assignments.registration.scoreEntries' => fn ($query) => $query->orderBy('end_number'),
+            ])
             ->firstOrFail();
     }
 }

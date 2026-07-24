@@ -26,12 +26,27 @@
     @if($isComplete)
         <div class="rounded-2xl border bg-white p-8 text-center shadow-sm"><p class="text-4xl">✓</p><h2 class="mt-3 text-xl font-bold">本靶已完成全部計分</h2><p class="mt-2 text-sm text-gray-500">請保留紙本記分卡，並交由主辦方進行最終核對。</p></div>
     @else
-        <form method="POST" action="{{ route('scoring-stations.ends.store',$target->access_token) }}" id="station-form" class="space-y-4">
+        <form method="POST" action="{{ route('scoring-stations.ends.store',$target->access_token) }}" id="station-form" class="grid gap-4 lg:grid-cols-[minmax(0,1fr)_380px] lg:items-start">
             @csrf
             <input type="hidden" name="end_number" value="{{ $endNumber }}">
+            <div class="grid gap-4 xl:grid-cols-2">
             @foreach($target->assignments as $assignment)
+                @php
+                    $historyEntries=$assignment->registration->scoreEntries;
+                    $historyTotal=$historyEntries->sum('end_total');
+                    $historyScores=$historyEntries->flatMap(fn($entry)=>$entry->scores ?? []);
+                    $historyX=$historyScores->filter(fn($score)=>strtoupper((string)$score)==='X')->count();
+                    $historyTenPlus=$historyScores->filter(fn($score)=>strtoupper((string)$score)==='X' || (string)$score==='10')->count();
+                    $runningTotal=0;
+                @endphp
                 <section class="athlete-card rounded-2xl border bg-white p-4 shadow-sm" data-registration="{{ $assignment->registration->id }}">
                     <div class="flex items-center justify-between gap-3"><div><p class="text-xs font-semibold text-indigo-600">{{ $target->target_number.$assignment->position }}</p><h2 class="text-lg font-bold">{{ $assignment->registration->name }}</h2></div><p class="end-total text-2xl font-bold">0</p></div>
+                    <div class="mt-3 grid grid-cols-4 gap-2 text-center">
+                        <div class="rounded-xl bg-gray-50 p-2"><p class="text-base font-semibold">{{ $historyEntries->count() }}</p><p class="text-[11px] text-gray-500">完成趟數</p></div>
+                        <div class="rounded-xl bg-gray-50 p-2"><p class="text-base font-semibold">{{ $historyTotal }}</p><p class="text-[11px] text-gray-500">累計</p></div>
+                        <div class="rounded-xl bg-indigo-50 p-2"><p class="text-base font-semibold text-indigo-700">{{ $historyTenPlus }}</p><p class="text-[11px] text-indigo-600">10+X</p></div>
+                        <div class="rounded-xl bg-purple-50 p-2"><p class="text-base font-semibold text-purple-700">{{ $historyX }}</p><p class="text-[11px] text-purple-600">X</p></div>
+                    </div>
                     <div class="mt-4 grid gap-2" style="grid-template-columns: repeat({{ $session->arrows_per_end }}, minmax(0, 1fr));">
                         @for($arrow=0;$arrow<$session->arrows_per_end;$arrow++)
                             <input name="scores[{{ $assignment->registration->id }}][]" required readonly inputmode="none" maxlength="2"
@@ -40,14 +55,43 @@
                                    class="score-input min-h-14 min-w-0 touch-manipulation cursor-pointer select-none rounded-xl border-gray-300 p-1 text-center text-xl font-bold placeholder:text-gray-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500">
                         @endfor
                     </div>
+                    <details class="mt-4 rounded-xl border bg-gray-50">
+                        <summary class="flex min-h-11 cursor-pointer items-center justify-between gap-3 px-3 text-sm font-medium"><span>查看各趟成績</span><span class="text-xs font-normal text-gray-500">{{ $historyEntries->count() }} 趟</span></summary>
+                        <div class="overflow-x-auto border-t bg-white">
+                            @if($historyEntries->isEmpty())
+                                <p class="p-4 text-center text-sm text-gray-500">尚無已送出的成績。</p>
+                            @else
+                                <table class="min-w-full text-sm">
+                                    <thead class="bg-gray-50 text-xs text-gray-500"><tr><th class="px-3 py-2 text-left">趟次</th><th class="px-3 py-2 text-left">箭值</th><th class="px-3 py-2 text-right">小計</th><th class="px-3 py-2 text-right">累計</th></tr></thead>
+                                    <tbody class="divide-y">
+                                    @foreach($historyEntries as $historyEntry)
+                                        @php($runningTotal += $historyEntry->end_total)
+                                        <tr>
+                                            <td class="whitespace-nowrap px-3 py-2 font-medium">第 {{ $historyEntry->end_number }} 趟</td>
+                                            <td class="whitespace-nowrap px-3 py-2 font-mono">{{ implode(' · ', $historyEntry->scores ?? []) }}</td>
+                                            <td class="px-3 py-2 text-right font-semibold">{{ $historyEntry->end_total }}</td>
+                                            <td class="px-3 py-2 text-right">{{ $runningTotal }}</td>
+                                        </tr>
+                                    @endforeach
+                                    </tbody>
+                                </table>
+                            @endif
+                        </div>
+                    </details>
                 </section>
             @endforeach
 
-            <section id="keypad-sheet" class="fixed inset-0 z-50 hidden items-end justify-center bg-black/30 p-3 sm:items-center">
-              <div class="w-full max-w-md rounded-2xl border bg-white p-3 shadow-2xl sm:p-4">
+                <div class="sticky bottom-3 rounded-2xl border bg-white/95 p-3 shadow-xl backdrop-blur xl:col-span-2">
+                    <p id="draft-status" class="mb-2 text-center text-xs text-gray-500">輸入會暫存在這台設備</p>
+                    <button class="min-h-14 w-full rounded-xl bg-indigo-600 px-5 text-base font-semibold text-white">核對並送出本靶第 {{ $endNumber }} 趟</button>
+                </div>
+            </div>
+
+            <section id="keypad-sheet" class="fixed inset-0 z-50 hidden items-end justify-center bg-black/30 p-3 sm:items-center lg:sticky lg:top-4 lg:flex lg:h-fit lg:bg-transparent lg:p-0">
+              <div class="w-full max-w-md rounded-2xl border bg-white p-3 shadow-2xl sm:p-4 lg:max-w-none lg:shadow-sm">
                 <div class="mb-3 flex items-center justify-between gap-3">
                     <div><p class="text-xs text-gray-500">目前輸入</p><p id="active-arrow-label" class="text-sm font-semibold">請點選一個箭位</p></div>
-                    <div class="flex items-center gap-2"><span id="active-arrow-value" class="inline-flex h-12 min-w-12 items-center justify-center rounded-xl bg-indigo-50 px-3 text-xl font-bold text-indigo-700">—</span><button id="close-keypad" type="button" class="inline-flex h-12 w-12 items-center justify-center rounded-xl border text-gray-500" aria-label="關閉鍵盤">✕</button></div>
+                    <div class="flex items-center gap-2"><span id="active-arrow-value" class="inline-flex h-12 min-w-12 items-center justify-center rounded-xl bg-indigo-50 px-3 text-xl font-bold text-indigo-700">—</span><button id="close-keypad" type="button" class="inline-flex h-12 w-12 items-center justify-center rounded-xl border text-gray-500 lg:hidden" aria-label="關閉鍵盤">✕</button></div>
                 </div>
                 <div class="grid grid-cols-4 gap-2">
                     @foreach(['X','10','9','BKSP','8','7','6','PREV','5','4','3','NEXT','2','1','M','CLR'] as $key)
@@ -58,13 +102,9 @@
                         </button>
                     @endforeach
                 </div>
+                <div class="mt-4 hidden rounded-xl bg-gray-50 p-3 text-xs leading-5 text-gray-500 lg:block">點選左側任一箭位後即可連續輸入。系統會自動移到下一格，最後一箭完成後請核對整靶成績再送出。</div>
               </div>
             </section>
-
-            <div class="sticky bottom-3 rounded-2xl border bg-white/95 p-3 shadow-xl backdrop-blur">
-                <p id="draft-status" class="mb-2 text-center text-xs text-gray-500">輸入會暫存在這台設備</p>
-                <button class="min-h-14 w-full rounded-xl bg-indigo-600 px-5 text-base font-semibold text-white">核對並送出本靶第 {{ $endNumber }} 趟</button>
-            </div>
         </form>
     @endif
 </div>
