@@ -10,7 +10,7 @@
     $splitEnds=(int) ceil(($session->event->mode==='indoor' ? 30 : 36)/$session->arrows_per_end);
     $roundLabel=$session->total_arrows > ($session->event->mode==='indoor' ? 30 : 36) ? ($endNumber <= $splitEnds ? '上半局' : '下半局') : '全程';
 @endphp
-<div class="mx-auto max-w-5xl space-y-4 px-3 py-4 sm:px-6 sm:py-6">
+<div class="mx-auto min-h-screen max-w-7xl space-y-3 px-3 py-3 sm:px-5 sm:py-4">
     <header class="rounded-2xl bg-gray-900 p-4 text-white sm:p-5">
         <div class="flex items-start justify-between gap-3">
             <div><p class="text-xs text-gray-300">{{ $session->event->name }} · {{ $session->name }}</p><h1 class="mt-1 text-2xl font-bold">靶號 {{ str_pad($target->target_number,2,'0',STR_PAD_LEFT) }}</h1><p class="mt-1 text-sm text-gray-300">{{ $session->group?->name }}</p></div>
@@ -26,10 +26,10 @@
     @if($isComplete)
         <div class="rounded-2xl border bg-white p-8 text-center shadow-sm"><p class="text-4xl">✓</p><h2 class="mt-3 text-xl font-bold">本靶已完成全部計分</h2><p class="mt-2 text-sm text-gray-500">請保留紙本記分卡，並交由主辦方進行最終核對。</p></div>
     @else
-        <form method="POST" action="{{ route('scoring-stations.ends.store',$target->access_token) }}" id="station-form" class="grid gap-4 lg:grid-cols-[minmax(0,1fr)_380px] lg:items-start">
+        <form method="POST" action="{{ route('scoring-stations.ends.store',$target->access_token) }}" id="station-form" class="space-y-3">
             @csrf
             <input type="hidden" name="end_number" value="{{ $endNumber }}">
-            <div class="grid gap-4 xl:grid-cols-2">
+            <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
             @foreach($target->assignments as $assignment)
                 @php
                     $historyEntries=$assignment->registration->scoreEntries;
@@ -39,24 +39,24 @@
                     $historyTenPlus=$historyScores->filter(fn($score)=>strtoupper((string)$score)==='X' || (string)$score==='10')->count();
                     $runningTotal=0;
                 @endphp
-                <section class="athlete-card rounded-2xl border bg-white p-4 shadow-sm" data-registration="{{ $assignment->registration->id }}">
+                <section class="athlete-card rounded-2xl border bg-white p-3 shadow-sm" data-registration="{{ $assignment->registration->id }}">
                     <div class="flex items-center justify-between gap-3"><div><p class="text-xs font-semibold text-indigo-600">{{ $target->target_number.$assignment->position }}</p><h2 class="text-lg font-bold">{{ $assignment->registration->name }}</h2></div><p class="end-total text-2xl font-bold">0</p></div>
-                    <div class="mt-3 grid grid-cols-4 gap-2 text-center">
-                        <div class="rounded-xl bg-gray-50 p-2"><p class="text-base font-semibold">{{ $historyEntries->count() }}</p><p class="text-[11px] text-gray-500">完成趟數</p></div>
-                        <div class="rounded-xl bg-gray-50 p-2"><p class="text-base font-semibold">{{ $historyTotal }}</p><p class="text-[11px] text-gray-500">累計</p></div>
-                        <div class="rounded-xl bg-indigo-50 p-2"><p class="text-base font-semibold text-indigo-700">{{ $historyTenPlus }}</p><p class="text-[11px] text-indigo-600">10+X</p></div>
-                        <div class="rounded-xl bg-purple-50 p-2"><p class="text-base font-semibold text-purple-700">{{ $historyX }}</p><p class="text-[11px] text-purple-600">X</p></div>
+                    <div class="mt-2 grid grid-cols-4 gap-1.5 text-center">
+                        <div class="rounded-lg bg-gray-50 p-1.5"><p class="text-sm font-semibold">{{ $historyEntries->count() }}</p><p class="text-[10px] text-gray-500">趟數</p></div>
+                        <div class="rounded-lg bg-gray-50 p-1.5"><p class="text-sm font-semibold">{{ $historyTotal }}</p><p class="text-[10px] text-gray-500">累計</p></div>
+                        <div class="rounded-lg bg-indigo-50 p-1.5"><p class="text-sm font-semibold text-indigo-700">{{ $historyTenPlus }}</p><p class="text-[10px] text-indigo-600">10+X</p></div>
+                        <div class="rounded-lg bg-purple-50 p-1.5"><p class="text-sm font-semibold text-purple-700">{{ $historyX }}</p><p class="text-[10px] text-purple-600">X</p></div>
                     </div>
-                    <div class="mt-4 grid gap-2" style="grid-template-columns: repeat({{ $session->arrows_per_end }}, minmax(0, 1fr));">
+                    <div class="mt-3 grid gap-1.5" style="grid-template-columns: repeat({{ $session->arrows_per_end }}, minmax(0, 1fr));">
                         @for($arrow=0;$arrow<$session->arrows_per_end;$arrow++)
                             <input name="scores[{{ $assignment->registration->id }}][]" required readonly inputmode="none" maxlength="2"
                                    placeholder="＿"
                                    aria-label="{{ $assignment->registration->name }} 第 {{ $arrow+1 }} 箭"
-                                   class="score-input min-h-14 min-w-0 touch-manipulation cursor-pointer select-none rounded-xl border-gray-300 p-1 text-center text-xl font-bold placeholder:text-gray-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500">
+                                   class="score-input min-h-12 min-w-0 touch-manipulation cursor-pointer select-none rounded-lg border-gray-300 p-1 text-center text-lg font-bold placeholder:text-gray-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500">
                         @endfor
                     </div>
-                    <details class="mt-4 rounded-xl border bg-gray-50">
-                        <summary class="flex min-h-11 cursor-pointer items-center justify-between gap-3 px-3 text-sm font-medium"><span>查看各趟成績</span><span class="text-xs font-normal text-gray-500">{{ $historyEntries->count() }} 趟</span></summary>
+                    <details class="mt-3 rounded-xl border bg-gray-50">
+                        <summary class="flex min-h-10 cursor-pointer items-center justify-between gap-3 px-3 text-xs font-medium"><span>各趟成績</span><span class="font-normal text-gray-500">{{ $historyEntries->count() }} 趟</span></summary>
                         <div class="overflow-x-auto border-t bg-white">
                             @if($historyEntries->isEmpty())
                                 <p class="p-4 text-center text-sm text-gray-500">尚無已送出的成績。</p>
@@ -80,31 +80,29 @@
                     </details>
                 </section>
             @endforeach
-
-                <div class="sticky bottom-3 rounded-2xl border bg-white/95 p-3 shadow-xl backdrop-blur xl:col-span-2">
-                    <p id="draft-status" class="mb-2 text-center text-xs text-gray-500">輸入會暫存在這台設備</p>
-                    <button class="min-h-14 w-full rounded-xl bg-indigo-600 px-5 text-base font-semibold text-white">核對並送出本靶第 {{ $endNumber }} 趟</button>
-                </div>
             </div>
 
-            <section id="keypad-sheet" class="fixed inset-0 z-50 hidden items-end justify-center bg-black/30 p-3 sm:items-center lg:sticky lg:top-4 lg:flex lg:h-fit lg:bg-transparent lg:p-0">
-              <div class="w-full max-w-md rounded-2xl border bg-white p-3 shadow-2xl sm:p-4 lg:max-w-none lg:shadow-sm">
+            <section id="keypad-panel" class="rounded-2xl border bg-white p-3 shadow-sm">
                 <div class="mb-3 flex items-center justify-between gap-3">
-                    <div><p class="text-xs text-gray-500">目前輸入</p><p id="active-arrow-label" class="text-sm font-semibold">請點選一個箭位</p></div>
-                    <div class="flex items-center gap-2"><span id="active-arrow-value" class="inline-flex h-12 min-w-12 items-center justify-center rounded-xl bg-indigo-50 px-3 text-xl font-bold text-indigo-700">—</span><button id="close-keypad" type="button" class="inline-flex h-12 w-12 items-center justify-center rounded-xl border text-gray-500 lg:hidden" aria-label="關閉鍵盤">✕</button></div>
+                    <div><p class="text-xs text-gray-500">連續計分</p><p id="active-arrow-label" class="text-sm font-semibold">從第一個空格開始</p></div>
+                    <span id="active-arrow-value" class="inline-flex h-11 min-w-12 items-center justify-center rounded-xl bg-indigo-50 px-3 text-xl font-bold text-indigo-700">—</span>
                 </div>
-                <div class="grid grid-cols-4 gap-2">
+                <div class="grid grid-cols-4 gap-2 sm:grid-cols-8">
                     @foreach(['X','10','9','BKSP','8','7','6','PREV','5','4','3','NEXT','2','1','M','CLR'] as $key)
                         <button type="button" data-key="{{ $key }}"
-                                class="score-key min-h-14 touch-manipulation select-none rounded-xl border px-2 text-lg font-semibold text-gray-900 active:bg-indigo-100"
+                                class="score-key min-h-12 touch-manipulation select-none rounded-xl border px-2 text-lg font-semibold text-gray-900 active:bg-indigo-100"
                                 style="-webkit-tap-highlight-color: transparent; -webkit-user-select: none;">
                             {{ $key === 'BKSP' ? '⌫' : ($key === 'PREV' ? '←' : ($key === 'NEXT' ? '→' : ($key === 'CLR' ? '清除' : $key))) }}
                         </button>
                     @endforeach
                 </div>
-                <div class="mt-4 hidden rounded-xl bg-gray-50 p-3 text-xs leading-5 text-gray-500 lg:block">點選左側任一箭位後即可連續輸入。系統會自動移到下一格，最後一箭完成後請核對整靶成績再送出。</div>
-              </div>
+                <p class="mt-2 text-center text-xs text-gray-500">按下分值會依選手與箭序自動前進；刪除會退回上一格。</p>
             </section>
+
+            <div class="grid gap-2 rounded-2xl border bg-white p-3 shadow-sm sm:grid-cols-[1fr_auto] sm:items-center">
+                <p id="draft-status" class="text-center text-xs text-gray-500 sm:text-left">輸入會暫存在這台設備</p>
+                <button class="min-h-12 rounded-xl bg-indigo-600 px-6 text-base font-semibold text-white">核對並送出本靶第 {{ $endNumber }} 趟</button>
+            </div>
         </form>
     @endif
 </div>
@@ -118,8 +116,6 @@
     const status=document.getElementById('draft-status');
     const activeLabel=document.getElementById('active-arrow-label');
     const activeValue=document.getElementById('active-arrow-value');
-    const keypad=document.getElementById('keypad-sheet');
-    const closeKeypad=document.getElementById('close-keypad');
     let activeIndex=0;
     const valueOf=value=>value==='X'?10:(value==='M'||!value?0:Number(value));
     const selectInput=index=>{
@@ -133,8 +129,6 @@
         const arrowIndex=Array.from(card.querySelectorAll('.score-input')).indexOf(input)+1;
         activeLabel.textContent=`${athlete} · 第 ${arrowIndex} 箭`;
         activeValue.textContent=input.value||'—';
-        keypad.classList.remove('hidden');
-        keypad.classList.add('flex');
     };
     const recalc=()=>{
         document.querySelectorAll('.athlete-card').forEach(card=>{
@@ -152,31 +146,33 @@
         if(Array.isArray(saved)) inputs.forEach((input,index)=>input.value=saved[index]||'');
     } catch(e) {}
     inputs.forEach((input,index)=>input.addEventListener('click',()=>selectInput(index)));
-    closeKeypad.addEventListener('click',()=>{keypad.classList.add('hidden');keypad.classList.remove('flex')});
-    keypad.addEventListener('click',event=>{if(event.target===keypad){keypad.classList.add('hidden');keypad.classList.remove('flex')}});
     document.querySelectorAll('.score-key').forEach(key=>key.addEventListener('click',()=>{
         const action=key.dataset.key;
         const input=inputs[activeIndex];
         if(!input) return;
         if(action==='PREV'){selectInput(activeIndex-1);return}
         if(action==='NEXT'){selectInput(activeIndex+1);return}
-        if(action==='BKSP'||action==='CLR'){
+        if(action==='BKSP'){
+            const previousIndex=Math.max(0,activeIndex-1);
+            inputs[previousIndex].value='';
+            selectInput(previousIndex);
+            save();
+            return;
+        }
+        if(action==='CLR'){
             input.value='';
             save();
-            selectInput(activeIndex-1);
             return;
         }
         input.value=action;
         save();
         if(activeIndex<inputs.length-1) {
             selectInput(activeIndex+1);
-        } else {
-            keypad.classList.add('hidden');
-            keypad.classList.remove('flex');
         }
     }));
     recalc();
     activeIndex=inputs.findIndex(input=>!input.value) === -1 ? 0 : inputs.findIndex(input=>!input.value);
+    selectInput(activeIndex);
     form.addEventListener('submit',event=>{
         if(!confirm('請確認同靶所有選手都已核對本趟箭值。送出後一般計分台不能修改，確定送出？')){event.preventDefault();return}
         localStorage.removeItem(storageKey);
