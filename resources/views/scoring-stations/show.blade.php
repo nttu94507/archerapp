@@ -128,7 +128,12 @@
         }
         input.value=action;
         save();
-        if(activeIndex<inputs.length-1) selectInput(activeIndex+1);
+        if(activeIndex<inputs.length-1) {
+            selectInput(activeIndex+1);
+        } else {
+            keypad.classList.add('hidden');
+            keypad.classList.remove('flex');
+        }
     }));
     recalc();
     activeIndex=inputs.findIndex(input=>!input.value) === -1 ? 0 : inputs.findIndex(input=>!input.value);
