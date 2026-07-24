@@ -19,7 +19,7 @@ class MyEventController extends Controller
         $userId = Auth::id();
 
         $registrations = EventRegistration::query()
-            ->with('event')
+            ->with(['event', 'event_group'])
             ->where('user_id', $userId)
             ->orderByDesc('created_at')
             ->get();
@@ -40,12 +40,23 @@ class MyEventController extends Controller
                 'event' => $event,
                 'registration' => $registration,
                 'scoreable' => $scoreable,
+                'phase' => $this->eventPhase($event, $now),
             ];
         })->filter(fn ($row) => $row['event']);
 
         return view('my-events.index', [
             'events' => $events,
         ]);
+    }
+
+    private function eventPhase(Event $event, Carbon $now): string
+    {
+        if ($event->cancelled_at) return 'cancelled';
+        $start = $event->start_date ? Carbon::parse($event->start_date)->startOfDay() : null;
+        $end = $event->end_date ? Carbon::parse($event->end_date)->endOfDay() : $start?->copy()->endOfDay();
+        if ($start && $now->lt($start)) return 'upcoming';
+        if ($start && $end && $now->between($start, $end)) return 'ongoing';
+        return 'finished';
     }
 
     public function score(EventRegistration $registration): View

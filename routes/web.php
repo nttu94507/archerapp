@@ -200,5 +200,8 @@ Route::get('events/{event}', [EventController::class, 'show'])->name('events.sho
 Route::post('events/{event}/groups/{group}/quick-register', [EventRegistrationController::class, 'quickRegister'])
     ->middleware('auth')
     ->name('events.quick_register');
+Route::get('events/{event}/groups/{group}/confirm-registration', [EventRegistrationController::class, 'confirm'])
+    ->middleware('auth')
+    ->name('events.registration.confirm');
 Route::patch('event-registrations/{registration}/withdraw', [EventRegistrationController::class, 'withdraw'])
     ->middleware('auth')->name('event-registrations.withdraw');

@@ -12,6 +12,41 @@ use Illuminate\Validation\Rule;
 
 class EventRegistrationController extends Controller
 {
+    public function confirm(Event $event, EventGroup $group, Request $request)
+    {
+        if (! $event->isPublished() || $group->event_id !== $event->id) {
+            abort(404);
+        }
+
+        $group->setRelation('event', $event);
+        if (! $group->isRegistrationOpen()) {
+            return redirect()->route('events.show', $event)->with('error', '目前非報名期間。');
+        }
+
+        $registered = EventRegistration::query()
+            ->where('event_id', $event->id)
+            ->where('event_group_id', $group->id)
+            ->whereIn('status', ['registered', 'checked_in'])
+            ->count();
+
+        if ($group->quota !== null && $registered >= $group->quota) {
+            return redirect()->route('events.show', $event)->with('error', '此組別名額已滿。');
+        }
+
+        $alreadyRegistered = EventRegistration::query()
+            ->where('event_id', $event->id)
+            ->where('event_group_id', $group->id)
+            ->where('user_id', $request->user()->id)
+            ->whereIn('status', ['registered', 'checked_in'])
+            ->exists();
+
+        if ($alreadyRegistered) {
+            return redirect()->route('events.show', $event)->with('error', '您已報名此組別。');
+        }
+
+        return view('events.confirm-registration', compact('event', 'group', 'registered'));
+    }
+
     //
     public function quickRegister(Event $event,EventGroup $group, Request $request)
     {

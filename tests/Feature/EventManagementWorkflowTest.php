@@ -38,6 +38,31 @@ class EventManagementWorkflowTest extends TestCase
         $this->get(route('events.show',$event))->assertNotFound();
     }
 
+    public function test_approved_organizer_can_create_group_and_publish_in_one_step(): void
+    {
+        $owner = User::factory()->create();
+        OrganizerProfile::create([
+            'user_id'=>$owner->id, 'organization_name'=>'快速弓社', 'organization_type'=>'club',
+            'contact_name'=>$owner->name, 'contact_email'=>$owner->email, 'contact_phone'=>'0912345678',
+            'application_reason'=>'測試', 'status'=>'approved', 'approved_at'=>now(),
+        ]);
+
+        $response = $this->actingAs($owner)->post(route('organizer.events.store'), array_merge($this->eventPayload(), [
+            'submit_mode'=>'publish',
+            'groups'=>[[
+                'name'=>'反曲弓公開組', 'bow_type'=>'recurve', 'gender'=>'open', 'distance'=>'70m',
+                'arrow_count'=>72, 'arrows_per_end'=>6, 'quota'=>32, 'fee'=>500, 'is_team'=>0,
+            ]],
+        ]));
+
+        $event = Event::firstOrFail();
+        $response->assertRedirect(route('organizer.events.show', $event));
+        $this->assertTrue($event->isPublished());
+        $this->assertDatabaseHas('event_groups', [
+            'event_id'=>$event->id, 'name'=>'反曲弓公開組', 'arrow_count'=>72, 'quota'=>32,
+        ]);
+    }
+
     public function test_event_roles_control_management_access(): void
     {
         $owner = User::factory()->create();

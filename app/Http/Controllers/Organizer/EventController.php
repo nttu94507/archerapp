@@ -37,27 +37,42 @@ class EventController extends Controller
     public function create(): View
     {
         abort_unless(request()->user()->canCreateEvents(),403);
-        return view('organizer.events.create');
+        return view('organizer.events.create', [
+            'organizerName' => request()->user()->organizerProfile?->organization_name,
+        ]);
     }
 
     public function store(Request $request): RedirectResponse
     {
         abort_unless($request->user()->canCreateEvents(),403);
-        $validated = $this->validateEvent($request);
-        $validated['status'] = 'draft';
-        $validated['verified'] = false;
+        $validated = $this->validateEvent($request, true);
+        $groups = $validated['groups'] ?? [];
+        $publish = ($validated['submit_mode'] ?? 'draft') === 'publish';
+        unset($validated['groups'], $validated['submit_mode']);
+        $validated['status'] = $publish ? 'approved' : 'draft';
+        $validated['published_at'] = $publish ? now() : null;
+        $validated['verified'] = $publish;
 
-        $event = DB::transaction(function () use ($validated, $request) {
+        $event = DB::transaction(function () use ($validated, $groups, $request, $publish) {
             $event = Event::create($validated);
             $event->staff()->create([
                 'user_id' => $request->user()->id, 'role' => 'owner', 'status' => 'active',
                 'invited_by' => $request->user()->id, 'invited_at' => now(), 'accepted_at' => now(),
             ]);
+            foreach ($groups as $group) {
+                $event->groups()->create($group);
+            }
             $this->audit($event, $request, 'event.created');
+            if ($publish) {
+                $this->audit($event, $request, 'event.published');
+            }
             return $event;
         });
 
-        return redirect()->route('organizer.events.show', $event)->with('success', '賽事草稿已建立。');
+        return redirect()->route('organizer.events.show', $event)->with(
+            'success',
+            $publish ? '賽事已建立並發布，可以立即分享給選手。' : '賽事草稿已建立。'
+        );
     }
 
     public function show(Request $request, Event $event): View
@@ -178,16 +193,35 @@ class EventController extends Controller
         return redirect()->route('organizer.events.show', $event)->with('success', '已加入 '.$event->name.' 的工作團隊。');
     }
 
-    private function validateEvent(Request $request): array
+    private function validateEvent(Request $request, bool $creating = false): array
     {
-        return $request->validate([
+        $rules = [
             'name' => ['required', 'string', 'max:120'], 'start_date' => ['required', 'date'],
             'end_date' => ['required', 'date', 'after_or_equal:start_date'], 'mode' => ['required', 'in:indoor,outdoor'],
             'level' => ['nullable', 'string', 'max:50'], 'organizer' => ['required', 'string', 'max:120'],
             'reg_start' => ['nullable', 'date', 'required_with:reg_end'], 'reg_end' => ['nullable', 'date', 'required_with:reg_start', 'after_or_equal:reg_start'],
             'venue' => ['nullable', 'string', 'max:255'], 'map_link' => ['nullable', 'url'],
             'lat' => ['nullable', 'numeric', 'between:-90,90'], 'lng' => ['nullable', 'numeric', 'between:-180,180'],
-        ]);
+        ];
+
+        if ($creating) {
+            $rules += [
+                'submit_mode' => ['nullable', 'in:draft,publish'],
+                'groups' => ['nullable', 'array', 'required_if:submit_mode,publish', 'min:1'],
+                'groups.*.name' => ['required', 'string', 'max:100'],
+                'groups.*.bow_type' => ['nullable', 'in:recurve,compound,barebow'],
+                'groups.*.gender' => ['required', 'in:male,female,open'],
+                'groups.*.age_class' => ['nullable', 'string', 'max:50'],
+                'groups.*.distance' => ['nullable', 'string', 'max:50'],
+                'groups.*.arrow_count' => ['required', 'integer', 'min:6', 'max:180', 'multiple_of:6'],
+                'groups.*.arrows_per_end' => ['required', 'integer', 'in:3,6'],
+                'groups.*.quota' => ['nullable', 'integer', 'min:1'],
+                'groups.*.fee' => ['nullable', 'integer', 'min:0'],
+                'groups.*.is_team' => ['nullable', 'boolean'],
+            ];
+        }
+
+        return $request->validate($rules);
     }
 
     private function audit(Event $event, Request $request, string $action, ?int $subjectId = null, array $metadata = []): void

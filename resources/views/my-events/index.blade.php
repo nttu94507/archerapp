@@ -3,43 +3,52 @@
 @section('title', '我的賽事')
 
 @section('content')
-    <div class="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 py-8">
-        <div class="mb-6 flex items-center justify-between">
-            <div>
-                <h1 class="text-2xl font-bold text-gray-900">我的賽事</h1>
-                <p class="text-sm text-gray-600">查看已報名、目前可計分的賽事。</p>
-            </div>
-        </div>
+<div class="mx-auto max-w-5xl px-4 py-6 sm:px-6 sm:py-8">
+    <div class="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div><h1 class="text-2xl font-bold">我的賽事</h1><p class="mt-1 text-sm text-gray-500">集中查看報名、付款、報到與計分狀態。</p></div>
+        <a href="{{ route('events.index') }}" class="inline-flex min-h-11 items-center justify-center rounded-xl bg-indigo-600 px-5 text-sm font-medium text-white">探索賽事</a>
+    </div>
 
-        @if($events->isEmpty())
-            <div class="rounded-2xl border border-dashed border-gray-200 bg-white p-6 text-center text-sm text-gray-500">
-                尚未有報名紀錄。
-            </div>
-        @else
-            <div class="grid gap-4">
-                @foreach($events as $row)
-                    @php($event = $row['event'])
-                    <div class="rounded-2xl border bg-white p-4 shadow-sm">
-                        <div class="flex items-start justify-between gap-3">
-                            <div>
-                                <div class="text-lg font-semibold text-gray-900">{{ $event->name }}</div>
-                                <div class="text-sm text-gray-500">{{ $event->start_date }} ~ {{ $event->end_date }}</div>
+    @if($events->isEmpty())
+        <div class="rounded-2xl border border-dashed bg-white p-8 text-center">
+            <p class="font-medium text-gray-800">目前沒有賽事報名紀錄</p>
+            <p class="mt-1 text-sm text-gray-500">找到適合的組別後，最快兩步即可完成報名。</p>
+            <a href="{{ route('events.index') }}" class="mt-5 inline-flex min-h-11 items-center rounded-xl bg-indigo-600 px-5 text-sm font-medium text-white">查看開放報名賽事</a>
+        </div>
+    @else
+        <div class="space-y-4">
+            @foreach($events as $row)
+                @php
+                    $event = $row['event']; $registration = $row['registration'];
+                    $statusLabel = ['registered'=>'已報名','checked_in'=>'已報到','withdrawn'=>'已取消','pending'=>'待處理'][$registration->status] ?? $registration->status;
+                    $phaseLabel = ['upcoming'=>'即將舉行','ongoing'=>'進行中','finished'=>'已結束','cancelled'=>'已取消'][$row['phase']] ?? $row['phase'];
+                    $isFree = (int) optional($registration->event_group)->fee === 0;
+                    $paymentLabel = $isFree ? '免費' : (['pending'=>'待付款／確認','paid'=>'已付款','refunded'=>'已退款'][$registration->payment_status] ?? ($registration->paid ? '已付款' : '待付款'));
+                @endphp
+                <article class="rounded-2xl border bg-white p-4 shadow-sm sm:p-5">
+                    <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                        <div class="min-w-0">
+                            <div class="flex flex-wrap items-center gap-2">
+                                <h2 class="break-words text-lg font-semibold">{{ $event->name }}</h2>
+                                <span class="rounded-full bg-gray-100 px-2 py-1 text-xs text-gray-600">{{ $phaseLabel }}</span>
                             </div>
-                            <div class="flex items-center gap-2">
-                                @if($row['scoreable'])
-                                    <span class="inline-flex items-center rounded-full bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-700">可計分</span>
-                                    <a href="{{ route('my-events.score', $row['registration']) }}"
-                                       class="inline-flex items-center rounded-xl bg-indigo-600 px-3 py-2 text-sm font-semibold text-white hover:bg-indigo-500">前往計分</a>
-                                @else
-                                    <span class="inline-flex items-center rounded-full bg-gray-100 px-3 py-1 text-xs font-medium text-gray-600">目前不可計分</span>
-                                    <a href="{{ route('my-events.score', $row['registration']) }}"
-                                       class="inline-flex items-center rounded-xl border px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50">查看計分表</a>
-                                @endif
+                            <p class="mt-1 text-sm text-gray-500">{{ $event->start_date->format('Y-m-d') }}～{{ $event->end_date->format('Y-m-d') }} · {{ $event->venue ?: '場地待公布' }}</p>
+                            <p class="mt-2 text-sm font-medium">{{ $registration->event_group?->name ?: '未指定組別' }}</p>
+                            <div class="mt-3 flex flex-wrap gap-2 text-xs">
+                                <span class="rounded-full bg-blue-50 px-3 py-1 text-blue-700">{{ $statusLabel }}</span>
+                                <span class="rounded-full {{ $isFree || $registration->paid ? 'bg-emerald-50 text-emerald-700' : 'bg-orange-50 text-orange-700' }} px-3 py-1">{{ $paymentLabel }}</span>
                             </div>
                         </div>
+                        <div class="grid shrink-0 grid-cols-2 gap-2 sm:flex">
+                            <a href="{{ route('events.show', $event) }}" class="inline-flex min-h-11 items-center justify-center rounded-xl border px-4 text-sm font-medium">賽事資訊</a>
+                            @if($registration->status !== 'withdrawn')
+                                <a href="{{ route('my-events.score', $registration) }}" class="inline-flex min-h-11 items-center justify-center rounded-xl {{ $row['scoreable'] ? 'bg-indigo-600 text-white' : 'border text-gray-700' }} px-4 text-sm font-medium">{{ $row['scoreable'] ? '前往計分' : '查看計分表' }}</a>
+                            @endif
+                        </div>
                     </div>
-                @endforeach
-            </div>
-        @endif
-    </div>
+                </article>
+            @endforeach
+        </div>
+    @endif
+</div>
 @endsection

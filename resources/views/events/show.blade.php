@@ -13,6 +13,7 @@
             <p class="text-sm text-gray-500">
                 {{ $event->start_date }} ~ {{ $event->end_date }} · {{ $event->organizer }}
             </p>
+            @if($event->venue)<p class="mt-1 text-sm text-gray-600">📍 {{ $event->venue }}</p>@endif
 
             {{-- 報名狀態 --}}
             @if($regStatus)
@@ -121,9 +122,10 @@
                         <li class="py-3 flex items-center justify-between">
                             <div class="min-w-0">
                                 <div class="font-medium text-gray-900 truncate">{{ $g->name }}</div>
-                                <div class="text-sm text-gray-700">{{$g->bow_type}} / {{$g->gender}} / {{$g->distance}} / {{$g->age_class}} </div>
+                                <div class="text-sm text-gray-700">{{ ['recurve'=>'反曲弓','compound'=>'複合弓','barebow'=>'光弓'][$g->bow_type] ?? '弓種不限' }} · {{ $g->distance ?: '距離未定' }} · {{ $g->arrow_count }} 箭</div>
                                 <div class="mt-1 text-xs text-gray-500">
-                                    已報名：{{ $registered }}
+                                    {{ (int) $g->fee > 0 ? 'NT$ '.number_format($g->fee) : '免費' }} ·
+                                    @if($cap)剩餘 {{ max(0, $cap - $registered) }} / {{ $cap }} 名@else已報名 {{ $registered }} 人@endif
                                 </div>
                             </div>
 
@@ -141,13 +143,8 @@
                             </span>
                                 @else
                                     @auth
-                                        <form method="POST" action="{{ route('events.quick_register', [$event, $g]) }}">
-                                            @csrf
-                                            <button type="submit"
-                                                    class="inline-flex items-center rounded-xl bg-indigo-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-indigo-500">
-                                                立即報名
-                                            </button>
-                                        </form>
+                                        <a href="{{ route('events.registration.confirm', [$event, $g]) }}"
+                                           class="inline-flex min-h-11 items-center rounded-xl bg-indigo-600 px-4 text-sm font-medium text-white hover:bg-indigo-500">立即報名</a>
                                     @else
                                         <a href="{{ route('login.options') }}"
                                            class="inline-flex items-center rounded-xl border px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50">

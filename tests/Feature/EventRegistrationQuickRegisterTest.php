@@ -39,6 +39,26 @@ class EventRegistrationQuickRegisterTest extends TestCase
         ]);
     }
 
+    public function test_user_sees_registration_confirmation_before_submitting(): void
+    {
+        $user = User::factory()->create(['name'=>'確認選手']);
+        $event = Event::factory()->create([
+            'name'=>'確認流程公開賽', 'reg_start'=>now()->subDay(), 'reg_end'=>now()->addDay(),
+        ]);
+        $group = EventGroup::factory()->create([
+            'event_id'=>$event->id, 'name'=>'反曲公開組', 'fee'=>500, 'quota'=>20,
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('events.registration.confirm', [$event, $group]))
+            ->assertOk()
+            ->assertSee('確認並完成報名')
+            ->assertSee('反曲公開組')
+            ->assertSee('NT$ 500');
+
+        $this->assertDatabaseCount('event_registrations', 0);
+    }
+
     public function test_quick_register_validates_registration_window(): void
     {
         $user = User::factory()->create();
