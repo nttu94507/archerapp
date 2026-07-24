@@ -22,7 +22,17 @@ class EventRegistrationController extends Controller
         if ($request->filled('status')) $query->where('status', $request->status);
         if ($request->filled('payment_status')) $query->where('payment_status', $request->payment_status);
         if ($request->filled('event_group_id')) $query->where('event_group_id', $request->event_group_id);
-        if ($request->filled('q')) $query->where(fn ($q) => $q->where('name', 'like', '%'.$request->q.'%')->orWhere('email', 'like', '%'.$request->q.'%')->orWhereHas('user', fn ($user) => $user->where('uuid', 'like', '%'.$request->q.'%')));
+        if ($request->filled('q')) {
+            $keyword = trim((string) $request->q);
+            $query->where(fn ($q) => $q
+                ->where('name', 'like', '%'.$keyword.'%')
+                ->orWhere('email', 'like', '%'.$keyword.'%')
+                ->orWhere('team_name', 'like', '%'.$keyword.'%')
+                ->orWhereHas('event_group', fn ($group) => $group->where('name', 'like', '%'.$keyword.'%'))
+                ->orWhereHas('user', fn ($user) => $user
+                    ->where('uuid', 'like', '%'.$keyword.'%')
+                    ->orWhere('nickname', 'like', '%'.$keyword.'%')));
+        }
         $registrations = $query->orderBy('event_group_id')->orderBy('name')->paginate(30)->withQueryString();
         $groups = $event->groups()->orderBy('name')->get();
         return view('organizer.registrations.index', compact('event', 'registrations', 'groups'));
