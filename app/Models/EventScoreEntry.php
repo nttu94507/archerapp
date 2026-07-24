@@ -11,6 +11,7 @@ class EventScoreEntry extends Model
 
     protected $fillable = [
         'event_id',
+        'event_registration_id',
         'user_id',
         'end_number',
         'scores',
@@ -29,5 +30,10 @@ class EventScoreEntry extends Model
     public function user()
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function registration()
+    {
+        return $this->belongsTo(EventRegistration::class, 'event_registration_id');
     }
 }

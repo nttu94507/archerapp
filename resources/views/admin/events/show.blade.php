@@ -17,6 +17,7 @@
             </div>
             <div class="flex flex-wrap gap-3">
                 <a href="{{ route('admin.events.index') }}" class="inline-flex items-center rounded-xl border border-gray-200 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">返回列表</a>
+                <a href="{{ route('organizer.events.badges.index', $event) }}" class="inline-flex items-center rounded-xl border border-indigo-200 bg-indigo-50 px-4 py-2 text-sm font-semibold text-indigo-700 hover:bg-indigo-100">Badge 管理</a>
                 <a href="{{ route('events.groups.create', $event) }}" class="inline-flex items-center rounded-xl bg-gray-900 px-4 py-2 text-sm font-semibold text-white hover:bg-gray-800">新增組別</a>
             </div>
         </div>
@@ -25,6 +26,15 @@
             <div class="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
                 {{ session('success') }}
             </div>
+        @endif
+
+        @if(in_array($event->status, ['draft','pending','approved','rejected']))
+            <section class="rounded-2xl border border-indigo-200 bg-indigo-50 p-5">
+                <h2 class="font-semibold text-indigo-900">平台緊急介入</h2>
+                <p class="mt-1 text-sm text-indigo-700">只在主辦方無法操作或需緊急處理時使用。</p>
+                <p class="mt-2 text-sm text-indigo-700">目前狀態：{{ ['draft'=>'草稿','pending'=>'舊審核資料','approved'=>'已發布','rejected'=>'已下架'][$event->status] ?? $event->status }}</p>
+                <form method="POST" action="{{ route('admin.events.review',$event) }}" class="mt-4 grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto_auto]">@csrf<input name="review_note" required class="min-h-11 min-w-0 w-full rounded-xl border-indigo-200 text-sm" placeholder="介入原因（必填）"><button name="decision" value="publish" class="min-h-11 rounded-xl bg-green-600 px-4 text-sm text-white">緊急發布</button><button name="decision" value="unpublish" class="min-h-11 rounded-xl border border-red-200 bg-white px-4 text-sm text-red-600">緊急下架</button></form>
+            </section>
         @endif
 
         <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">

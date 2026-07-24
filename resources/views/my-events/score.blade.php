@@ -164,7 +164,7 @@
                     @endif
                 </div>
                 @if(!$finalized)
-                    <form method="POST" action="{{ route('my-events.score.submit', $event) }}">
+                    <form method="POST" action="{{ route('my-events.score.submit', $registration) }}">
                         @csrf
                         <button type="submit"
                                 {{ $allComplete ? '' : 'disabled' }}
@@ -190,7 +190,7 @@
                 </button>
             </div>
 
-            <form id="score-form" method="POST" action="{{ route('my-events.score.store', $event) }}" class="space-y-4 px-4 py-5">
+            <form id="score-form" method="POST" action="{{ route('my-events.score.store', $registration) }}" class="space-y-4 px-4 py-5">
                 @csrf
                 <input type="hidden" name="end_number" id="end_number" value="1">
                 <div class="grid grid-cols-6 gap-2" id="inputs">

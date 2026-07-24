@@ -17,6 +17,10 @@ class EventRegistrationController extends Controller
     {
         $user = $request->user();
 
+        if (! $event->isPublished() || $event->cancelled_at) {
+            return back()->with('error', '此賽事目前未開放報名。');
+        }
+
         // 檢查 group 是否屬於該 event
         if ($group->event_id !== $event->id) {
             return back()->with('error', '組別不屬於此賽事。');
@@ -24,10 +28,8 @@ class EventRegistrationController extends Controller
 
         // 檢查報名期間
         $now = now();
-        $start = $event->reg_start ? Carbon::parse($event->reg_start) : null;
-        $end   = $event->reg_end   ? Carbon::parse($event->reg_end)   : null;
-
-        if (!($start && $end && $now->between($start, $end))) {
+        $group->setRelation('event', $event);
+        if (! $group->isRegistrationOpen($now)) {
             return back()->with('error', '目前非報名期間。');
         }
 
@@ -43,26 +45,32 @@ class EventRegistrationController extends Controller
             return back()->with('error', '您已報名此組別。');
         }
 
-        // 檢查名額（如果有設定 capacity）
-        $group->loadCount(['registrations as registered_count' => function ($q) {
-            $q->whereIn('status', ['registered','checked_in']);
-        }]);
+        try {
+            DB::transaction(function () use ($event, $group, $user) {
+                EventGroup::whereKey($group->id)->lockForUpdate()->firstOrFail();
+                $current = EventRegistration::where('event_group_id', $group->id)->whereIn('status', ['registered','checked_in'])->count();
+                if (!is_null($group->quota) && $current >= $group->quota) abort(422, '此組別名額已滿。');
 
-        if (!is_null($group->quota) && $group->registered_count >= $group->quota) {
-            return back()->with('error', '此組別名額已滿。');
+                $existing = EventRegistration::where('event_id',$event->id)->where('event_group_id',$group->id)->where('email',$user->email)->first();
+                if ($existing) {
+                    $existing->update(['user_id'=>$user->id,'name'=>$user->display_name,'status'=>'registered','withdraw_reason'=>null,'withdrawn_at'=>null,'withdrawn_by'=>null]);
+                } else {
+                    EventRegistration::create(['event_id'=>$event->id,'event_group_id'=>$group->id,'user_id'=>$user->id,'name'=>$user->display_name,'email'=>$user->email,'status'=>'registered']);
+                }
+            });
+        } catch (\Symfony\Component\HttpKernel\Exception\HttpException $e) {
+            return back()->with('error', $e->getMessage());
         }
 
-        // 建立報名
-        EventRegistration::create([
-            'event_id'       => $event->id,
-            'event_group_id' => $group->id,
-            'user_id'        => $user->id,
-            'name'           => $user->display_name,
-            'email'          => $user->email,
-            'status'         => 'registered',
-        ]);
-
         return redirect()->route('events.show', $event)->with('success', '報名成功！');
+    }
+
+    public function withdraw(EventRegistration $registration, Request $request)
+    {
+        abort_unless($registration->user_id === $request->user()->id, 403);
+        abort_unless(in_array($registration->status, ['registered'], true), 422);
+        $registration->update(['status'=>'withdrawn','withdraw_reason'=>$request->input('reason'),'withdrawn_at'=>now(),'withdrawn_by'=>$request->user()->id]);
+        return back()->with('success', '已取消報名。');
     }
 
 //    public function register(Event $event, Request $request)

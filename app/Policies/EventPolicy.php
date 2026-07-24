@@ -1,0 +1,54 @@
+<?php
+
+namespace App\Policies;
+
+use App\Models\Event;
+use App\Models\User;
+
+class EventPolicy
+{
+    public function before(User $user): ?bool
+    {
+        return $user->isAdmin() ? true : null;
+    }
+
+    public function viewManagement(User $user, Event $event): bool
+    {
+        return $this->hasRole($user, $event, ['owner', 'manager', 'staff', 'volunteer', 'viewer']);
+    }
+
+    public function update(User $user, Event $event): bool
+    {
+        return $this->canOperate($user) && $this->hasRole($user, $event, ['owner', 'manager']);
+    }
+
+    public function manageGroups(User $user, Event $event): bool
+    {
+        return $this->canOperate($user) && $this->hasRole($user, $event, ['owner', 'manager']);
+    }
+
+    public function manageRegistrations(User $user, Event $event): bool
+    {
+        return $this->canOperate($user) && $this->hasRole($user, $event, ['owner', 'manager', 'staff']);
+    }
+
+    public function manageScores(User $user, Event $event): bool
+    {
+        return $this->canOperate($user) && $this->hasRole($user, $event, ['owner', 'manager', 'staff']);
+    }
+
+    public function manageStaff(User $user, Event $event): bool
+    {
+        return $this->canOperate($user) && $this->hasRole($user, $event, ['owner', 'manager']);
+    }
+
+    private function canOperate(User $user): bool
+    {
+        return $user->organizerProfile()->where('status', 'suspended')->doesntExist();
+    }
+
+    private function hasRole(User $user, Event $event, array $roles): bool
+    {
+        return $event->staff()->where('user_id', $user->id)->where('status', 'active')->whereIn('role', $roles)->exists();
+    }
+}

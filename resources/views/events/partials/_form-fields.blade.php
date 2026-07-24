@@ -22,45 +22,45 @@
     }
 @endphp
 
-            <div class="rounded-2xl border border-gray-200 p-6 space-y-5 shadow-sm bg-white">
+            <div class="space-y-5 rounded-2xl border border-gray-200 bg-white p-4 shadow-sm sm:p-6">
                 <h2 class="text-lg font-semibold text-gray-900">基本資訊</h2>
 
                 <div>
                     <label for="name" class="block text-sm font-medium text-gray-700 mb-1">賽事名稱 *</label>
                     <input type="text" name="name" id="name" value="{{ old('name', $existing?->name) }}"
-                           class="block w-full rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-indigo-500"
+                           class="block min-h-12 w-full rounded-xl border border-gray-300 bg-gray-50 px-3 text-base focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
                            required>
                     @error('name') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
                 </div>
 
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div class="grid grid-cols-1 gap-5 sm:grid-cols-2 sm:gap-4">
                     <div>
                         <label for="start_date" class="block text-sm font-medium text-gray-700 mb-1">開始日期 *</label>
                         <input type="date" name="start_date" id="start_date" value="{{ $startDateValue }}"
-                               class="block w-full rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-indigo-500"
+                               class="block min-h-12 w-full min-w-0 rounded-xl border border-gray-300 bg-gray-50 px-3 text-base focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
                                required>
                         @error('start_date') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
                     </div>
                     <div>
                         <div class="flex items-baseline justify-between">
                             <label for="end_date" class="block text-sm font-medium text-gray-700 mb-1">結束日期 *</label>
-                            <label class="inline-flex items-center gap-2 text-xs text-gray-600">
-                                <input type="checkbox" id="single-day" class="rounded">
+                            <label class="inline-flex min-h-11 items-center gap-2 text-sm text-gray-600">
+                                <input type="checkbox" id="single-day" class="h-5 w-5 rounded">
                                 單日賽
                             </label>
                         </div>
                         <input type="date" name="end_date" id="end_date" value="{{ $endDateValue }}"
-                               class="block w-full rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-indigo-500"
+                               class="block min-h-12 w-full min-w-0 rounded-xl border border-gray-300 bg-gray-50 px-3 text-base focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
                                required>
                         @error('end_date') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
                     </div>
                 </div>
 
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div class="grid grid-cols-1 gap-5 sm:grid-cols-2 sm:gap-4">
                     <div>
                         <label for="mode" class="block text-sm font-medium text-gray-700 mb-1">比賽類型 *</label>
                         <select name="mode" id="mode"
-                                class="block w-full rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-indigo-500"
+                                class="block min-h-12 w-full rounded-xl border border-gray-300 bg-gray-50 px-3 text-base focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
                                 required>
                             <option value="">請選擇</option>
                             <option value="indoor" @selected(old('mode', $existing?->mode)==='indoor')>室內</option>
@@ -68,91 +68,92 @@
                         </select>
                         @error('mode') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
                     </div>
+                    @if($showVerification ?? false)
                     <div>
                         <label for="verified" class="block text-sm font-medium text-gray-700 mb-1">是否驗證</label>
                         <select name="verified" id="verified"
-                                class="block w-full rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-indigo-500">
+                                class="block min-h-12 w-full rounded-xl border border-gray-300 bg-gray-50 px-3 text-base focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
                             <option value="1" @selected(old('verified', strval($existing?->verified ?? '1'))==='1')>是</option>
                             <option value="0" @selected(old('verified', strval($existing?->verified ?? '1'))==='0')>否</option>
                         </select>
                         @error('verified') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
-                    </div>
+                    </div>@endif
                 </div>
 
                 <div>
                     <label for="level" class="block text-sm font-medium text-gray-700 mb-1">等級</label>
                     <input type="text" name="level" id="level" value="{{ old('level', $existing?->level) }}"
                            placeholder="例如：local / regional / national"
-                           class="block w-full rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-indigo-500">
+                           class="block min-h-12 w-full rounded-xl border border-gray-300 bg-gray-50 px-3 text-base focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
                     @error('level') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
                 </div>
 
                 <div>
                     <label for="organizer" class="block text-sm font-medium text-gray-700 mb-1">主辦單位 *</label>
                     <input type="text" name="organizer" id="organizer" value="{{ old('organizer', $existing?->organizer) }}"
-                           class="block w-full rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-indigo-500"
+                           class="block min-h-12 w-full rounded-xl border border-gray-300 bg-gray-50 px-3 text-base focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
                            required>
                     @error('organizer') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
                 </div>
             </div>
 
-            <div class="rounded-2xl border border-gray-200 p-6 space-y-5 shadow-sm bg-white">
-                <h2 class="text-lg font-semibold text-gray-900">報名資訊</h2>
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div class="space-y-5 rounded-2xl border border-gray-200 bg-white p-4 shadow-sm sm:p-6">
+                <div><h2 class="text-lg font-semibold text-gray-900">報名資訊</h2><p class="mt-1 text-xs text-gray-500">可稍後設定</p></div>
+                <div class="grid grid-cols-1 gap-5 sm:grid-cols-2 sm:gap-4">
                     <div>
                         <label for="reg_start" class="block text-sm font-medium text-gray-700 mb-1">報名開始</label>
                         <input type="datetime-local" name="reg_start" id="reg_start" value="{{ $regStartValue }}"
-                               class="block w-full rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-indigo-500">
+                               class="block min-h-12 w-full min-w-0 rounded-xl border border-gray-300 bg-gray-50 px-3 text-base focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
                         @error('reg_start') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
                     </div>
                     <div>
                         <label for="reg_end" class="block text-sm font-medium text-gray-700 mb-1">報名截止</label>
                         <input type="datetime-local" name="reg_end" id="reg_end" value="{{ $regEndValue }}"
-                               class="block w-full rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-indigo-500">
+                               class="block min-h-12 w-full min-w-0 rounded-xl border border-gray-300 bg-gray-50 px-3 text-base focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
                         @error('reg_end') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
                     </div>
                 </div>
             </div>
 
-            <div class="rounded-2xl border border-gray-200 p-6 space-y-5 shadow-sm bg-white">
+            <div class="space-y-5 rounded-2xl border border-gray-200 bg-white p-4 shadow-sm sm:p-6">
                 <h2 class="text-lg font-semibold text-gray-900">場地資訊</h2>
                 <div>
                     <label for="venue" class="block text-sm font-medium text-gray-700 mb-1">場地名稱</label>
                     <input type="text" name="venue" id="venue" value="{{ old('venue', $existing?->venue) }}"
-                           class="block w-full rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-indigo-500">
+                           class="block min-h-12 w-full rounded-xl border border-gray-300 bg-gray-50 px-3 text-base focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
                     @error('venue') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
                 </div>
                 <div>
                     <label for="map_link" class="block text-sm font-medium text-gray-700 mb-1">Google 地圖連結</label>
                     <input type="url" name="map_link" id="map_link" value="{{ old('map_link', $existing?->map_link) }}"
                            placeholder="https://maps.google.com/..."
-                           class="block w-full rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-indigo-500">
+                           class="block min-h-12 w-full rounded-xl border border-gray-300 bg-gray-50 px-3 text-base focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
                     @error('map_link') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
                 </div>
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div class="grid grid-cols-1 gap-5 sm:grid-cols-2 sm:gap-4">
                     <div>
                         <label for="lat" class="block text-sm font-medium text-gray-700 mb-1">緯度</label>
                         <input type="text" name="lat" id="lat" value="{{ old('lat', $existing?->lat) }}"
-                               class="block w-full rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-indigo-500">
+                               inputmode="decimal" class="block min-h-12 w-full rounded-xl border border-gray-300 bg-gray-50 px-3 text-base focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
                         @error('lat') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
                     </div>
                     <div>
                         <label for="lng" class="block text-sm font-medium text-gray-700 mb-1">經度</label>
                         <input type="text" name="lng" id="lng" value="{{ old('lng', $existing?->lng) }}"
-                               class="block w-full rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-indigo-500">
+                               inputmode="decimal" class="block min-h-12 w-full rounded-xl border border-gray-300 bg-gray-50 px-3 text-base focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
                         @error('lng') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
                     </div>
                 </div>
             </div>
 
-            <div class="flex justify-end gap-3">
+            <div class="sticky bottom-3 z-10 grid grid-cols-2 gap-3 rounded-2xl border bg-white/95 p-3 shadow-lg backdrop-blur sm:static sm:flex sm:justify-end sm:border-0 sm:bg-transparent sm:p-0 sm:shadow-none">
                 <a href="{{ $cancelRoute ?? url()->previous() }}"
-                   class="inline-flex items-center justify-center rounded-xl border px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
+                   class="inline-flex min-h-12 items-center justify-center rounded-xl border px-4 text-sm font-medium text-gray-700 hover:bg-gray-50">
                     取消
                 </a>
                 <button type="submit"
-                        class="inline-flex items-center justify-center rounded-xl bg-indigo-600 px-6 py-2 text-sm font-medium text-white hover:bg-indigo-500">
-                    儲存
+                        class="inline-flex min-h-12 items-center justify-center rounded-xl bg-indigo-600 px-6 text-sm font-medium text-white hover:bg-indigo-500">
+                    {{ $existing ? '儲存變更' : '建立草稿' }}
                 </button>
             </div>
 

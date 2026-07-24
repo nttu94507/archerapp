@@ -93,6 +93,11 @@
                 </div>
 
                 <div>
+                    <label class="block text-xs text-gray-600 mb-1">每趟箭數</label>
+                    <select name="groups[__INDEX__][arrows_per_end]" class="w-full rounded-lg border px-3 py-2 text-sm"><option value="6">6 箭</option><option value="3">3 箭</option></select>
+                </div>
+
+                <div>
                     <label class="block text-xs text-gray-600 mb-1">名額</label>
                     <input type="number" min="1" class="w-full rounded-lg border px-3 py-2 text-sm"
                            name="groups[__INDEX__][quota]">
@@ -112,6 +117,8 @@
                     </div>
                     <span class="text-xs text-gray-500 mt-5">此組別為隊際</span>
                 </div>
+                <div class="md:col-span-7"><label class="inline-flex min-h-11 items-center gap-2 text-sm"><input type="checkbox" name="groups[__INDEX__][use_custom_reg_window]" value="1" class="custom-reg-toggle h-5 w-5 rounded">自訂此組報名時間</label><p class="text-xs text-gray-500">未勾選時沿用賽事設定</p></div>
+                <div class="custom-reg-window hidden md:col-span-7 grid-cols-1 gap-3 sm:grid-cols-2"><div><label class="block text-xs text-gray-600 mb-1">報名開始</label><input type="datetime-local" name="groups[__INDEX__][reg_start]" class="custom-reg-input w-full rounded-lg border px-3 py-2 text-sm"></div><div><label class="block text-xs text-gray-600 mb-1">報名截止</label><input type="datetime-local" name="groups[__INDEX__][reg_end]" class="custom-reg-input w-full rounded-lg border px-3 py-2 text-sm"></div></div>
             </div>
         </div>
     </template>
@@ -147,6 +154,9 @@
                 const arrowSelect = node.querySelector('.arrow-select');
                 const arrowHidden = node.querySelector('.arrow-count-field');
                 const customInput = node.querySelector('.custom-arrow-input');
+                const regToggle = node.querySelector('.custom-reg-toggle');
+                const regWindow = node.querySelector('.custom-reg-window');
+                const regInputs = node.querySelectorAll('.custom-reg-input');
 
                 function syncArrowCount() {
                     const value = arrowSelect.value;
@@ -170,6 +180,17 @@
 
                 // 初始同步
                 syncArrowCount();
+
+                function syncRegWindow() {
+                    regWindow.classList.toggle('hidden', !regToggle.checked);
+                    regWindow.classList.toggle('grid', regToggle.checked);
+                    regInputs.forEach(input => {
+                        input.required = regToggle.checked;
+                        if (!regToggle.checked) input.value = '';
+                    });
+                }
+                regToggle.addEventListener('change', syncRegWindow);
+                syncRegWindow();
 
                 list.appendChild(node);
                 renumber();

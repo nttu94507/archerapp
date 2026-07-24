@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\EventController as AdminEventController;
+use App\Http\Controllers\Admin\BadgeOversightController;
 use App\Http\Controllers\Admin\UserController as AdminUserController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\EventController;
@@ -12,8 +13,17 @@ use App\Http\Controllers\LoginController;
 use App\Http\Controllers\ProfileCompletionController;
 use App\Http\Controllers\ScoreController;
 use App\Http\Controllers\TeamPostController;
-use App\Http\Controllers\AchievementController;
 use App\Http\Controllers\SecondHandItemController;
+use App\Http\Controllers\EventBadgeClaimController;
+use App\Http\Controllers\Organizer\EventBadgeController as OrganizerEventBadgeController;
+use App\Http\Controllers\Organizer\BadgeController as OrganizerBadgeController;
+use App\Http\Controllers\BadgeCertificateController;
+use App\Http\Controllers\BadgeDropController;
+use App\Http\Controllers\Organizer\EventController as OrganizerEventController;
+use App\Http\Controllers\Organizer\EventRegistrationController as OrganizerRegistrationController;
+use App\Http\Controllers\Organizer\EventResultController as OrganizerResultController;
+use App\Http\Controllers\Organizer\QualificationController;
+use App\Http\Controllers\Admin\OrganizerQualificationController as AdminOrganizerQualificationController;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Storage;
 
@@ -32,7 +42,7 @@ Route::get('/storage/{path}', function (string $path) {
     }
 
     return response()->file(Storage::disk('public')->path($path));
-})->where('path', '.*');
+})->where('path', '.*')->name('storage.local');
 
 //google 登入相關
 Route::get('/auth/google/redirect', [GoogleController::class, 'redirect'])
@@ -55,6 +65,12 @@ Route::middleware('auth')->group(function () {
     Route::delete('/second-hand/{secondHandItem}', [SecondHandItemController::class, 'destroy'])->name('second-hand.destroy');
 });
 Route::get('/second-hand/{secondHandItem}', [SecondHandItemController::class, 'show'])->name('second-hand.show');
+Route::get('/badge-certificates/{publicId}', [BadgeCertificateController::class,'show'])->name('badge-certificates.show');
+Route::middleware('auth')->group(function () {
+    Route::get('/badge-drops/{token}', [BadgeDropController::class,'show'])->name('badge-drops.show');
+    Route::post('/badge-drops/{token}', [BadgeDropController::class,'claim'])->name('badge-drops.claim');
+});
+Route::get('/badge-drops/{token}/qrcode', [BadgeDropController::class,'qrCode'])->name('badge-drops.qrcode');
 
 Route::prefix('admin')->middleware(['auth', 'admin'])->name('admin.')->group(function () {
     Route::get('/', function () {
@@ -65,9 +81,74 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->name('admin.')->group(fun
         ->only(['index', 'create', 'store', 'show']);
 
     Route::get('users', [AdminUserController::class, 'index'])->name('users.index');
+    Route::get('badges', [BadgeOversightController::class, 'index'])->name('badges.index');
+    Route::get('badges/create', [BadgeOversightController::class, 'create'])->name('badges.create');
+    Route::post('badges', [BadgeOversightController::class, 'store'])->name('badges.store');
+    Route::post('badges/{badge}/award', [BadgeOversightController::class, 'award'])->name('badges.award');
+    Route::post('badges/{badge}/award-all', [BadgeOversightController::class, 'awardAll'])->name('badges.award-all');
+    Route::patch('badges/{badge}/toggle', [BadgeOversightController::class, 'toggle'])->name('badges.toggle');
+    Route::patch('badge-awards/{award}/revoke', [BadgeOversightController::class, 'revoke'])->name('badge-awards.revoke');
 
     Route::patch('events/{event}/registrations/{registration}/payment', [AdminEventController::class, 'updatePayment'])
         ->name('events.registrations.payment');
+    Route::post('events/{event}/review', [AdminEventController::class, 'review'])->name('events.review');
+    Route::get('organizers', [AdminOrganizerQualificationController::class, 'index'])->name('organizers.index');
+    Route::get('organizers/{profile}', [AdminOrganizerQualificationController::class, 'show'])->name('organizers.show');
+    Route::post('organizers/{profile}/review', [AdminOrganizerQualificationController::class, 'review'])->name('organizers.review');
+    Route::post('organizers/{profile}/suspend', [AdminOrganizerQualificationController::class, 'suspend'])->name('organizers.suspend');
+    Route::post('organizers/{profile}/restore', [AdminOrganizerQualificationController::class, 'restore'])->name('organizers.restore');
+    Route::get('organizers/{profile}/document', [AdminOrganizerQualificationController::class, 'document'])->name('organizers.document');
+});
+
+Route::prefix('organizer')->middleware('auth')->name('organizer.')->group(function () {
+    Route::get('badges', [OrganizerBadgeController::class,'index'])->name('badges.index');
+    Route::get('badges/create', [OrganizerBadgeController::class,'create'])->name('badges.create');
+    Route::post('badges', [OrganizerBadgeController::class,'store'])->name('badges.store');
+    Route::get('badges/{badge}/edit', [OrganizerBadgeController::class,'edit'])->name('badges.edit');
+    Route::put('badges/{badge}', [OrganizerBadgeController::class,'update'])->name('badges.update');
+    Route::post('badges/{badge}/award', [OrganizerBadgeController::class,'award'])->name('badges.award');
+    Route::patch('badges/{badge}/claim-toggle', [OrganizerBadgeController::class,'toggleClaim'])->name('badges.claim-toggle');
+    Route::get('qualification', [QualificationController::class, 'show'])->name('qualification.show');
+    Route::put('qualification', [QualificationController::class, 'update'])->name('qualification.update');
+    Route::post('qualification/submit', [QualificationController::class, 'submit'])->name('qualification.submit');
+    Route::post('qualification/withdraw', [QualificationController::class, 'withdraw'])->name('qualification.withdraw');
+    Route::get('events', [OrganizerEventController::class, 'index'])->name('events.index');
+    Route::get('events/create', [OrganizerEventController::class, 'create'])->middleware('organizer.approved')->name('events.create');
+    Route::post('events', [OrganizerEventController::class, 'store'])->middleware('organizer.approved')->name('events.store');
+    Route::get('events/{event}', [OrganizerEventController::class, 'show'])->name('events.show');
+    Route::get('events/{event}/edit', [OrganizerEventController::class, 'edit'])->name('events.edit');
+    Route::put('events/{event}', [OrganizerEventController::class, 'update'])->name('events.update');
+    Route::post('events/{event}/submit', [OrganizerEventController::class, 'submit'])->name('events.submit');
+    Route::post('events/{event}/unpublish', [OrganizerEventController::class, 'unpublish'])->name('events.unpublish');
+    Route::post('events/{event}/cancel', [OrganizerEventController::class, 'cancel'])->name('events.cancel');
+    Route::post('events/{event}/staff', [OrganizerEventController::class, 'addStaff'])->name('events.staff.store');
+    Route::patch('events/{event}/staff/{staff}/revoke', [OrganizerEventController::class, 'revokeStaff'])->name('events.staff.revoke');
+    Route::get('staff-invitations/{event}/{role}', [OrganizerEventController::class, 'showStaffInvitation'])->middleware('signed')->name('staff-invitations.show');
+    Route::post('staff-invitations/{event}/{role}', [OrganizerEventController::class, 'acceptStaffInvitation'])->middleware('signed')->name('staff-invitations.accept');
+    Route::get('events/{event}/registrations', [OrganizerRegistrationController::class, 'index'])->name('events.registrations.index');
+    Route::patch('events/{event}/registrations/bulk', [OrganizerRegistrationController::class, 'bulk'])->name('events.registrations.bulk');
+    Route::patch('events/{event}/registrations/payment', [OrganizerRegistrationController::class, 'bulkPayment'])->name('events.registrations.payment');
+    Route::post('events/{event}/registrations/check-in', [OrganizerRegistrationController::class, 'checkIn'])->name('events.registrations.check-in');
+    Route::patch('events/{event}/registrations/{registration}', [OrganizerRegistrationController::class, 'update'])->name('events.registrations.update');
+    Route::get('events/{event}/results', [OrganizerResultController::class, 'index'])->name('events.results.index');
+    Route::post('events/{event}/results/verify', [OrganizerResultController::class, 'verify'])->name('events.results.verify');
+    Route::post('events/{event}/results/publish', [OrganizerResultController::class, 'publish'])->name('events.results.publish');
+
+    Route::prefix('events/{event}')->name('events.')->group(function () {
+        Route::get('badges', [OrganizerEventBadgeController::class, 'index'])->name('badges.index');
+        Route::post('badges', [OrganizerEventBadgeController::class, 'store'])->name('badges.store');
+        Route::get('badges/{badge}', [OrganizerEventBadgeController::class, 'show'])->name('badges.show');
+        Route::patch('badges/{badge}', [OrganizerEventBadgeController::class, 'update'])->name('badges.update');
+        Route::post('badges/{badge}/regenerate-token', [OrganizerEventBadgeController::class, 'regenerateToken'])->name('badges.regenerate-token');
+        Route::get('badges/{badge}/qrcode', [OrganizerEventBadgeController::class, 'qrCode'])->name('badges.qrcode');
+        Route::post('badges/{badge}/review', [OrganizerEventBadgeController::class, 'bulkReview'])->name('badges.review');
+        Route::post('badges/{badge}/award', [OrganizerEventBadgeController::class, 'manualAward'])->name('badges.award');
+    });
+});
+
+Route::middleware('auth')->group(function () {
+    Route::get('/badge-claims/{token}', [EventBadgeClaimController::class, 'show'])->name('badge-claims.show');
+    Route::post('/badge-claims/{token}', [EventBadgeClaimController::class, 'store'])->name('badge-claims.store');
 });
 
 //組隊報名相關
@@ -80,8 +161,13 @@ Route::middleware('auth')->group(function () {
     Route::get('/team-posts/{teamPost}', [TeamPostController::class, 'show'])->name('team-posts.show');
 });
 
-//選手資料
+//會員資料
 Route::middleware('auth')->group(function () {
+    Route::get('/member-profile', [ProfileCompletionController::class, 'index'])->name('member-profile.index');
+    Route::get('/member-profile/edit', [ProfileCompletionController::class, 'edit'])->name('member-profile.edit');
+    Route::get('/member-profile/qrcode', [ProfileCompletionController::class, 'qrCode'])->name('member-profile.qrcode');
+    Route::get('/members/scan', [ProfileCompletionController::class, 'scan'])->name('members.scan');
+    Route::get('/members/{user:uuid}', [ProfileCompletionController::class, 'show'])->name('members.show');
     Route::get('/user/profile', [ProfileCompletionController::class, 'edit'])->name('user.profile.completion');
     Route::post('/user/profile', [ProfileCompletionController::class, 'update'])->name('user.profile.completion.update');
 });
@@ -89,10 +175,9 @@ Route::middleware('auth')->group(function () {
 //選手專區
 Route::get('events', [EventController::class, 'index'])->name('events.index');
 
-Route::middleware(['auth', 'admin'])->group(function () {
-    Route::get('events/create', [EventController::class, 'create'])->name('events.create');
-    Route::post('events', [EventController::class, 'store'])->name('events.store');
-    Route::get('events/{event}/edit', [EventController::class, 'edit'])->name('events.edit');
+Route::middleware('auth')->group(function () {
+    Route::get('events/create', [OrganizerEventController::class, 'create'])->middleware('organizer.approved')->name('events.create');
+    Route::post('events', [OrganizerEventController::class, 'store'])->middleware('organizer.approved')->name('events.store');
 
     Route::resource('events.groups', \App\Http\Controllers\EventGroupController::class)->except(['show']);
 });
@@ -102,15 +187,11 @@ Route::middleware(['auth'])->group(function () {
     Route::resource('scores', \App\Http\Controllers\ScoreController::class);
 });
 
-Route::middleware(['auth'])->group(function () {
-    Route::get('achievements', [AchievementController::class, 'index'])->name('achievements.index');
-});
-
 Route::middleware(['auth', 'profile.completed'])->group(function () {
     Route::get('/my-events', [MyEventController::class, 'index'])->name('my-events.index');
-    Route::get('/my-events/{event}/score', [MyEventController::class, 'score'])->name('my-events.score');
-    Route::post('/my-events/{event}/score', [MyEventController::class, 'storeScore'])->name('my-events.score.store');
-    Route::post('/my-events/{event}/submit', [MyEventController::class, 'submitAll'])->name('my-events.score.submit');
+    Route::get('/my-events/registrations/{registration}/score', [MyEventController::class, 'score'])->name('my-events.score');
+    Route::post('/my-events/registrations/{registration}/score', [MyEventController::class, 'storeScore'])->name('my-events.score.store');
+    Route::post('/my-events/registrations/{registration}/submit', [MyEventController::class, 'submitAll'])->name('my-events.score.submit');
 });
 
 //快速報名
@@ -119,3 +200,5 @@ Route::get('events/{event}', [EventController::class, 'show'])->name('events.sho
 Route::post('events/{event}/groups/{group}/quick-register', [EventRegistrationController::class, 'quickRegister'])
     ->middleware('auth')
     ->name('events.quick_register');
+Route::patch('event-registrations/{registration}/withdraw', [EventRegistrationController::class, 'withdraw'])
+    ->middleware('auth')->name('event-registrations.withdraw');

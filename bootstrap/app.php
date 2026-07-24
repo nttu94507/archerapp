@@ -17,6 +17,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'admin' => \App\Http\Middleware\EnsureUserIsAdmin::class,
 //            'verified' => \App\Http\Middleware\EnsureEmailIsVerified::class,
             'profile.completed' => \App\Http\Middleware\EnsureProfileIsComplete::class,
+            'organizer.approved' => \App\Http\Middleware\EnsureApprovedOrganizer::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

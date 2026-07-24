@@ -6,23 +6,12 @@
 @section('content')
     @php
         $regStatus = function ($event) {
-            if (!$event->reg_start || !$event->reg_end) {
-                return null;
-            }
-
-            $now = now();
-            $start = \Carbon\Carbon::parse($event->reg_start);
-            $end = \Carbon\Carbon::parse($event->reg_end);
-
-            if ($now->lt($start)) {
-                return ['label' => '尚未開始', 'class' => 'bg-gray-100 text-gray-700'];
-            }
-
-            if ($now->between($start, $end)) {
-                return ['label' => '報名中', 'class' => 'bg-indigo-50 text-indigo-700'];
-            }
-
-            return ['label' => '已截止', 'class' => 'bg-gray-100 text-gray-500'];
+            return match ($event->registrationStatus()) {
+                'open' => ['label' => '報名中', 'class' => 'bg-green-100 text-green-700'],
+                'upcoming' => ['label' => '尚未開始', 'class' => 'bg-yellow-100 text-yellow-800'],
+                'closed' => ['label' => '已截止', 'class' => 'bg-gray-100 text-gray-500'],
+                default => null,
+            };
         };
 
         $dateRange = function ($event) {
@@ -108,7 +97,7 @@
                         <a href="{{ route('events.show', $event) }}#groups" class="group block rounded-2xl border border-indigo-100 bg-white p-5 shadow-sm ring-1 ring-indigo-50 transition hover:-translate-y-0.5 hover:shadow md:focus:outline-none md:focus:ring-2 md:focus:ring-indigo-200">
                             <article class="flex items-start justify-between gap-3">
                                 <div>
-                                    <p class="text-xs font-semibold text-indigo-600">報名截止：{{ $event->reg_end ? \Carbon\Carbon::parse($event->reg_end)->format('Y-m-d H:i') : '—' }}</p>
+                                    <p class="text-xs font-semibold text-indigo-600">最晚截止：{{ optional($event->registrationClosesAt())->format('Y-m-d H:i') ?? '—' }}</p>
                                     <h3 class="mt-1 text-lg font-semibold text-gray-900 group-hover:text-indigo-700">{{ $event->name }}</h3>
                                     <p class="text-sm text-gray-600">{{ $event->venue ?? '點未填寫'}} ・ {{ $dateRange($event) }} </p>
                                     <div class="mt-2 flex flex-wrap gap-2 text-xs text-gray-500">

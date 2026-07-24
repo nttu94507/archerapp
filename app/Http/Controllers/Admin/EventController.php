@@ -77,8 +77,8 @@ class EventController extends Controller
             'verified'   => 'boolean',
             'level'      => 'nullable|string|max:50',
             'organizer'  => 'required|string|max:120',
-            'reg_start'  => 'nullable|date',
-            'reg_end'    => 'nullable|date|after_or_equal:reg_start',
+            'reg_start'  => 'nullable|date|required_with:reg_end',
+            'reg_end'    => 'nullable|date|required_with:reg_start|after_or_equal:reg_start',
             'venue'      => 'nullable|string|max:255',
             'map_link'   => 'nullable|url',
             'lat'        => 'nullable|numeric|between:-90,90',
@@ -86,6 +86,8 @@ class EventController extends Controller
         ]);
 
         $validated['verified'] = $request->boolean('verified');
+        $validated['status'] = $validated['verified'] ? 'approved' : 'draft';
+        $validated['published_at'] = $validated['verified'] ? now() : null;
 
         $event = DB::transaction(function () use ($validated, $request) {
             $event = Event::create($validated);
@@ -112,10 +114,11 @@ class EventController extends Controller
         $event->load('groups');
 
         $participantStatuses = [
-            'pending'    => '待處理',
             'registered' => '已報名',
             'checked_in' => '已報到',
             'withdrawn'  => '已退出',
+            'refunded'   => '已退款',
+            'no_show'    => '未到',
         ];
 
         $participantQuery = EventRegistration::query()
@@ -179,7 +182,7 @@ class EventController extends Controller
             ->orderBy('user_id')
             ->orderBy('end_number')
             ->get()
-            ->groupBy('user_id');
+            ->groupBy('event_registration_id');
 
         $statSort = $request->get('stat_sort', 'total_score');
         $statDir  = $request->get('stat_dir', 'desc');
@@ -192,7 +195,7 @@ class EventController extends Controller
         }
 
         $scoreboard = $participants->map(function (EventRegistration $registration) use ($scoreEntries) {
-            $entries = $scoreEntries->get($registration->user_id, collect());
+            $entries = $scoreEntries->get($registration->id, collect());
 
             $arrowCount = $entries->reduce(function (int $carry, EventScoreEntry $entry) {
                 return $carry + count($entry->scores ?? []);
@@ -269,5 +272,29 @@ class EventController extends Controller
         $registration->update(['paid' => $validated['paid']]);
 
         return back()->with('success', '繳費狀態已更新。');
+    }
+
+    public function review(Event $event, Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'decision' => ['required', 'in:publish,unpublish,approve,reject'],
+            'review_note' => ['required', 'string', 'max:1000'],
+        ]);
+
+        $approved = in_array($validated['decision'], ['publish', 'approve'], true);
+        $event->update([
+            'status' => $approved ? 'approved' : 'draft',
+            'verified' => $approved,
+            'published_at' => $approved ? now() : null,
+            'review_note' => $validated['review_note'] ?? null,
+        ]);
+        \App\Models\EventAuditLog::create([
+            'event_id' => $event->id, 'user_id' => $request->user()->id,
+            'action' => $approved ? 'admin.event_force_published' : 'admin.event_force_unpublished',
+            'subject_type' => Event::class, 'subject_id' => $event->id,
+            'metadata' => ['note' => $validated['review_note'] ?? null],
+        ]);
+
+        return back()->with('success', $approved ? '管理員已緊急發布賽事。' : '管理員已緊急下架賽事。');
     }
 }

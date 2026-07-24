@@ -1,0 +1,23 @@
+@extends('layouts.app')
+
+@section('title', $member->display_name . ' 的會員資料')
+
+@section('content')
+<div class="mx-auto max-w-xl px-4 py-8 sm:px-6">
+    <a href="{{ route('members.scan') }}" class="text-sm text-indigo-600 hover:text-indigo-500">← 繼續掃描</a>
+    <div class="mt-4 rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+        <p class="text-sm font-medium text-indigo-600">ArrowTrack 會員</p>
+        <h1 class="mt-2 text-2xl font-bold">{{ $member->display_name }}</h1>
+        <p class="mt-2 break-all font-mono text-xs text-gray-500">{{ $member->uuid }}</p>
+        <dl class="mt-6 grid grid-cols-2 gap-5 border-t pt-5 text-sm">
+            <div><dt class="text-gray-500">城市</dt><dd class="mt-1 font-medium">{{ $member->profile?->city ?: '未填寫' }}</dd></div>
+            <div><dt class="text-gray-500">慣用手</dt><dd class="mt-1 font-medium">{{ ['left'=>'左手','right'=>'右手','both'=>'皆可'][$member->profile?->handedness] ?? '未指定' }}</dd></div>
+            <div><dt class="text-gray-500">弓種</dt><dd class="mt-1 font-medium">{{ ['recurve'=>'反曲弓','compound'=>'複合弓','barebow'=>'光弓','traditional'=>'傳統弓'][$member->profile?->bow_type] ?? '未指定' }}</dd></div>
+        </dl>
+        <p class="mt-6 rounded-xl bg-gray-50 p-3 text-xs text-gray-500">為保護會員隱私，電話、生日與緊急聯絡資訊不會顯示。</p>
+    </div>
+    <section class="mt-5 rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+        <div class="flex items-center justify-between"><h2 class="text-lg font-semibold">Badge</h2><span class="text-sm text-gray-500">點擊查看</span></div><div class="mt-4"><x-badge-gallery :awards="$member->eventBadges" /></div>
+    </section>
+</div>
+@endsection

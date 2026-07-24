@@ -25,6 +25,8 @@ class EventFactory extends Factory
             'end_date'   => $end->format('Y-m-d'),
             'mode'       => $this->faker->randomElement(['indoor','outdoor']),
             'verified'   => true,
+            'status'     => 'approved',
+            'published_at' => now(),
             'level'      => $this->faker->randomElement(['local','regional','national']),
             'organizer'  => $this->faker->company(),
             'reg_start'  => $this->faker->optional()->dateTimeBetween('-2 months', 'now'),
