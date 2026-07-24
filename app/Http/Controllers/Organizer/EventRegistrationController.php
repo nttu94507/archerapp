@@ -18,24 +18,56 @@ class EventRegistrationController extends Controller
     public function index(Request $request, Event $event): View
     {
         $this->authorize('manageRegistrations', $event);
-        $query = $event->registrations()->with(['user', 'event_group']);
-        if ($request->filled('status')) $query->where('status', $request->status);
-        if ($request->filled('payment_status')) $query->where('payment_status', $request->payment_status);
-        if ($request->filled('event_group_id')) $query->where('event_group_id', $request->event_group_id);
-        if ($request->filled('q')) {
-            $keyword = trim((string) $request->q);
-            $query->where(fn ($q) => $q
-                ->where('name', 'like', '%'.$keyword.'%')
-                ->orWhere('email', 'like', '%'.$keyword.'%')
-                ->orWhere('team_name', 'like', '%'.$keyword.'%')
-                ->orWhereHas('event_group', fn ($group) => $group->where('name', 'like', '%'.$keyword.'%'))
-                ->orWhereHas('user', fn ($user) => $user
-                    ->where('uuid', 'like', '%'.$keyword.'%')
-                    ->orWhere('nickname', 'like', '%'.$keyword.'%')));
+        $activeStatuses = ['registered', 'checked_in'];
+        $groups = $event->groups()
+            ->withCount([
+                'registrations as active_registrations_count' => fn ($query) => $query->whereIn('status', $activeStatuses),
+                'registrations as paid_registrations_count' => fn ($query) => $query->whereIn('status', $activeStatuses)->where('payment_status', 'paid'),
+                'registrations as exempt_registrations_count' => fn ($query) => $query->whereIn('status', $activeStatuses)->where('payment_status', 'exempt'),
+                'registrations as pending_payment_count' => fn ($query) => $query->whereIn('status', $activeStatuses)->where('payment_status', 'pending'),
+                'registrations as payment_issue_count' => fn ($query) => $query->whereIn('status', $activeStatuses)->where('payment_status', 'issue'),
+            ])
+            ->orderBy('name')
+            ->get();
+
+        $selectedGroup = $request->filled('event_group_id')
+            ? $groups->firstWhere('id', $request->integer('event_group_id'))
+            : null;
+
+        $registrations = null;
+        if ($selectedGroup) {
+            $query = $event->registrations()
+                ->with(['user', 'event_group'])
+                ->where('event_group_id', $selectedGroup->id);
+            if ($request->filled('status')) $query->where('status', $request->status);
+            if ($request->filled('payment_status')) $query->where('payment_status', $request->payment_status);
+            if ($request->filled('q')) {
+                $keyword = trim((string) $request->q);
+                $query->where(fn ($q) => $q
+                    ->where('name', 'like', '%'.$keyword.'%')
+                    ->orWhere('email', 'like', '%'.$keyword.'%')
+                    ->orWhere('team_name', 'like', '%'.$keyword.'%')
+                    ->orWhereHas('user', fn ($user) => $user
+                        ->where('uuid', 'like', '%'.$keyword.'%')
+                        ->orWhere('nickname', 'like', '%'.$keyword.'%')));
+            }
+            $registrations = $query->orderByRaw("CASE WHEN status IN ('registered','checked_in') THEN 0 ELSE 1 END")
+                ->orderBy('name')
+                ->paginate(30)
+                ->withQueryString();
         }
-        $registrations = $query->orderBy('event_group_id')->orderBy('name')->paginate(30)->withQueryString();
-        $groups = $event->groups()->orderBy('name')->get();
-        return view('organizer.registrations.index', compact('event', 'registrations', 'groups'));
+
+        $totals = [
+            'groups' => $groups->count(),
+            'registrations' => $groups->sum('active_registrations_count'),
+            'paid' => $groups->sum(fn ($group) => (int) $group->fee === 0
+                ? (int) $group->active_registrations_count
+                : (int) $group->paid_registrations_count + (int) $group->exempt_registrations_count),
+            'pending' => $groups->sum(fn ($group) => (int) $group->fee === 0 ? 0 : (int) $group->pending_payment_count),
+            'issues' => $groups->sum('payment_issue_count'),
+        ];
+
+        return view('organizer.registrations.index', compact('event', 'registrations', 'groups', 'selectedGroup', 'totals'));
     }
 
     public function update(Request $request, Event $event, EventRegistration $registration, EventBadgeAwardService $badges): RedirectResponse

@@ -111,6 +111,36 @@ class EventManagementWorkflowTest extends TestCase
         $this->assertDatabaseHas('event_audit_logs',['event_id'=>$event->id,'action'=>'registration.checked_in']);
     }
 
+    public function test_registration_management_starts_with_group_summary_then_opens_group_members(): void
+    {
+        [$owner, $event, $group] = $this->ownedEvent();
+        $group->update(['name'=>'反曲公開組', 'fee'=>500, 'quota'=>24]);
+        $member = User::factory()->create(['name'=>'測試選手']);
+        $registration = $this->registration($event, $group, $member);
+
+        $this->actingAs($owner)
+            ->get(route('organizer.events.registrations.index', $event))
+            ->assertOk()
+            ->assertSee('選擇組別')
+            ->assertSee('反曲公開組')
+            ->assertDontSee('測試選手');
+
+        $this->actingAs($owner)
+            ->get(route('organizer.events.registrations.index', [$event, 'event_group_id'=>$group->id, 'q'=>'測試選手']))
+            ->assertOk()
+            ->assertSee('搜尋此組選手')
+            ->assertSee('測試選手')
+            ->assertSee('標記為繳費完成');
+
+        $this->actingAs($owner)->patch(route('organizer.events.registrations.payment', $event), [
+            'registration_ids'=>[$registration->id], 'payment_status'=>'paid', 'payment_amount'=>500,
+        ])->assertSessionHas('success');
+
+        $this->assertDatabaseHas('event_registrations', [
+            'id'=>$registration->id, 'payment_status'=>'paid', 'paid'=>true,
+        ]);
+    }
+
     public function test_member_can_accept_a_signed_staff_qr_invitation(): void
     {
         [$owner,$event] = $this->ownedEvent();
