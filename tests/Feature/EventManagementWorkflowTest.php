@@ -7,6 +7,7 @@ use App\Models\EventGroup;
 use App\Models\EventRegistration;
 use App\Models\EventScoreEntry;
 use App\Models\EventStaff;
+use App\Models\EventScoringSession;
 use App\Models\User;
 use App\Models\OrganizerProfile;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -185,6 +186,38 @@ class EventManagementWorkflowTest extends TestCase
         $this->actingAs($owner)->post(route('organizer.events.results.publish',$event))->assertSessionHas('success');
         $this->assertNotNull($registration->fresh()->result_published_at);
         $this->assertNotNull($event->fresh()->completed_at);
+    }
+
+    public function test_organizer_can_create_shared_target_station_and_submit_an_end_for_all_archers(): void
+    {
+        [$owner,$event,$group] = $this->ownedEvent();
+        $group->update(['name'=>'反曲公開組','arrow_count'=>12,'arrows_per_end'=>6]);
+        $members = User::factory()->count(2)->create();
+        $registrations = $members->map(fn ($member) => $this->registration($event,$group,$member));
+
+        $this->actingAs($owner)->post(route('organizer.events.scoring.store',$event), [
+            'event_group_id'=>$group->id, 'name'=>'上午資格賽', 'athletes_per_target'=>2,
+        ])->assertSessionHas('success');
+
+        $session = EventScoringSession::with('targets.assignments')->firstOrFail();
+        $target = $session->targets->first();
+        $this->assertCount(2,$target->assignments);
+
+        $this->get(route('scoring-stations.show',$target->access_token))
+            ->assertOk()->assertSee('靶號')->assertSee($members[0]->name)->assertSee($members[1]->name);
+
+        $this->post(route('scoring-stations.ends.store',$target->access_token), [
+            'end_number'=>1,
+            'scores'=>[
+                $registrations[0]->id=>['X','10','9','8','7','6'],
+                $registrations[1]->id=>['10','10','9','9','8','8'],
+            ],
+        ])->assertSessionHas('success');
+
+        $this->assertDatabaseHas('event_score_entries', [
+            'event_registration_id'=>$registrations[0]->id, 'end_number'=>1, 'end_total'=>50,
+        ]);
+        $this->assertSame(1,$target->fresh()->last_completed_end);
     }
 
     private function eventPayload(): array

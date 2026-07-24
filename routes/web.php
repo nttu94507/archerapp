@@ -22,10 +22,12 @@ use App\Http\Controllers\BadgeDropController;
 use App\Http\Controllers\Organizer\EventController as OrganizerEventController;
 use App\Http\Controllers\Organizer\EventRegistrationController as OrganizerRegistrationController;
 use App\Http\Controllers\Organizer\EventResultController as OrganizerResultController;
+use App\Http\Controllers\Organizer\EventScoringController as OrganizerScoringController;
 use App\Http\Controllers\Organizer\QualificationController;
 use App\Http\Controllers\Admin\OrganizerQualificationController as AdminOrganizerQualificationController;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Storage;
+use App\Http\Controllers\ScoringStationController;
 
 // open page
 Route::get('/', [DashboardController::class, 'index'])->name('dashboard.index');
@@ -133,6 +135,8 @@ Route::prefix('organizer')->middleware('auth')->name('organizer.')->group(functi
     Route::get('events/{event}/results', [OrganizerResultController::class, 'index'])->name('events.results.index');
     Route::post('events/{event}/results/verify', [OrganizerResultController::class, 'verify'])->name('events.results.verify');
     Route::post('events/{event}/results/publish', [OrganizerResultController::class, 'publish'])->name('events.results.publish');
+    Route::get('events/{event}/scoring', [OrganizerScoringController::class, 'index'])->name('events.scoring.index');
+    Route::post('events/{event}/scoring', [OrganizerScoringController::class, 'store'])->name('events.scoring.store');
 
     Route::prefix('events/{event}')->name('events.')->group(function () {
         Route::get('badges', [OrganizerEventBadgeController::class, 'index'])->name('badges.index');
@@ -145,6 +149,9 @@ Route::prefix('organizer')->middleware('auth')->name('organizer.')->group(functi
         Route::post('badges/{badge}/award', [OrganizerEventBadgeController::class, 'manualAward'])->name('badges.award');
     });
 });
+
+Route::get('/scoring-stations/{token}', [ScoringStationController::class, 'show'])->name('scoring-stations.show');
+Route::post('/scoring-stations/{token}/ends', [ScoringStationController::class, 'storeEnd'])->name('scoring-stations.ends.store');
 
 Route::middleware('auth')->group(function () {
     Route::get('/badge-claims/{token}', [EventBadgeClaimController::class, 'show'])->name('badge-claims.show');

@@ -40,6 +40,10 @@ class Event extends Model
         return $this->hasMany(EventRegistration::class);
     }
 
+    public function scoringSessions() {
+        return $this->hasMany(EventScoringSession::class);
+    }
+
     public function auditLogs() {
         return $this->hasMany(EventAuditLog::class)->latest();
     }
