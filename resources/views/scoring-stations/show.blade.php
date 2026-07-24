@@ -88,11 +88,11 @@
                     <span id="active-arrow-value" class="inline-flex h-11 min-w-12 items-center justify-center rounded-xl bg-indigo-50 px-3 text-xl font-bold text-indigo-700">—</span>
                 </div>
                 <div class="grid grid-cols-4 gap-2 sm:grid-cols-8">
-                    @foreach(['X','10','9','BKSP','8','7','6','PREV','5','4','3','NEXT','2','1','M','CLR'] as $key)
+                    @foreach(['X','10','9','BKSP','8','7','6','PREV','5','4','3','NEXT','2','1','M','SUBMIT'] as $key)
                         <button type="button" data-key="{{ $key }}"
-                                class="score-key min-h-12 touch-manipulation select-none rounded-xl border px-2 text-lg font-semibold text-gray-900 active:bg-indigo-100"
+                                class="score-key min-h-12 touch-manipulation select-none rounded-xl border px-2 text-lg font-semibold active:bg-indigo-100 {{ $key==='SUBMIT' ? 'border-indigo-600 bg-indigo-600 text-white' : 'text-gray-900' }}"
                                 style="-webkit-tap-highlight-color: transparent; -webkit-user-select: none;">
-                            {{ $key === 'BKSP' ? '⌫' : ($key === 'PREV' ? '←' : ($key === 'NEXT' ? '→' : ($key === 'CLR' ? '清除' : $key))) }}
+                            {{ $key === 'BKSP' ? '⌫' : ($key === 'PREV' ? '←' : ($key === 'NEXT' ? '→' : ($key === 'SUBMIT' ? '送出' : $key))) }}
                         </button>
                     @endforeach
                 </div>
@@ -154,15 +154,11 @@
         if(!input) return;
         if(action==='PREV'){selectInput(activeIndex-1);return}
         if(action==='NEXT'){selectInput(activeIndex+1);return}
+        if(action==='SUBMIT'){form.requestSubmit();return}
         if(action==='BKSP'){
             const previousIndex=Math.max(0,activeIndex-1);
             inputs[previousIndex].value='';
             selectInput(previousIndex);
-            save();
-            return;
-        }
-        if(action==='CLR'){
-            input.value='';
             save();
             return;
         }
