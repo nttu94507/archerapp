@@ -123,7 +123,7 @@
         if(action==='BKSP'||action==='CLR'){
             input.value='';
             save();
-            if(action==='BKSP') selectInput(activeIndex-1);
+            selectInput(activeIndex-1);
             return;
         }
         input.value=action;
