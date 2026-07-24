@@ -35,8 +35,9 @@
                     <div class="mt-4 grid gap-2" style="grid-template-columns: repeat({{ $session->arrows_per_end }}, minmax(0, 1fr));">
                         @for($arrow=0;$arrow<$session->arrows_per_end;$arrow++)
                             <input name="scores[{{ $assignment->registration->id }}][]" required readonly inputmode="none" maxlength="2"
+                                   placeholder="＿"
                                    aria-label="{{ $assignment->registration->name }} 第 {{ $arrow+1 }} 箭"
-                                   class="score-input min-h-14 min-w-0 cursor-pointer rounded-xl border-gray-300 p-1 text-center text-xl font-bold focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500">
+                                   class="score-input min-h-14 min-w-0 touch-manipulation cursor-pointer select-none rounded-xl border-gray-300 p-1 text-center text-xl font-bold placeholder:text-gray-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500">
                         @endfor
                     </div>
                 </section>
@@ -51,7 +52,8 @@
                 <div class="grid grid-cols-4 gap-2">
                     @foreach(['X','10','9','BKSP','8','7','6','PREV','5','4','3','NEXT','2','1','M','CLR'] as $key)
                         <button type="button" data-key="{{ $key }}"
-                                class="score-key min-h-14 rounded-xl border px-2 text-lg font-semibold text-gray-900 active:bg-indigo-100">
+                                class="score-key min-h-14 touch-manipulation select-none rounded-xl border px-2 text-lg font-semibold text-gray-900 active:bg-indigo-100"
+                                style="-webkit-tap-highlight-color: transparent; -webkit-user-select: none;">
                             {{ $key === 'BKSP' ? '⌫' : ($key === 'PREV' ? '←' : ($key === 'NEXT' ? '→' : ($key === 'CLR' ? '清除' : $key))) }}
                         </button>
                     @endforeach
