@@ -10,8 +10,8 @@
     $splitEnds=(int) ceil(($session->event->mode==='indoor' ? 30 : 36)/$session->arrows_per_end);
     $roundLabel=$session->total_arrows > ($session->event->mode==='indoor' ? 30 : 36) ? ($endNumber <= $splitEnds ? '上半局' : '下半局') : '全程';
 @endphp
-<div class="mx-auto min-h-screen max-w-7xl space-y-3 px-3 py-3 sm:px-5 sm:py-4">
-    <header class="rounded-2xl bg-gray-900 p-4 text-white sm:p-5">
+<div class="mx-auto min-h-screen max-w-7xl space-y-3 px-3 py-3 sm:px-5 sm:py-4 lg:flex lg:h-[calc(100dvh-4rem)] lg:min-h-0 lg:flex-col lg:overflow-hidden">
+    <header class="shrink-0 rounded-2xl bg-gray-900 p-4 text-white">
         <div class="flex items-start justify-between gap-3">
             <div><p class="text-xs text-gray-300">{{ $session->event->name }} · {{ $session->name }}</p><h1 class="mt-1 text-2xl font-bold">靶號 {{ str_pad($target->target_number,2,'0',STR_PAD_LEFT) }}</h1><p class="mt-1 text-sm text-gray-300">{{ $session->group?->name }}</p></div>
             <div class="text-right"><p class="text-xs text-gray-300">{{ $roundLabel }}</p><p class="text-xl font-bold">{{ $isComplete ? '計分完成' : '第 '.$endNumber.' / '.$totalEnds.' 趟' }}</p></div>
@@ -26,10 +26,10 @@
     @if($isComplete)
         <div class="rounded-2xl border bg-white p-8 text-center shadow-sm"><p class="text-4xl">✓</p><h2 class="mt-3 text-xl font-bold">本靶已完成全部計分</h2><p class="mt-2 text-sm text-gray-500">請保留紙本記分卡，並交由主辦方進行最終核對。</p></div>
     @else
-        <form method="POST" action="{{ route('scoring-stations.ends.store',$target->access_token) }}" id="station-form" class="space-y-3">
+        <form method="POST" action="{{ route('scoring-stations.ends.store',$target->access_token) }}" id="station-form" class="space-y-3 lg:flex lg:min-h-0 lg:flex-1 lg:flex-col">
             @csrf
             <input type="hidden" name="end_number" value="{{ $endNumber }}">
-            <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4 lg:min-h-0 lg:flex-1">
             @foreach($target->assignments as $assignment)
                 @php
                     $historyEntries=$assignment->registration->scoreEntries;
@@ -39,7 +39,7 @@
                     $historyTenPlus=$historyScores->filter(fn($score)=>strtoupper((string)$score)==='X' || (string)$score==='10')->count();
                     $runningTotal=0;
                 @endphp
-                <section class="athlete-card rounded-2xl border bg-white p-3 shadow-sm" data-registration="{{ $assignment->registration->id }}">
+                <section class="athlete-card rounded-2xl border bg-white p-3 shadow-sm lg:min-h-0 lg:overflow-y-auto" data-registration="{{ $assignment->registration->id }}">
                     <div class="flex items-center justify-between gap-3"><div><p class="text-xs font-semibold text-indigo-600">{{ $target->target_number.$assignment->position }}</p><h2 class="text-lg font-bold">{{ $assignment->registration->name }}</h2></div><p class="end-total text-2xl font-bold">0</p></div>
                     <div class="mt-2 grid grid-cols-4 gap-1.5 text-center">
                         <div class="rounded-lg bg-gray-50 p-1.5"><p class="text-sm font-semibold">{{ $historyEntries->count() }}</p><p class="text-[10px] text-gray-500">趟數</p></div>
@@ -82,7 +82,7 @@
             @endforeach
             </div>
 
-            <section id="keypad-panel" class="rounded-2xl border bg-white p-3 shadow-sm">
+            <section id="keypad-panel" class="shrink-0 rounded-2xl border bg-white p-3 shadow-sm">
                 <div class="mb-3 flex items-center justify-between gap-3">
                     <div><p class="text-xs text-gray-500">連續計分</p><p id="active-arrow-label" class="text-sm font-semibold">從第一個空格開始</p></div>
                     <span id="active-arrow-value" class="inline-flex h-11 min-w-12 items-center justify-center rounded-xl bg-indigo-50 px-3 text-xl font-bold text-indigo-700">—</span>
@@ -99,7 +99,7 @@
                 <p class="mt-2 text-center text-xs text-gray-500">按下分值會依選手與箭序自動前進；刪除會退回上一格。</p>
             </section>
 
-            <div class="grid gap-2 rounded-2xl border bg-white p-3 shadow-sm sm:grid-cols-[1fr_auto] sm:items-center">
+            <div class="grid shrink-0 gap-2 rounded-2xl border bg-white p-3 shadow-sm sm:grid-cols-[1fr_auto] sm:items-center">
                 <p id="draft-status" class="text-center text-xs text-gray-500 sm:text-left">輸入會暫存在這台設備</p>
                 <button class="min-h-12 rounded-xl bg-indigo-600 px-6 text-base font-semibold text-white">核對並送出本靶第 {{ $endNumber }} 趟</button>
             </div>
@@ -123,7 +123,6 @@
         inputs.forEach(input=>input.classList.remove('ring-2','ring-indigo-500','bg-indigo-50'));
         const input=inputs[activeIndex];
         input.classList.add('ring-2','ring-indigo-500','bg-indigo-50');
-        input.focus();
         const card=input.closest('.athlete-card');
         const athlete=card?.querySelector('h2')?.textContent?.trim()||'選手';
         const arrowIndex=Array.from(card.querySelectorAll('.score-input')).indexOf(input)+1;
@@ -145,7 +144,10 @@
         const saved=JSON.parse(localStorage.getItem(storageKey)||'null');
         if(Array.isArray(saved)) inputs.forEach((input,index)=>input.value=saved[index]||'');
     } catch(e) {}
-    inputs.forEach((input,index)=>input.addEventListener('click',()=>selectInput(index)));
+    inputs.forEach((input,index)=>{
+        input.addEventListener('pointerdown',event=>{event.preventDefault();selectInput(index)});
+        input.addEventListener('click',event=>event.preventDefault());
+    });
     document.querySelectorAll('.score-key').forEach(key=>key.addEventListener('click',()=>{
         const action=key.dataset.key;
         const input=inputs[activeIndex];
