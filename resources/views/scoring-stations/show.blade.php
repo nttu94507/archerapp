@@ -34,13 +34,30 @@
                     <div class="flex items-center justify-between gap-3"><div><p class="text-xs font-semibold text-indigo-600">{{ $target->target_number.$assignment->position }}</p><h2 class="text-lg font-bold">{{ $assignment->registration->name }}</h2></div><p class="end-total text-2xl font-bold">0</p></div>
                     <div class="mt-4 grid gap-2" style="grid-template-columns: repeat({{ $session->arrows_per_end }}, minmax(0, 1fr));">
                         @for($arrow=0;$arrow<$session->arrows_per_end;$arrow++)
-                            <select name="scores[{{ $assignment->registration->id }}][]" required class="score-input min-h-14 min-w-0 rounded-xl border-gray-300 p-1 text-center text-lg font-bold">
-                                <option value="">—</option>@foreach(['X','10','9','8','7','6','5','4','3','2','1','M'] as $value)<option value="{{ $value }}">{{ $value }}</option>@endforeach
-                            </select>
+                            <input name="scores[{{ $assignment->registration->id }}][]" required readonly inputmode="none" maxlength="2"
+                                   aria-label="{{ $assignment->registration->name }} 第 {{ $arrow+1 }} 箭"
+                                   class="score-input min-h-14 min-w-0 cursor-pointer rounded-xl border-gray-300 p-1 text-center text-xl font-bold focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500">
                         @endfor
                     </div>
                 </section>
             @endforeach
+
+            <section id="keypad-sheet" class="fixed inset-0 z-50 hidden items-end justify-center bg-black/30 p-3 sm:items-center">
+              <div class="w-full max-w-md rounded-2xl border bg-white p-3 shadow-2xl sm:p-4">
+                <div class="mb-3 flex items-center justify-between gap-3">
+                    <div><p class="text-xs text-gray-500">目前輸入</p><p id="active-arrow-label" class="text-sm font-semibold">請點選一個箭位</p></div>
+                    <div class="flex items-center gap-2"><span id="active-arrow-value" class="inline-flex h-12 min-w-12 items-center justify-center rounded-xl bg-indigo-50 px-3 text-xl font-bold text-indigo-700">—</span><button id="close-keypad" type="button" class="inline-flex h-12 w-12 items-center justify-center rounded-xl border text-gray-500" aria-label="關閉鍵盤">✕</button></div>
+                </div>
+                <div class="grid grid-cols-4 gap-2">
+                    @foreach(['X','10','9','BKSP','8','7','6','PREV','5','4','3','NEXT','2','1','M','CLR'] as $key)
+                        <button type="button" data-key="{{ $key }}"
+                                class="score-key min-h-14 rounded-xl border px-2 text-lg font-semibold text-gray-900 active:bg-indigo-100">
+                            {{ $key === 'BKSP' ? '⌫' : ($key === 'PREV' ? '←' : ($key === 'NEXT' ? '→' : ($key === 'CLR' ? '清除' : $key))) }}
+                        </button>
+                    @endforeach
+                </div>
+              </div>
+            </section>
 
             <div class="sticky bottom-3 rounded-2xl border bg-white/95 p-3 shadow-xl backdrop-blur">
                 <p id="draft-status" class="mb-2 text-center text-xs text-gray-500">輸入會暫存在這台設備</p>
@@ -57,11 +74,31 @@
     const storageKey='scoring:{{ $target->access_token }}:end:{{ $endNumber }}';
     const inputs=Array.from(document.querySelectorAll('.score-input'));
     const status=document.getElementById('draft-status');
+    const activeLabel=document.getElementById('active-arrow-label');
+    const activeValue=document.getElementById('active-arrow-value');
+    const keypad=document.getElementById('keypad-sheet');
+    const closeKeypad=document.getElementById('close-keypad');
+    let activeIndex=0;
     const valueOf=value=>value==='X'?10:(value==='M'||!value?0:Number(value));
+    const selectInput=index=>{
+        activeIndex=Math.max(0,Math.min(inputs.length-1,index));
+        inputs.forEach(input=>input.classList.remove('ring-2','ring-indigo-500','bg-indigo-50'));
+        const input=inputs[activeIndex];
+        input.classList.add('ring-2','ring-indigo-500','bg-indigo-50');
+        input.focus();
+        const card=input.closest('.athlete-card');
+        const athlete=card?.querySelector('h2')?.textContent?.trim()||'選手';
+        const arrowIndex=Array.from(card.querySelectorAll('.score-input')).indexOf(input)+1;
+        activeLabel.textContent=`${athlete} · 第 ${arrowIndex} 箭`;
+        activeValue.textContent=input.value||'—';
+        keypad.classList.remove('hidden');
+        keypad.classList.add('flex');
+    };
     const recalc=()=>{
         document.querySelectorAll('.athlete-card').forEach(card=>{
             card.querySelector('.end-total').textContent=Array.from(card.querySelectorAll('.score-input')).reduce((sum,input)=>sum+valueOf(input.value),0);
         });
+        activeValue.textContent=inputs[activeIndex]?.value||'—';
     };
     const save=()=>{
         localStorage.setItem(storageKey,JSON.stringify(inputs.map(input=>input.value)));
@@ -72,8 +109,27 @@
         const saved=JSON.parse(localStorage.getItem(storageKey)||'null');
         if(Array.isArray(saved)) inputs.forEach((input,index)=>input.value=saved[index]||'');
     } catch(e) {}
-    inputs.forEach(input=>input.addEventListener('change',save));
+    inputs.forEach((input,index)=>input.addEventListener('click',()=>selectInput(index)));
+    closeKeypad.addEventListener('click',()=>{keypad.classList.add('hidden');keypad.classList.remove('flex')});
+    keypad.addEventListener('click',event=>{if(event.target===keypad){keypad.classList.add('hidden');keypad.classList.remove('flex')}});
+    document.querySelectorAll('.score-key').forEach(key=>key.addEventListener('click',()=>{
+        const action=key.dataset.key;
+        const input=inputs[activeIndex];
+        if(!input) return;
+        if(action==='PREV'){selectInput(activeIndex-1);return}
+        if(action==='NEXT'){selectInput(activeIndex+1);return}
+        if(action==='BKSP'||action==='CLR'){
+            input.value='';
+            save();
+            if(action==='BKSP') selectInput(activeIndex-1);
+            return;
+        }
+        input.value=action;
+        save();
+        if(activeIndex<inputs.length-1) selectInput(activeIndex+1);
+    }));
     recalc();
+    activeIndex=inputs.findIndex(input=>!input.value) === -1 ? 0 : inputs.findIndex(input=>!input.value);
     form.addEventListener('submit',event=>{
         if(!confirm('請確認同靶所有選手都已核對本趟箭值。送出後一般計分台不能修改，確定送出？')){event.preventDefault();return}
         localStorage.removeItem(storageKey);
