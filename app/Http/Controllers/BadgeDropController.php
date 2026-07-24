@@ -24,11 +24,15 @@ class BadgeDropController extends Controller
     public function claim(Request $request, string $token, EventBadgeAwardService $service): RedirectResponse
     {
         $badge=$this->badge($token);
-        if(!$badge->is_active || !$badge->location_claim_enabled) return back()->with('error','此 Badge 目前未開放領取。');
+        if(!$badge->is_active || (!$badge->location_claim_enabled && !$badge->claim_enabled)) return back()->with('error','此 Badge 目前未開放領取。');
         if($badge->claim_starts_at && $badge->claim_starts_at->isFuture()) return back()->with('error','Badge 尚未開放領取。');
         if($badge->claim_ends_at && $badge->claim_ends_at->isPast()) return back()->with('error','Badge 領取活動已結束。');
         if($badge->awards()->where('user_id',$request->user()->id)->whereNull('revoked_at')->exists()) return back()->with('error','你已經取得這枚 Badge。');
         if($badge->isAtCapacity()) return back()->with('error','徽章數量已達到最大值。');
+        if(!$badge->location_claim_enabled) {
+            $issued=$service->award($badge,$request->user()->id,'public_qr',null,null,['criteria_snapshot'=>'登入會員帳號並掃描官方 QR Code']);
+            return back()->with($issued?'success':'error',$issued?'Badge 已取得。':($badge->fresh()->isAtCapacity()?'徽章數量已達到最大值。':'你已經取得這枚 Badge。'));
+        }
         $data=$request->validate(['lat'=>['required','numeric','between:-90,90'],'lng'=>['required','numeric','between:-180,180'],'accuracy'=>['required','numeric','min:0','max:5000']]);
         $distance=$this->distanceKm($badge->claim_lat,$badge->claim_lng,(float)$data['lat'],(float)$data['lng']);
         if($distance > $badge->claim_radius_km) return back()->with('error','目前不在 Badge 發放區域內。');

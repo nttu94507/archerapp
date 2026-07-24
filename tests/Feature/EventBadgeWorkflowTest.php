@@ -25,7 +25,7 @@ class EventBadgeWorkflowTest extends TestCase
     {
         $admin=User::factory()->create(['is_admin'=>true]); $nearby=User::factory()->create(); $farAway=User::factory()->create();
         $this->actingAs($admin)->post(route('admin.badges.store'),[
-            'name'=>'台南定位 Badge','location_claim_enabled'=>1,'claim_lat'=>22.999728,'claim_lng'=>120.227028,'claim_radius_km'=>10,
+            'name'=>'台南定位 Badge','claim_method'=>'location','claim_lat'=>22.999728,'claim_lng'=>120.227028,'claim_radius_km'=>10,
         ])->assertSessionHas('success');
         $badge=EventBadge::where('name','台南定位 Badge')->firstOrFail();
 
@@ -42,6 +42,33 @@ class EventBadgeWorkflowTest extends TestCase
         $this->assertDatabaseMissing('user_event_badges',['event_badge_id'=>$badge->id,'user_id'=>$farAway->id]);
     }
 
+    public function test_member_can_claim_an_official_public_qr_badge_without_gps(): void
+    {
+        $admin=User::factory()->create(['is_admin'=>true]);
+        $member=User::factory()->create();
+        $this->actingAs($admin)->post(route('admin.badges.store'),[
+            'name'=>'公開領取 Badge',
+            'claim_method'=>'public',
+            'claim_period'=>'unlimited',
+        ])->assertSessionHas('success');
+        $badge=EventBadge::where('name','公開領取 Badge')->firstOrFail();
+
+        $this->assertTrue($badge->claim_enabled);
+        $this->assertFalse($badge->location_claim_enabled);
+        $this->assertNull($badge->claim_lat);
+        $this->actingAs($member)->get(route('badge-drops.show',$badge->claim_token))
+            ->assertOk()->assertSee('不需要提供位置')->assertSee('領取 Badge');
+        $this->actingAs($member)->post(route('badge-drops.claim',$badge->claim_token))
+            ->assertSessionHas('success','Badge 已取得。');
+        $this->assertDatabaseHas('user_event_badges',[
+            'event_badge_id'=>$badge->id,
+            'user_id'=>$member->id,
+            'award_source'=>'public_qr',
+        ]);
+        $this->actingAs($member)->post(route('badge-drops.claim',$badge->claim_token))
+            ->assertSessionHas('error','你已經取得這枚 Badge。');
+    }
+
     public function test_location_badge_can_be_limited_to_a_single_day_range(): void
     {
         $this->travelTo(now()->setDate(2026, 8, 1)->setTime(12, 0));
@@ -50,7 +77,7 @@ class EventBadgeWorkflowTest extends TestCase
 
         $this->actingAs($admin)->post(route('admin.badges.store'),[
             'name'=>'限定日期定位 Badge',
-            'location_claim_enabled'=>1,
+            'claim_method'=>'location',
             'claim_lat'=>22.999728,
             'claim_lng'=>120.227028,
             'claim_radius_km'=>10,
@@ -119,7 +146,7 @@ class EventBadgeWorkflowTest extends TestCase
 
         $this->actingAs($admin)->post(route('admin.badges.store'),[
             'name'=>'跨日定位 Badge',
-            'location_claim_enabled'=>1,
+            'claim_method'=>'location',
             'claim_lat'=>22.999728,
             'claim_lng'=>120.227028,
             'claim_radius_km'=>10,
@@ -245,11 +272,33 @@ class EventBadgeWorkflowTest extends TestCase
         EventBadge::create(['created_by'=>$organizer->id,'issuer_type'=>'organizer','issuer_name'=>'測試單位','name'=>'單位測試 Badge','type'=>'special','eligibility'=>'any','award_rule'=>'manual']);
 
         $this->actingAs($admin)->get(route('admin.badges.create'))
-            ->assertOk()->assertSee('新增官方 Badge')->assertSee('不限日期')->assertSee('指定日期範圍')->assertSee('同一天即為單日領取');
+            ->assertOk()->assertSee('新增官方 Badge')->assertSee('公開 QR Code 領取')->assertSee('GPS 定位領取')->assertSee('不限日期')->assertSee('指定日期範圍')->assertSee('同一天即為單日領取');
         $this->actingAs($admin)->get(route('admin.badges.index',['source'=>'official']))
             ->assertOk()->assertSee('官方測試 Badge')->assertSee('官方發放')->assertDontSee('單位測試 Badge');
         $this->actingAs($admin)->get(route('admin.badges.index',['source'=>'organization']))
             ->assertOk()->assertSee('單位測試 Badge')->assertSee('單位發放')->assertDontSee('官方測試 Badge');
+    }
+
+    public function test_admin_can_award_an_official_badge_to_all_current_accounts_without_partial_limited_awards(): void
+    {
+        $admin=User::factory()->create(['is_admin'=>true]);
+        User::factory()->count(2)->create();
+        $badge=EventBadge::create(['created_by'=>$admin->id,'issuer_type'=>'platform','issuer_name'=>'ArrowTrack 官方','name'=>'全站紀念 Badge','type'=>'special','eligibility'=>'any','award_rule'=>'manual']);
+
+        $this->actingAs($admin)->get(route('admin.badges.index',['source'=>'official']))
+            ->assertOk()->assertSee('全站派發');
+        $this->actingAs($admin)->post(route('admin.badges.award-all',$badge))
+            ->assertSessionHas('success','已派發給 3 位會員。');
+        $this->assertSame(3,UserEventBadge::where('event_badge_id',$badge->id)->where('award_source','platform_all')->count());
+
+        $this->actingAs($admin)->post(route('admin.badges.award-all',$badge))
+            ->assertSessionHas('success','所有會員都已取得這枚 Badge。');
+        $this->assertSame(3,UserEventBadge::where('event_badge_id',$badge->id)->count());
+
+        $limited=EventBadge::create(['created_by'=>$admin->id,'issuer_type'=>'platform','issuer_name'=>'ArrowTrack 官方','name'=>'限量不足','type'=>'special','eligibility'=>'any','award_rule'=>'manual','max_supply'=>1]);
+        $this->actingAs($admin)->post(route('admin.badges.award-all',$limited))
+            ->assertSessionHas('error','限量數量不足，未派發任何 Badge。請提高上限或取消限量後再試。');
+        $this->assertDatabaseMissing('user_event_badges',['event_badge_id'=>$limited->id]);
     }
 
     public function test_republished_corrected_scores_reconcile_placement_badge(): void
