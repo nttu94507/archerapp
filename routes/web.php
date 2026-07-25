@@ -137,6 +137,7 @@ Route::prefix('organizer')->middleware('auth')->name('organizer.')->group(functi
     Route::post('events/{event}/results/publish', [OrganizerResultController::class, 'publish'])->name('events.results.publish');
     Route::get('events/{event}/scoring', [OrganizerScoringController::class, 'index'])->name('events.scoring.index');
     Route::post('events/{event}/scoring', [OrganizerScoringController::class, 'store'])->name('events.scoring.store');
+    Route::delete('events/{event}/scoring/targets/{target}/device', [OrganizerScoringController::class, 'releaseDevice'])->name('events.scoring.targets.device.destroy');
 
     Route::prefix('events/{event}')->name('events.')->group(function () {
         Route::get('badges', [OrganizerEventBadgeController::class, 'index'])->name('badges.index');

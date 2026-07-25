@@ -211,7 +211,19 @@ class EventManagementWorkflowTest extends TestCase
         $target = $session->targets->first();
         $this->assertCount(2,$target->assignments);
 
+        $deviceToken = 'test-scoring-device-token';
+        $target->update([
+            'device_token_hash'=>hash('sha256', $deviceToken),
+            'device_bound_at'=>now(),
+        ]);
+        $cookieName = 'scoring_device_'.$target->id;
+
         $this->get(route('scoring-stations.show',$target->access_token))
+            ->assertStatus(423)
+            ->assertSee('不允許第二台設備讀取或輸入成績');
+
+        $this->withCookie($cookieName, $deviceToken)
+            ->get(route('scoring-stations.show',$target->access_token))
             ->assertOk()
             ->assertSee('靶號')
             ->assertSee('總覽')
@@ -220,7 +232,8 @@ class EventManagementWorkflowTest extends TestCase
             ->assertSee($members[0]->name)
             ->assertSee($members[1]->name);
 
-        $this->post(route('scoring-stations.ends.store',$target->access_token), [
+        $this->withCookie($cookieName, $deviceToken)
+            ->post(route('scoring-stations.ends.store',$target->access_token), [
             'end_number'=>1,
             'scores'=>[
                 $registrations[0]->id=>['X','10','9','8','7','6'],
@@ -232,6 +245,14 @@ class EventManagementWorkflowTest extends TestCase
             'event_registration_id'=>$registrations[0]->id, 'end_number'=>1, 'end_total'=>50,
         ]);
         $this->assertSame(1,$target->fresh()->last_completed_end);
+
+        $oldAccessToken = $target->access_token;
+        $this->actingAs($owner)
+            ->delete(route('organizer.events.scoring.targets.device.destroy', [$event, $target]))
+            ->assertSessionHas('success');
+        $this->assertNull($target->fresh()->device_token_hash);
+        $this->assertNotSame($oldAccessToken, $target->fresh()->access_token);
+        $this->get(route('scoring-stations.show', $oldAccessToken))->assertNotFound();
     }
 
     private function eventPayload(): array

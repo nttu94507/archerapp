@@ -7,6 +7,7 @@ use App\Models\Event;
 use App\Models\EventAuditLog;
 use App\Models\EventGroup;
 use App\Models\EventScoringSession;
+use App\Models\EventScoringTarget;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -102,5 +103,33 @@ class EventScoringController extends Controller
         }
 
         return back()->with('success', '排靶完成，賽事報名已自動截止。');
+    }
+
+    public function releaseDevice(Request $request, Event $event, EventScoringTarget $target): RedirectResponse
+    {
+        $this->authorize('manageScores', $event);
+        abort_unless($target->session()->where('event_id', $event->id)->exists(), 404);
+
+        DB::transaction(function () use ($event, $target, $request): void {
+            $lockedTarget = EventScoringTarget::whereKey($target->id)->lockForUpdate()->firstOrFail();
+            $lockedTarget->update([
+                'access_token'=>(string) Str::uuid(),
+                'device_token_hash'=>null,
+                'device_bound_at'=>null,
+                'device_last_seen_at'=>null,
+                'device_user_agent'=>null,
+            ]);
+
+            EventAuditLog::create([
+                'event_id'=>$event->id,
+                'user_id'=>$request->user()->id,
+                'action'=>'scoring.target_device_released',
+                'subject_type'=>EventScoringTarget::class,
+                'subject_id'=>$target->id,
+                'metadata'=>['target'=>$target->target_number],
+            ]);
+        });
+
+        return back()->with('success', '靶號 '.$target->target_number.' 的舊連結與設備已失效，請使用畫面上的新連結開啟替代設備。');
     }
 }

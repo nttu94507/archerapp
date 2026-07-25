@@ -7,15 +7,20 @@ use App\Models\EventScoreEntry;
 use App\Models\EventScoringTarget;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cookie;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
-use Illuminate\View\View;
 
 class ScoringStationController extends Controller
 {
-    public function show(string $token): View
+    public function show(Request $request, string $token)
     {
         $target = $this->target($token);
+        if (! $this->claimOrValidateDevice($request, $target)) {
+            return response()->view('scoring-stations.device-locked', [], 423);
+        }
+
         $endNumber = min($target->last_completed_end + 1, $target->session->totalEnds());
 
         return view('scoring-stations.show', compact('target', 'endNumber'));
@@ -24,6 +29,10 @@ class ScoringStationController extends Controller
     public function storeEnd(Request $request, string $token): RedirectResponse
     {
         $target = $this->target($token);
+        if (! $this->claimOrValidateDevice($request, $target, false)) {
+            return redirect()->route('scoring-stations.show', $token);
+        }
+
         $session = $target->session;
         if ($target->status === 'completed') {
             return back()->with('error', '此靶位已完成全部計分。');
@@ -102,5 +111,76 @@ class ScoringStationController extends Controller
                 'assignments.registration.scoreEntries' => fn ($query) => $query->orderBy('end_number'),
             ])
             ->firstOrFail();
+    }
+
+    private function claimOrValidateDevice(Request $request, EventScoringTarget $target, bool $allowClaim = true): bool
+    {
+        $cookieName = $this->deviceCookieName($target);
+        $deviceToken = $request->cookie($cookieName);
+        $newDeviceToken = null;
+
+        $authorized = DB::transaction(function () use ($target, $deviceToken, $allowClaim, $request, &$newDeviceToken): bool {
+            $lockedTarget = EventScoringTarget::whereKey($target->id)->lockForUpdate()->firstOrFail();
+
+            if ($lockedTarget->device_token_hash === null) {
+                if (! $allowClaim) {
+                    return false;
+                }
+
+                $newDeviceToken = Str::random(64);
+                $lockedTarget->update([
+                    'device_token_hash'=>hash('sha256', $newDeviceToken),
+                    'device_bound_at'=>now(),
+                    'device_last_seen_at'=>now(),
+                    'device_user_agent'=>Str::limit((string) $request->userAgent(), 500, ''),
+                ]);
+
+                EventAuditLog::create([
+                    'event_id'=>$target->session->event_id,
+                    'action'=>'scoring.target_device_bound',
+                    'subject_type'=>EventScoringTarget::class,
+                    'subject_id'=>$target->id,
+                    'metadata'=>['target'=>$target->target_number],
+                ]);
+
+                return true;
+            }
+
+            if (! is_string($deviceToken)
+                || ! hash_equals($lockedTarget->device_token_hash, hash('sha256', $deviceToken))) {
+                return false;
+            }
+
+            $lockedTarget->update(['device_last_seen_at'=>now()]);
+
+            return true;
+        });
+
+        if ($newDeviceToken !== null) {
+            Cookie::queue(cookie(
+                $cookieName,
+                $newDeviceToken,
+                60 * 24 * 30,
+                '/',
+                null,
+                $request->isSecure(),
+                true,
+                false,
+                'strict'
+            ));
+        }
+
+        $target->refresh()->load([
+            'session.event',
+            'session.group',
+            'assignments.registration.scoreEntries' => fn ($query) => $query->orderBy('end_number'),
+        ]);
+
+        return $authorized;
+    }
+
+    private function deviceCookieName(EventScoringTarget $target): string
+    {
+        return 'scoring_device_'.$target->id;
     }
 }

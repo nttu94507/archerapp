@@ -61,6 +61,18 @@
                                 <button type="button" data-copy="{{ $stationUrl }}" class="copy-station min-h-11 rounded-xl border px-3 text-sm">複製連結</button>
                             </div>
                             <p class="mt-2 text-xs text-gray-400">最後同步：{{ $target->last_synced_at?->diffForHumans() ?? '尚未同步' }}</p>
+                            <div class="mt-3 flex items-center justify-between gap-3 border-t pt-3">
+                                <div class="min-w-0">
+                                    <p class="text-xs font-medium {{ $target->device_bound_at ? 'text-emerald-700' : 'text-gray-500' }}">{{ $target->device_bound_at ? '設備已綁定' : '等待設備綁定' }}</p>
+                                    @if($target->device_bound_at)<p class="mt-1 text-xs text-gray-400">最後連線：{{ $target->device_last_seen_at?->diffForHumans() ?? '未知' }}</p>@endif
+                                </div>
+                                @if($target->device_bound_at)
+                                    <form method="POST" action="{{ route('organizer.events.scoring.targets.device.destroy', [$event, $target]) }}" onsubmit="return confirm('解除後，目前設備與舊連結會立即失效，系統將產生新的計分連結。確定更換設備？')">
+                                        @csrf @method('DELETE')
+                                        <button class="min-h-10 rounded-lg border border-red-200 px-3 text-xs font-medium text-red-600">解除設備</button>
+                                    </form>
+                                @endif
+                            </div>
                         </article>
                     @endforeach
                 </div>
