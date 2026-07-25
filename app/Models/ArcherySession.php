@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Services\AchievementProgressService;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -9,6 +10,20 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 class ArcherySession extends Model
 {
     use SoftDeletes;
+
+    protected static function booted(): void
+    {
+        $markDirty = function (ArcherySession $session): void {
+            if ($session->user_id) {
+                app(AchievementProgressService::class)->markUserDirty((int) $session->user_id);
+            }
+        };
+
+        static::created($markDirty);
+        static::updated($markDirty);
+        static::deleted($markDirty);
+        static::restored($markDirty);
+    }
 
     //
     protected $fillable = [
