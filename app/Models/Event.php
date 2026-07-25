@@ -58,6 +58,11 @@ class Event extends Model
 
     public function registrationStatus(?Carbon $at = null): string
     {
+        $hasScoringSession = $this->relationLoaded('scoringSessions')
+            ? $this->scoringSessions->isNotEmpty()
+            : $this->scoringSessions()->exists();
+        if ($hasScoringSession) return 'closed';
+
         $at ??= now();
         $groups = $this->relationLoaded('groups') ? $this->groups : $this->groups()->with('event')->get();
         if ($groups->isEmpty()) return 'unset';

@@ -20,7 +20,7 @@ class EventScoringController extends Controller
         $this->authorize('manageScores', $event);
         $event->load(['groups' => fn ($query) => $query->withCount([
             'registrations as active_registrations_count' => fn ($registration) => $registration->whereIn('status', ['registered', 'checked_in']),
-        ])]);
+        ])->withCount('scoringSessions')]);
         $sessions = $event->scoringSessions()
             ->with(['group', 'targets.assignments.registration'])
             ->latest()
@@ -37,49 +37,70 @@ class EventScoringController extends Controller
             'name' => ['required', 'string', 'max:120'],
             'athletes_per_target' => ['required', 'integer', 'between:2,4'],
         ]);
-        $group = $event->groups()->findOrFail($validated['event_group_id']);
-        $registrations = $group->registrations()
-            ->whereIn('status', ['registered', 'checked_in'])
-            ->orderBy('name')
-            ->get();
-        if ($registrations->isEmpty()) {
-            return back()->withInput()->with('error', '此組別目前沒有可排靶的選手。');
+        try {
+            DB::transaction(function () use ($event, $validated, $request): void {
+                $lockedEvent = Event::whereKey($event->id)->lockForUpdate()->firstOrFail();
+                $group = EventGroup::where('event_id', $event->id)
+                    ->whereKey($validated['event_group_id'])
+                    ->lockForUpdate()
+                    ->firstOrFail();
+
+                if (EventScoringSession::where('event_group_id', $group->id)->exists()) {
+                    abort(422, '此組別已完成排靶，不能重複執行。');
+                }
+
+                $registrations = $group->registrations()
+                    ->whereIn('status', ['registered', 'checked_in'])
+                    ->orderBy('name')
+                    ->get();
+                if ($registrations->isEmpty()) {
+                    abort(422, '此組別目前沒有可排靶的選手。');
+                }
+
+                $registrationClosedAt = now();
+                $lockedEvent->update(['reg_end' => $registrationClosedAt]);
+
+                $session = EventScoringSession::create([
+                    'event_id'=>$event->id,
+                    'event_group_id'=>$group->id,
+                    'name'=>$validated['name'],
+                    'total_arrows'=>$group->arrow_count ?: ($event->mode === 'indoor' ? 30 : 36),
+                    'arrows_per_end'=>$group->arrows_per_end ?: 6,
+                    'athletes_per_target'=>$validated['athletes_per_target'],
+                    'status'=>'ready',
+                    'created_by'=>$request->user()->id,
+                ]);
+
+                foreach ($registrations->chunk($validated['athletes_per_target']) as $targetIndex => $members) {
+                    $target = $session->targets()->create([
+                        'target_number'=>$targetIndex + 1,
+                        'access_token'=>(string) Str::uuid(),
+                        'status'=>'ready',
+                    ]);
+                    foreach ($members->values() as $position => $registration) {
+                        $target->assignments()->create([
+                            'event_registration_id'=>$registration->id,
+                            'position'=>['A','B','C','D'][$position],
+                        ]);
+                    }
+                }
+
+                EventAuditLog::create([
+                    'event_id'=>$event->id, 'user_id'=>$request->user()->id,
+                    'action'=>'scoring.session_created', 'subject_type'=>EventScoringSession::class,
+                    'subject_id'=>$session->id,
+                    'metadata'=>[
+                        'group_id'=>$group->id,
+                        'targets'=>$session->targets()->count(),
+                        'athletes'=>$registrations->count(),
+                        'registration_closed_at'=>$registrationClosedAt->toIso8601String(),
+                    ],
+                ]);
+            });
+        } catch (\Symfony\Component\HttpKernel\Exception\HttpException $e) {
+            return back()->withInput()->with('error', $e->getMessage());
         }
 
-        DB::transaction(function () use ($event, $group, $registrations, $validated, $request): void {
-            $session = EventScoringSession::create([
-                'event_id'=>$event->id,
-                'event_group_id'=>$group->id,
-                'name'=>$validated['name'],
-                'total_arrows'=>$group->arrow_count ?: ($event->mode === 'indoor' ? 30 : 36),
-                'arrows_per_end'=>$group->arrows_per_end ?: 6,
-                'athletes_per_target'=>$validated['athletes_per_target'],
-                'status'=>'ready',
-                'created_by'=>$request->user()->id,
-            ]);
-
-            foreach ($registrations->chunk($validated['athletes_per_target']) as $targetIndex => $members) {
-                $target = $session->targets()->create([
-                    'target_number'=>$targetIndex + 1,
-                    'access_token'=>(string) Str::uuid(),
-                    'status'=>'ready',
-                ]);
-                foreach ($members->values() as $position => $registration) {
-                    $target->assignments()->create([
-                        'event_registration_id'=>$registration->id,
-                        'position'=>['A','B','C','D'][$position],
-                    ]);
-                }
-            }
-
-            EventAuditLog::create([
-                'event_id'=>$event->id, 'user_id'=>$request->user()->id,
-                'action'=>'scoring.session_created', 'subject_type'=>EventScoringSession::class,
-                'subject_id'=>$session->id,
-                'metadata'=>['group_id'=>$group->id, 'targets'=>$session->targets()->count(), 'athletes'=>$registrations->count()],
-            ]);
-        });
-
-        return back()->with('success', '計分場次與靶位已建立。');
+        return back()->with('success', '排靶完成，賽事報名已自動截止。');
     }
 }

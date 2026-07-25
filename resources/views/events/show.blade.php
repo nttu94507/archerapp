@@ -116,7 +116,7 @@
                             $already = auth()->check() && in_array($g->id, $myGroupIds ?? [], true);
                             $groupRegStart = $g->reg_start ?: $regStartAt;
                             $groupRegEnd = $g->reg_end ?: $regEndAt;
-                            $groupIsBetween = $groupRegStart && $groupRegEnd && now()->between($groupRegStart, $groupRegEnd);
+                            $groupIsBetween = !$registrationLocked && $groupRegStart && $groupRegEnd && now()->between($groupRegStart, $groupRegEnd);
                         @endphp
 
                         <li class="py-3 flex items-center justify-between">
@@ -136,7 +136,7 @@
                                 已報名
                             </span>
                                 @elseif(!$groupIsBetween)
-                                    <span class="text-xs text-gray-400">目前不可報名</span>
+                                    <span class="text-xs text-gray-400">{{ $registrationLocked ? '排靶完成，報名截止' : '目前不可報名' }}</span>
                                 @elseif($full)
                                     <span class="inline-flex items-center rounded-xl bg-gray-100 px-3 py-1.5 text-xs font-medium text-gray-500">
                                 名額已滿

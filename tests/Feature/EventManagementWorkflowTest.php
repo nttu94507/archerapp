@@ -199,12 +199,26 @@ class EventManagementWorkflowTest extends TestCase
             'event_group_id'=>$group->id, 'name'=>'上午資格賽', 'athletes_per_target'=>2,
         ])->assertSessionHas('success');
 
+        $this->assertNotNull($event->fresh()->reg_end);
+        $this->assertTrue($event->fresh()->registrationStatus() === 'closed');
+
+        $this->actingAs($owner)->post(route('organizer.events.scoring.store',$event), [
+            'event_group_id'=>$group->id, 'name'=>'重複排靶', 'athletes_per_target'=>2,
+        ])->assertSessionHas('error', '此組別已完成排靶，不能重複執行。');
+        $this->assertSame(1, EventScoringSession::where('event_group_id', $group->id)->count());
+
         $session = EventScoringSession::with('targets.assignments')->firstOrFail();
         $target = $session->targets->first();
         $this->assertCount(2,$target->assignments);
 
         $this->get(route('scoring-stations.show',$target->access_token))
-            ->assertOk()->assertSee('靶號')->assertSee($members[0]->name)->assertSee($members[1]->name);
+            ->assertOk()
+            ->assertSee('靶號')
+            ->assertSee('總覽')
+            ->assertSee('計分')
+            ->assertSee('核對並送出本趟')
+            ->assertSee($members[0]->name)
+            ->assertSee($members[1]->name);
 
         $this->post(route('scoring-stations.ends.store',$target->access_token), [
             'end_number'=>1,

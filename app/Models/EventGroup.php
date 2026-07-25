@@ -33,6 +33,11 @@ class EventGroup extends Model
         // return $this->hasMany(Registration::class, 'group_id', 'id');
     }
 
+    public function scoringSessions()
+    {
+        return $this->hasMany(EventScoringSession::class, 'event_group_id');
+    }
+
     public function usesCustomRegistrationWindow(): bool
     {
         return $this->reg_start !== null && $this->reg_end !== null;
@@ -50,6 +55,13 @@ class EventGroup extends Model
 
     public function isRegistrationOpen(?Carbon $at = null): bool
     {
+        $event = $this->event;
+        if ($event && ($event->relationLoaded('scoringSessions')
+            ? $event->scoringSessions->isNotEmpty()
+            : $event->scoringSessions()->exists())) {
+            return false;
+        }
+
         $start = $this->effectiveRegStart();
         $end = $this->effectiveRegEnd();
 

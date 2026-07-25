@@ -18,18 +18,28 @@
     @if(session('error'))<div class="rounded-xl bg-red-50 p-4 text-sm text-red-700">{{ session('error') }}</div>@endif
     @if($errors->any())<div class="rounded-xl bg-red-50 p-4 text-sm text-red-700">{{ $errors->first() }}</div>@endif
 
+    @if($sessions->isNotEmpty())
+        <div class="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
+            賽事已執行排靶，報名已停止。已排靶的組別會永久鎖定，不能再次執行。
+        </div>
+    @endif
+
     <section class="rounded-2xl border bg-white p-4 shadow-sm sm:p-6">
         <h2 class="font-semibold">建立計分場次</h2>
-        <p class="mt-1 text-sm text-gray-500">系統會依姓名排序，自動將已報名或已報到選手排入 1A、1B…。</p>
-        <form method="POST" action="{{ route('organizer.events.scoring.store',$event) }}" class="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-[1fr_1fr_12rem_auto]">
+        <p class="mt-1 text-sm text-gray-500">系統會依姓名排序，自動將已報名或已報到選手排入 1A、1B…。第一次排靶後，整場賽事會立即停止報名。</p>
+        <form method="POST" action="{{ route('organizer.events.scoring.store',$event) }}" onsubmit="return confirm('排靶後將立即停止整場賽事報名，且此組別不能重新排靶。確定執行？')" class="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-[1fr_1fr_12rem_auto]">
             @csrf
             <select name="event_group_id" required class="min-h-12 rounded-xl border-gray-300">
                 <option value="">選擇組別</option>
-                @foreach($event->groups as $group)<option value="{{ $group->id }}">{{ $group->name }}（{{ $group->active_registrations_count }} 人）</option>@endforeach
+                @foreach($event->groups as $group)
+                    <option value="{{ $group->id }}" @disabled($group->scoring_sessions_count > 0)>
+                        {{ $group->name }}（{{ $group->active_registrations_count }} 人{{ $group->scoring_sessions_count > 0 ? '，已排靶' : '' }}）
+                    </option>
+                @endforeach
             </select>
             <input name="name" required value="{{ old('name',$event->name.' 資格賽') }}" class="min-h-12 rounded-xl border-gray-300" placeholder="場次名稱">
             <select name="athletes_per_target" class="min-h-12 rounded-xl border-gray-300"><option value="4">每靶 4 人</option><option value="3">每靶 3 人</option><option value="2">每靶 2 人</option></select>
-            <button class="min-h-12 rounded-xl bg-indigo-600 px-5 text-sm font-medium text-white">自動排靶</button>
+            <button class="min-h-12 rounded-xl bg-indigo-600 px-5 text-sm font-medium text-white">確認排靶並停止報名</button>
         </form>
     </section>
 

@@ -82,9 +82,14 @@ class EventRegistrationController extends Controller
 
         try {
             DB::transaction(function () use ($event, $group, $user) {
-                EventGroup::whereKey($group->id)->lockForUpdate()->firstOrFail();
+                $lockedEvent = Event::whereKey($event->id)->lockForUpdate()->firstOrFail();
+                if ($lockedEvent->scoringSessions()->exists()) {
+                    abort(422, '賽事已完成排靶，報名已截止。');
+                }
+
+                $lockedGroup = EventGroup::whereKey($group->id)->lockForUpdate()->firstOrFail();
                 $current = EventRegistration::where('event_group_id', $group->id)->whereIn('status', ['registered','checked_in'])->count();
-                if (!is_null($group->quota) && $current >= $group->quota) abort(422, '此組別名額已滿。');
+                if (!is_null($lockedGroup->quota) && $current >= $lockedGroup->quota) abort(422, '此組別名額已滿。');
 
                 $existing = EventRegistration::where('event_id',$event->id)->where('event_group_id',$group->id)->where('email',$user->email)->first();
                 if ($existing) {

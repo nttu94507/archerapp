@@ -157,6 +157,7 @@ class EventController extends Controller
             abort_unless($request->user() && $request->user()->can('viewManagement', $event), 404);
         }
         $event->load([
+            'scoringSessions',
             'groups' => function ($q) {
                 $q->orderBy('name')
                     // 帶出「有效報名數量」（例如：registered / checked_in 視為占名額）
@@ -173,6 +174,7 @@ class EventController extends Controller
         $isBefore  = $regStartAt && $now->lt($regStartAt);
         $isBetween = $regStartAt && $regEndAt && $now->between($regStartAt, $regEndAt);
         $isAfter   = $regEndAt && $now->gt($regEndAt);
+        $registrationLocked = $event->scoringSessions->isNotEmpty();
 
         $regStatus = match ($event->registrationStatus($now)) {
             'open' => '報名中', 'upcoming' => '尚未開始', 'closed' => '已截止', default => null,
@@ -216,6 +218,7 @@ class EventController extends Controller
             'myGroupIds' => $myGroupIds,
             'myRegistrations' => $myRegistrations,
             'isEventFinished' => $isEventFinished,
+            'registrationLocked' => $registrationLocked,
         ]);
     }
 
