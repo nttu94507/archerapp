@@ -28,7 +28,6 @@
         <section id="overview-panel" data-tab-panel="overview" class="h-full bg-white">
             <div class="border-b px-4 py-3">
                 <p class="text-xs font-semibold uppercase tracking-wider text-gray-400">本靶選手</p>
-                <p class="mt-1 text-sm text-gray-500">顯示所有已送出的箭值與目前累計。</p>
             </div>
 
             <div class="divide-y">
