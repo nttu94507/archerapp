@@ -7,32 +7,22 @@
     $session = $target->session;
     $totalEnds = $session->totalEnds();
     $isComplete = $target->status === 'completed';
-    $splitEnds = (int) ceil(($session->event->mode === 'indoor' ? 30 : 36) / $session->arrows_per_end);
-    $roundLabel = $session->total_arrows > ($session->event->mode === 'indoor' ? 30 : 36)
-        ? ($endNumber <= $splitEnds ? '上半局' : '下半局')
-        : '全程';
 @endphp
 
 <div id="scoring-station" class="mx-auto flex min-h-[calc(100dvh-4rem)] max-w-7xl flex-col bg-gray-50 pb-20 sm:px-4 sm:py-4">
     <header class="shrink-0 border-b bg-white px-4 py-4 sm:rounded-t-2xl sm:border">
         <div class="flex items-start justify-between gap-4">
             <div class="min-w-0">
-                <p class="truncate text-xs font-medium text-gray-500">{{ $session->event->name }} · 靶號 {{ str_pad($target->target_number, 2, '0', STR_PAD_LEFT) }}</p>
-                <h1 class="mt-1 truncate text-xl font-bold text-gray-900">{{ $session->name }}</h1>
-                <p class="mt-1 text-sm text-gray-500">{{ $session->group?->name }}</p>
+                <h1 class="truncate text-xl font-bold text-gray-900">{{ $session->event->name }}</h1>
+                <p class="mt-2 text-sm text-gray-500">{{ $session->group?->name }} / 靶號 {{ str_pad($target->target_number, 2, '0', STR_PAD_LEFT) }}</p>
             </div>
             <div class="shrink-0 text-right">
                 <span class="inline-flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
                     <span class="h-2 w-2 rounded-full bg-emerald-500"></span>{{ $isComplete ? '計分完成' : '計分中' }}
                 </span>
-                <p class="mt-2 text-xs text-gray-500">{{ $roundLabel }} · {{ $target->last_completed_end }} / {{ $totalEnds }} 趟</p>
             </div>
         </div>
     </header>
-
-    @if(session('success'))<div class="m-3 rounded-xl bg-green-50 p-4 text-sm text-green-700 sm:mx-0">{{ session('success') }}</div>@endif
-    @if(session('error'))<div class="m-3 rounded-xl bg-red-50 p-4 text-sm text-red-700 sm:mx-0">{{ session('error') }}</div>@endif
-    @if($errors->any())<div class="m-3 rounded-xl bg-red-50 p-4 text-sm text-red-700 sm:mx-0">{{ $errors->first() }}</div>@endif
 
     <main class="min-h-0 flex-1 sm:rounded-b-2xl sm:border-x sm:border-b">
         <section id="overview-panel" data-tab-panel="overview" class="h-full bg-white">
