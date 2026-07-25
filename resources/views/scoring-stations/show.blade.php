@@ -33,7 +33,8 @@
                         $historyTotal = $historyEntries->sum('end_total');
                         $historyScores = $historyEntries->flatMap(fn ($entry) => $entry->scores ?? []);
                         $historyX = $historyScores->filter(fn ($score) => strtoupper((string) $score) === 'X')->count();
-                        $historyTenPlus = $historyScores->filter(fn ($score) => strtoupper((string) $score) === 'X' || (string) $score === '10')->count();
+                        $historyTen = $historyScores->filter(fn ($score) => (string) $score === '10')->count();
+                        $entriesByEnd = $historyEntries->keyBy('end_number');
                     @endphp
                     <article role="button" tabindex="0" data-overview-registration="{{ $assignment->registration->id }}"
                              aria-label="前往 {{ $assignment->registration->name }} 的計分區域"
@@ -44,32 +45,20 @@
                                 <h2 class="text-lg font-bold text-gray-900">{{ $assignment->registration->name }}</h2>
                             </div>
 
-                            @if($historyEntries->isEmpty())
-                                <div class="mt-3 font-mono text-sm tracking-wider text-gray-300">
-                                    {{ collect(range(1, $session->arrows_per_end))->map(fn () => '—')->implode('　') }}
-                                </div>
-                                <p class="mt-1 text-xs text-gray-400">尚無已送出的成績</p>
-                            @else
-                                <div class="mt-3 space-y-2">
-                                    @foreach($historyEntries as $historyEntry)
-                                        <div class="flex min-w-0 items-center gap-2 text-sm">
-                                            <span class="w-12 shrink-0 text-xs text-gray-400">第 {{ $historyEntry->end_number }} 趟</span>
-                                            <div class="flex min-w-0 flex-1 flex-wrap gap-1">
-                                                @foreach($historyEntry->scores ?? [] as $score)
-                                                    <span class="inline-flex h-7 min-w-7 items-center justify-center rounded-md bg-gray-100 px-1.5 font-mono font-semibold text-gray-800">{{ $score }}</span>
-                                                @endforeach
-                                            </div>
-                                            <span class="shrink-0 font-semibold text-gray-700">{{ $historyEntry->end_total }}</span>
-                                        </div>
-                                    @endforeach
-                                </div>
-                            @endif
-
-                            <p class="mt-3 text-xs text-gray-500">10+X {{ $historyTenPlus }} · X {{ $historyX }}</p>
+                            <div class="mt-3 grid grid-cols-6 gap-x-1 gap-y-2">
+                                @foreach(range(1, $totalEnds) as $historyEnd)
+                                    @php($endEntry = $entriesByEnd->get($historyEnd))
+                                    <div class="flex min-w-0 items-center">
+                                        <span class="min-w-0 flex-1 text-center font-mono text-sm font-semibold {{ $endEntry ? 'text-gray-800' : 'text-gray-300' }}">{{ $endEntry?->end_total ?? '__' }}</span>
+                                        @if($historyEnd % 6 !== 0 && $historyEnd !== $totalEnds)<span class="text-xs text-gray-300">/</span>@endif
+                                    </div>
+                                @endforeach
+                            </div>
                         </div>
                         <div class="pt-1 text-right">
                             <p class="text-2xl font-bold tabular-nums text-gray-900">{{ $historyTotal }}</p>
                             <p class="text-xs text-gray-400">目前總分</p>
+                            <p class="mt-2 whitespace-nowrap text-xs text-gray-500">10：{{ $historyTen }} · X：{{ $historyX }}</p>
                         </div>
                     </article>
                 @endforeach
@@ -89,24 +78,12 @@
                     <input type="hidden" name="end_number" value="{{ $endNumber }}">
 
                     <div class="rounded-2xl border bg-white p-3 shadow-sm">
-                        <div class="mb-3 flex items-center justify-between gap-3">
-                            <div>
-                                <p class="text-sm font-semibold text-gray-900">第 {{ $endNumber }} / {{ $totalEnds }} 趟</p>
-                                <p class="text-xs text-gray-500">每位選手輸入 {{ $session->arrows_per_end }} 支箭</p>
-                            </div>
-                            <div class="text-right">
-                                <p id="active-arrow-label" class="text-xs text-gray-500">從第一個空格開始</p>
-                                <p id="active-arrow-value" class="text-xl font-bold text-indigo-700">—</p>
-                            </div>
-                        </div>
-
                         <div class="divide-y rounded-xl border">
                             @foreach($target->assignments as $assignment)
-                                <div class="athlete-card grid grid-cols-[1.25rem_4.5rem_minmax(0,1fr)_2.5rem] items-center gap-1.5 px-2 py-1.5 sm:grid-cols-[2rem_8rem_minmax(0,1fr)_3.5rem] sm:gap-2" data-registration="{{ $assignment->registration->id }}">
-                                    <span class="font-bold text-indigo-600">{{ $assignment->position }}</span>
+                                <div class="athlete-card grid grid-cols-[2rem_4.5rem_minmax(0,1fr)_2.5rem] items-center gap-1.5 px-2 py-1.5 sm:grid-cols-[3rem_8rem_minmax(0,1fr)_3.5rem] sm:gap-2" data-registration="{{ $assignment->registration->id }}">
+                                    <span class="font-bold text-indigo-600">{{ $target->target_number.$assignment->position }}</span>
                                     <div class="min-w-0">
                                         <p class="truncate text-xs font-semibold sm:text-sm">{{ $assignment->registration->name }}</p>
-                                        <p class="text-[10px] leading-3 text-gray-400">{{ $target->target_number.$assignment->position }}</p>
                                     </div>
                                     <p class="end-total col-start-4 row-start-1 text-right text-base font-bold tabular-nums sm:text-lg">0</p>
                                     <div class="col-start-3 row-start-1 grid gap-1" style="grid-template-columns: repeat({{ $session->arrows_per_end }}, minmax(0, 1fr));">
@@ -128,10 +105,19 @@
                                 ['8','8'], ['7','7'], ['6','6'], ['5','5'],
                                 ['4','4'], ['3','3'], ['2','2'], ['1','1'],
                             ] as [$key, $label])
+                                @php
+                                    $keyColor = match ($key) {
+                                        'X', '10', '9' => 'border-yellow-200 bg-yellow-50 text-yellow-900',
+                                        '8', '7' => 'border-red-200 bg-red-50 text-red-900',
+                                        '6', '5' => 'border-blue-200 bg-blue-50 text-blue-900',
+                                        '4', '3' => 'border-gray-300 bg-gray-100 text-gray-900',
+                                        default => 'border-gray-300 bg-white text-gray-900',
+                                    };
+                                @endphp
                                 <button type="button" data-key="{{ $key }}"
-                                        class="score-key min-h-14 touch-manipulation select-none rounded-xl border border-gray-300 bg-white px-2 text-lg font-bold text-gray-900 active:bg-indigo-100">{{ $label }}</button>
+                                        class="score-key min-h-14 touch-manipulation select-none rounded-xl border px-2 text-lg font-bold active:brightness-95 {{ $keyColor }}">{{ $label }}</button>
                             @endforeach
-                            <button type="button" data-key="M" class="score-key col-span-2 min-h-14 touch-manipulation select-none rounded-xl border border-red-200 bg-red-50 px-2 text-lg font-bold text-red-700 active:bg-red-100">M</button>
+                            <button type="button" data-key="M" class="score-key col-span-2 min-h-14 touch-manipulation select-none rounded-xl border border-green-200 bg-green-50 px-2 text-lg font-bold text-green-800 active:bg-green-100">M</button>
                             <button type="button" data-key="SUBMIT" class="score-key col-span-2 min-h-14 touch-manipulation select-none rounded-xl bg-indigo-600 px-3 text-base font-semibold text-white active:bg-indigo-700">送出</button>
                         </div>
                         <p id="draft-status" class="mt-2 text-center text-xs text-gray-500">輸入會暫存在這台設備；刪除會退回上一格。</p>
@@ -175,8 +161,6 @@
     const storageKey = 'scoring:{{ $target->access_token }}:end:{{ $endNumber }}';
     const inputs = Array.from(document.querySelectorAll('.score-input'));
     const status = document.getElementById('draft-status');
-    const activeLabel = document.getElementById('active-arrow-label');
-    const activeValue = document.getElementById('active-arrow-value');
     let activeIndex = 0;
     const jumpToAthlete = registrationId => {
         const card = document.querySelector(`.athlete-card[data-registration="${registrationId}"]`);
@@ -203,17 +187,11 @@
         inputs.forEach(input => input.classList.remove('ring-2', 'ring-indigo-500', 'bg-indigo-50'));
         const input = inputs[activeIndex];
         input.classList.add('ring-2', 'ring-indigo-500', 'bg-indigo-50');
-        const card = input.closest('.athlete-card');
-        const athlete = card?.querySelector('p')?.textContent?.trim() || '選手';
-        const arrowIndex = Array.from(card.querySelectorAll('.score-input')).indexOf(input) + 1;
-        activeLabel.textContent = `${athlete} · 第 ${arrowIndex} 箭`;
-        activeValue.textContent = input.value || '—';
     };
     const recalc = () => {
         document.querySelectorAll('.athlete-card').forEach(card => {
             card.querySelector('.end-total').textContent = Array.from(card.querySelectorAll('.score-input')).reduce((sum, input) => sum + valueOf(input.value), 0);
         });
-        activeValue.textContent = inputs[activeIndex]?.value || '—';
     };
     const save = () => {
         localStorage.setItem(storageKey, JSON.stringify(inputs.map(input => input.value)));
