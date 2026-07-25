@@ -123,14 +123,21 @@
 
                     <section class="rounded-2xl border bg-white p-3 shadow-sm">
                         <div class="grid grid-cols-4 gap-2">
-                            @foreach(['X','10','9','8','7','6','5','4','3','2','1','M'] as $key)
-                                <button type="button" data-key="{{ $key }}" class="score-key min-h-14 touch-manipulation select-none rounded-xl border border-gray-300 bg-white px-2 text-lg font-bold text-gray-900 active:bg-indigo-100">{{ $key }}</button>
+                            @foreach([
+                                ['X','X'], ['10','10'], ['9','9'], ['BKSP','⌫'],
+                                ['8','8'], ['7','7'], ['6','6'], ['PREV','←'],
+                                ['5','5'], ['4','4'], ['3','3'], ['NEXT','→'],
+                                ['2','2'], ['1','1'], ['M','M'], [null,null],
+                            ] as [$key, $label])
+                                @if($key)
+                                    <button type="button" data-key="{{ $key }}"
+                                            class="score-key min-h-14 touch-manipulation select-none rounded-xl border px-2 text-lg font-bold active:bg-indigo-100 {{ $key === 'NEXT' ? 'border-indigo-200 bg-indigo-50 text-indigo-700' : ($key === 'M' ? 'border-red-200 bg-red-50 text-red-700' : 'border-gray-300 bg-white text-gray-900') }}">{{ $label }}</button>
+                                @else
+                                    <span aria-hidden="true"></span>
+                                @endif
                             @endforeach
                         </div>
-                        <div class="mt-2 grid grid-cols-[1fr_1.35fr] gap-2">
-                            <button type="button" data-key="BKSP" class="score-key min-h-12 rounded-xl border border-gray-300 text-sm font-semibold text-gray-700">刪除上一箭</button>
-                            <button type="button" data-key="SUBMIT" class="score-key min-h-12 rounded-xl bg-indigo-600 px-3 text-sm font-semibold text-white">核對並送出本趟</button>
-                        </div>
+                        <button type="button" data-key="SUBMIT" class="score-key mt-3 min-h-12 w-full rounded-xl bg-indigo-600 px-3 text-sm font-semibold text-white">核對並送出本趟</button>
                         <p id="draft-status" class="mt-2 text-center text-xs text-gray-500">輸入會暫存在這台設備；刪除會退回上一格。</p>
                     </section>
                 </form>
@@ -230,6 +237,14 @@
         const input = inputs[activeIndex];
         if (!input) return;
         if (action === 'SUBMIT') { form.requestSubmit(); return; }
+        if (action === 'PREV') {
+            selectInput(Math.max(0, activeIndex - 1));
+            return;
+        }
+        if (action === 'NEXT') {
+            selectInput(Math.min(inputs.length - 1, activeIndex + 1));
+            return;
+        }
         if (action === 'BKSP') {
             const indexToClear = input.value ? activeIndex : Math.max(0, activeIndex - 1);
             inputs[indexToClear].value = '';
