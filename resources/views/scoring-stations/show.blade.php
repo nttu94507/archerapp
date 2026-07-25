@@ -101,19 +101,19 @@
                     <section class="rounded-2xl border bg-white p-3 shadow-sm">
                         <div class="grid grid-cols-4 gap-2">
                             @foreach([
-                                ['X','X'], ['10','10'], ['9','9'], ['BKSP','⌫'],
-                                ['8','8'], ['7','7'], ['6','6'], ['5','5'],
-                                ['4','4'], ['3','3'], ['2','2'], ['1','1'],
-                            ] as [$key, $label])
-                                @php
-                                    $keyColor = match ($key) {
-                                        'X', '10', '9' => 'border-yellow-200 bg-yellow-50 text-yellow-900',
-                                        '8', '7' => 'border-red-200 bg-red-50 text-red-900',
-                                        '6', '5' => 'border-blue-200 bg-blue-50 text-blue-900',
-                                        '4', '3' => 'border-gray-300 bg-gray-100 text-gray-900',
-                                        default => 'border-gray-300 bg-white text-gray-900',
-                                    };
-                                @endphp
+                                ['X','X','border-yellow-200 bg-yellow-50 text-yellow-900'],
+                                ['10','10','border-yellow-200 bg-yellow-50 text-yellow-900'],
+                                ['9','9','border-yellow-200 bg-yellow-50 text-yellow-900'],
+                                ['BKSP','⌫','border-gray-300 bg-white text-gray-900'],
+                                ['8','8','border-red-200 bg-red-50 text-red-900'],
+                                ['7','7','border-red-200 bg-red-50 text-red-900'],
+                                ['6','6','border-blue-200 bg-blue-50 text-blue-900'],
+                                ['5','5','border-blue-200 bg-blue-50 text-blue-900'],
+                                ['4','4','border-gray-300 bg-gray-100 text-gray-900'],
+                                ['3','3','border-gray-300 bg-gray-100 text-gray-900'],
+                                ['2','2','border-gray-300 bg-white text-gray-900'],
+                                ['1','1','border-gray-300 bg-white text-gray-900'],
+                            ] as [$key, $label, $keyColor])
                                 <button type="button" data-key="{{ $key }}"
                                         class="score-key min-h-14 touch-manipulation select-none rounded-xl border px-2 text-lg font-bold active:brightness-95 {{ $keyColor }}">{{ $label }}</button>
                             @endforeach
