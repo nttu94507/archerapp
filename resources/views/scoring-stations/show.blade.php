@@ -53,11 +53,10 @@
                     <article role="button" tabindex="0" data-overview-registration="{{ $assignment->registration->id }}"
                              aria-label="前往 {{ $assignment->registration->name }} 的計分區域"
                              class="group grid cursor-pointer grid-cols-[2.25rem_minmax(0,1fr)_auto] gap-2 px-4 py-4 transition hover:bg-indigo-50 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-indigo-500 sm:grid-cols-[3rem_minmax(0,1fr)_8rem] sm:gap-4">
-                        <div class="pt-1 text-lg font-bold text-indigo-600">{{ $assignment->position }}</div>
+                        <div class="pt-1 text-lg font-bold text-indigo-600">{{ $target->target_number.$assignment->position }}</div>
                         <div class="min-w-0">
-                            <div class="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+                            <div>
                                 <h2 class="text-lg font-bold text-gray-900">{{ $assignment->registration->name }}</h2>
-                                <span class="text-xs text-gray-500">{{ $target->target_number.$assignment->position }} · 已完成 {{ $historyEntries->count() }} / {{ $totalEnds }} 趟</span>
                             </div>
 
                             @if($historyEntries->isEmpty())
@@ -127,7 +126,7 @@
                                     <p class="end-total col-start-4 row-start-1 text-right text-base font-bold tabular-nums sm:text-lg">0</p>
                                     <div class="col-start-3 row-start-1 grid gap-1" style="grid-template-columns: repeat({{ $session->arrows_per_end }}, minmax(0, 1fr));">
                                         @for($arrow = 0; $arrow < $session->arrows_per_end; $arrow++)
-                                            <input name="scores[{{ $assignment->registration->id }}][]" required readonly inputmode="none" maxlength="2"
+                                            <input name="scores[{{ $assignment->registration->id }}][]" readonly inputmode="none" maxlength="2"
                                                    placeholder="＿" aria-label="{{ $assignment->registration->name }} 第 {{ $arrow + 1 }} 箭"
                                                    class="score-input h-9 min-w-0 touch-manipulation cursor-pointer select-none rounded-md border-gray-300 p-0.5 text-center text-sm font-bold placeholder:text-gray-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500 sm:h-10 sm:text-base">
                                         @endfor
@@ -265,6 +264,10 @@
             event.preventDefault();
             return;
         }
+        inputs.forEach(input => {
+            if (!input.value) input.value = 'M';
+        });
+        save();
         localStorage.removeItem(storageKey);
     });
 })();

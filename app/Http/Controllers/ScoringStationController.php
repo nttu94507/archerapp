@@ -41,26 +41,28 @@ class ScoringStationController extends Controller
         $expectedEnd = $target->last_completed_end + 1;
         $validated = $request->validate([
             'end_number'=>['required', 'integer', 'in:'.$expectedEnd],
-            'scores'=>['required', 'array'],
+            'scores'=>['nullable', 'array'],
         ]);
 
         $assignments = $target->assignments;
+        $normalizedScores = [];
         foreach ($assignments as $assignment) {
-            $scores = $validated['scores'][$assignment->event_registration_id] ?? null;
-            if (! is_array($scores) || count($scores) !== $session->arrows_per_end) {
-                throw ValidationException::withMessages(['scores'=>'每位選手都必須輸入 '.$session->arrows_per_end.' 支箭。']);
-            }
+            $scores = $validated['scores'][$assignment->event_registration_id] ?? [];
+            $scores = is_array($scores) ? array_values($scores) : [];
+            $scores = array_pad(array_slice($scores, 0, $session->arrows_per_end), $session->arrows_per_end, 'M');
+            $scores = array_map(fn ($score) => trim((string) $score) === '' ? 'M' : $score, $scores);
             foreach ($scores as $score) {
                 if (! preg_match('/^(X|10|[1-9]|M)$/i', (string) $score)) {
                     throw ValidationException::withMessages(['scores'=>'箭值只能是 X、10～1 或 M。']);
                 }
             }
+            $normalizedScores[$assignment->event_registration_id] = $scores;
         }
 
-        DB::transaction(function () use ($target, $session, $assignments, $validated, $expectedEnd): void {
+        DB::transaction(function () use ($target, $session, $assignments, $normalizedScores, $expectedEnd): void {
             foreach ($assignments as $assignment) {
                 $registration = $assignment->registration;
-                $scores = collect($validated['scores'][$registration->id])
+                $scores = collect($normalizedScores[$registration->id])
                     ->map(fn ($score) => strtoupper((string) $score))
                     ->sortByDesc(fn ($score) => $score === 'X' ? 11 : ($score === 'M' ? 0 : (int) $score))
                     ->values()
