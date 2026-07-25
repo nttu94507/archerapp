@@ -50,7 +50,9 @@
                         $historyX = $historyScores->filter(fn ($score) => strtoupper((string) $score) === 'X')->count();
                         $historyTenPlus = $historyScores->filter(fn ($score) => strtoupper((string) $score) === 'X' || (string) $score === '10')->count();
                     @endphp
-                    <article class="grid grid-cols-[2.25rem_minmax(0,1fr)_auto] gap-2 px-4 py-4 sm:grid-cols-[3rem_minmax(0,1fr)_8rem] sm:gap-4">
+                    <article role="button" tabindex="0" data-overview-registration="{{ $assignment->registration->id }}"
+                             aria-label="前往 {{ $assignment->registration->name }} 的計分區域"
+                             class="group grid cursor-pointer grid-cols-[2.25rem_minmax(0,1fr)_auto] gap-2 px-4 py-4 transition hover:bg-indigo-50 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-indigo-500 sm:grid-cols-[3rem_minmax(0,1fr)_8rem] sm:gap-4">
                         <div class="pt-1 text-lg font-bold text-indigo-600">{{ $assignment->position }}</div>
                         <div class="min-w-0">
                             <div class="flex flex-wrap items-baseline gap-x-3 gap-y-1">
@@ -116,18 +118,18 @@
 
                         <div class="divide-y rounded-xl border">
                             @foreach($target->assignments as $assignment)
-                                <div class="athlete-card grid grid-cols-[2rem_minmax(0,1fr)_3rem] items-center gap-2 p-3 sm:grid-cols-[3rem_10rem_minmax(0,1fr)_4rem]" data-registration="{{ $assignment->registration->id }}">
+                                <div class="athlete-card grid grid-cols-[1.25rem_4.5rem_minmax(0,1fr)_2.5rem] items-center gap-1.5 px-2 py-1.5 sm:grid-cols-[2rem_8rem_minmax(0,1fr)_3.5rem] sm:gap-2" data-registration="{{ $assignment->registration->id }}">
                                     <span class="font-bold text-indigo-600">{{ $assignment->position }}</span>
-                                    <div class="min-w-0 sm:order-none">
-                                        <p class="truncate text-sm font-semibold">{{ $assignment->registration->name }}</p>
-                                        <p class="text-xs text-gray-400">{{ $target->target_number.$assignment->position }}</p>
+                                    <div class="min-w-0">
+                                        <p class="truncate text-xs font-semibold sm:text-sm">{{ $assignment->registration->name }}</p>
+                                        <p class="text-[10px] leading-3 text-gray-400">{{ $target->target_number.$assignment->position }}</p>
                                     </div>
-                                    <p class="end-total text-right text-xl font-bold tabular-nums sm:order-last">0</p>
-                                    <div class="col-span-3 grid gap-1.5 sm:col-span-1" style="grid-template-columns: repeat({{ $session->arrows_per_end }}, minmax(0, 1fr));">
+                                    <p class="end-total col-start-4 row-start-1 text-right text-base font-bold tabular-nums sm:text-lg">0</p>
+                                    <div class="col-start-3 row-start-1 grid gap-1" style="grid-template-columns: repeat({{ $session->arrows_per_end }}, minmax(0, 1fr));">
                                         @for($arrow = 0; $arrow < $session->arrows_per_end; $arrow++)
                                             <input name="scores[{{ $assignment->registration->id }}][]" required readonly inputmode="none" maxlength="2"
                                                    placeholder="＿" aria-label="{{ $assignment->registration->name }} 第 {{ $arrow + 1 }} 箭"
-                                                   class="score-input min-h-11 min-w-0 touch-manipulation cursor-pointer select-none rounded-lg border-gray-300 p-1 text-center text-base font-bold placeholder:text-gray-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500">
+                                                   class="score-input h-9 min-w-0 touch-manipulation cursor-pointer select-none rounded-md border-gray-300 p-0.5 text-center text-sm font-bold placeholder:text-gray-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500 sm:h-10 sm:text-base">
                                         @endfor
                                     </div>
                                 </div>
@@ -189,6 +191,25 @@
     const activeLabel = document.getElementById('active-arrow-label');
     const activeValue = document.getElementById('active-arrow-value');
     let activeIndex = 0;
+    const jumpToAthlete = registrationId => {
+        const card = document.querySelector(`.athlete-card[data-registration="${registrationId}"]`);
+        if (!card) return;
+        const firstInput = card.querySelector('.score-input');
+        const inputIndex = inputs.indexOf(firstInput);
+        switchTab('scoring');
+        if (inputIndex >= 0) selectInput(inputIndex);
+        requestAnimationFrame(() => card.scrollIntoView({behavior: 'smooth', block: 'center'}));
+    };
+    document.querySelectorAll('[data-overview-registration]').forEach(card => {
+        const activate = () => jumpToAthlete(card.dataset.overviewRegistration);
+        card.addEventListener('click', activate);
+        card.addEventListener('keydown', event => {
+            if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                activate();
+            }
+        });
+    });
     const valueOf = value => value === 'X' ? 10 : (value === 'M' || !value ? 0 : Number(value));
     const selectInput = index => {
         activeIndex = Math.max(0, Math.min(inputs.length - 1, index));
