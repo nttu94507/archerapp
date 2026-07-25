@@ -26,10 +26,6 @@
 
     <main class="min-h-0 flex-1 sm:rounded-b-2xl sm:border-x sm:border-b">
         <section id="overview-panel" data-tab-panel="overview" class="h-full bg-white">
-            <div class="border-b px-4 py-3">
-                <p class="text-xs font-semibold uppercase tracking-wider text-gray-400">本靶選手</p>
-            </div>
-
             <div class="divide-y">
                 @foreach($target->assignments as $assignment)
                     @php
