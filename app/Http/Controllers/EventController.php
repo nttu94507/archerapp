@@ -203,6 +203,9 @@ class EventController extends Controller
         $eventEndAt = $event->end_date ? Carbon::parse($event->end_date)->endOfDay() : null;
         $isEventFinished = $eventEndAt ? $eventEndAt->lt($now) : false;
 
+        $eventEndAt = $event->end_date ? Carbon::parse($event->end_date)->endOfDay() : null;
+        $isEventFinished = $eventEndAt ? $eventEndAt->lt($now) : false;
+
         return view('events.show', [
             'event'      => $event,
             'groups'     => $event->groups,
