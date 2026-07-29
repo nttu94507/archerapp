@@ -210,6 +210,16 @@ class EventManagementWorkflowTest extends TestCase
         $session = EventScoringSession::with('targets.assignments')->firstOrFail();
         $target = $session->targets->first();
         $this->assertCount(2,$target->assignments);
+        $this->assertMatchesRegularExpression('/^\d{6}$/', $target->device_pin);
+
+        $this->get(route('scoring-stations.show',$target->access_token))
+            ->assertOk()
+            ->assertSee('驗證並綁定此設備')
+            ->assertDontSee($members[0]->name);
+
+        $this->post(route('scoring-stations.claim',$target->access_token), ['pin'=>'000000'])
+            ->assertSessionHasErrors('pin');
+        $this->assertNull($target->fresh()->device_token_hash);
 
         $deviceToken = 'test-scoring-device-token';
         $target->update([

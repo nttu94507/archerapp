@@ -56,8 +56,16 @@
                         <article class="rounded-xl border p-4">
                             <div class="flex items-start justify-between gap-2"><div><h3 class="font-semibold">靶號 {{ str_pad($target->target_number,2,'0',STR_PAD_LEFT) }}</h3><p class="mt-1 text-xs text-gray-500">完成 {{ $target->last_completed_end }} / {{ $session->totalEnds() }} 趟</p></div><span class="rounded-full bg-gray-100 px-2 py-1 text-xs">{{ ['ready'=>'待開始','scoring'=>'計分中','completed'=>'完成'][$target->status] ?? $target->status }}</span></div>
                             <div class="mt-3 space-y-1">@foreach($target->assignments as $assignment)<p class="text-sm"><span class="inline-block w-8 font-mono font-semibold">{{ $target->target_number.$assignment->position }}</span>{{ $assignment->registration?->name }}</p>@endforeach</div>
+                            <div class="mt-4 grid grid-cols-[6rem_1fr] items-center gap-3 rounded-xl bg-gray-50 p-3">
+                                <img src="{{ route('organizer.events.scoring.targets.qrcode', [$event, $target]) }}" alt="靶號 {{ $target->target_number }} 計分 QR Code" class="h-24 w-24 rounded-lg bg-white p-1">
+                                <div class="min-w-0">
+                                    <p class="text-xs text-gray-500">設備綁定 PIN</p>
+                                    <p class="mt-1 font-mono text-2xl font-bold tracking-[0.2em] text-gray-900">{{ $target->device_pin }}</p>
+                                    <p class="mt-2 text-xs leading-5 text-gray-500">掃描 QR Code 或開啟連結，再輸入此 PIN。</p>
+                                </div>
+                            </div>
                             <div class="mt-4 grid grid-cols-2 gap-2">
-                                <a href="{{ $stationUrl }}" target="_blank" class="inline-flex min-h-11 items-center justify-center rounded-xl bg-gray-900 px-3 text-sm font-medium text-white">開啟計分台</a>
+                                <a href="{{ $stationUrl }}" target="_blank" class="inline-flex min-h-11 items-center justify-center rounded-xl bg-gray-900 px-3 text-sm font-medium text-white">開啟驗證頁</a>
                                 <button type="button" data-copy="{{ $stationUrl }}" class="copy-station min-h-11 rounded-xl border px-3 text-sm">複製連結</button>
                             </div>
                             <p class="mt-2 text-xs text-gray-400">最後同步：{{ $target->last_synced_at?->diffForHumans() ?? '尚未同步' }}</p>

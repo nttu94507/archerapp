@@ -5,7 +5,7 @@
 @section('content')
 <div class="mx-auto max-w-5xl px-4 py-6 sm:px-6 sm:py-8">
     <div class="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-        <div><h1 class="text-2xl font-bold">我的賽事</h1><p class="mt-1 text-sm text-gray-500">集中查看報名、付款、報到與計分狀態。</p></div>
+        <div><h1 class="text-2xl font-bold">我的賽事</h1><p class="mt-1 text-sm text-gray-500">集中查看報名、付款與報到狀態。</p></div>
         <a href="{{ route('events.index') }}" class="inline-flex min-h-11 items-center justify-center rounded-xl bg-indigo-600 px-5 text-sm font-medium text-white">探索賽事</a>
     </div>
 
@@ -39,11 +39,8 @@
                                 <span class="rounded-full {{ $isFree || $registration->paid ? 'bg-emerald-50 text-emerald-700' : 'bg-orange-50 text-orange-700' }} px-3 py-1">{{ $paymentLabel }}</span>
                             </div>
                         </div>
-                        <div class="grid shrink-0 grid-cols-2 gap-2 sm:flex">
+                        <div class="shrink-0">
                             <a href="{{ route('events.show', $event) }}" class="inline-flex min-h-11 items-center justify-center rounded-xl border px-4 text-sm font-medium">賽事資訊</a>
-                            @if($registration->status !== 'withdrawn')
-                                <a href="{{ route('my-events.score', $registration) }}" class="inline-flex min-h-11 items-center justify-center rounded-xl {{ $row['scoreable'] ? 'bg-indigo-600 text-white' : 'border text-gray-700' }} px-4 text-sm font-medium">{{ $row['scoreable'] ? '前往計分' : '查看計分表' }}</a>
-                            @endif
                         </div>
                     </div>
                 </article>

@@ -138,6 +138,7 @@ Route::prefix('organizer')->middleware('auth')->name('organizer.')->group(functi
     Route::get('events/{event}/scoring', [OrganizerScoringController::class, 'index'])->name('events.scoring.index');
     Route::post('events/{event}/scoring', [OrganizerScoringController::class, 'store'])->name('events.scoring.store');
     Route::delete('events/{event}/scoring/targets/{target}/device', [OrganizerScoringController::class, 'releaseDevice'])->name('events.scoring.targets.device.destroy');
+    Route::get('events/{event}/scoring/targets/{target}/qrcode', [OrganizerScoringController::class, 'qrCode'])->name('events.scoring.targets.qrcode');
 
     Route::prefix('events/{event}')->name('events.')->group(function () {
         Route::get('badges', [OrganizerEventBadgeController::class, 'index'])->name('badges.index');
@@ -152,6 +153,7 @@ Route::prefix('organizer')->middleware('auth')->name('organizer.')->group(functi
 });
 
 Route::get('/scoring-stations/{token}', [ScoringStationController::class, 'show'])->name('scoring-stations.show');
+Route::post('/scoring-stations/{token}/claim', [ScoringStationController::class, 'claim'])->middleware('throttle:10,1')->name('scoring-stations.claim');
 Route::post('/scoring-stations/{token}/ends', [ScoringStationController::class, 'storeEnd'])->name('scoring-stations.ends.store');
 
 Route::middleware('auth')->group(function () {
@@ -197,9 +199,6 @@ Route::middleware(['auth'])->group(function () {
 
 Route::middleware(['auth', 'profile.completed'])->group(function () {
     Route::get('/my-events', [MyEventController::class, 'index'])->name('my-events.index');
-    Route::get('/my-events/registrations/{registration}/score', [MyEventController::class, 'score'])->name('my-events.score');
-    Route::post('/my-events/registrations/{registration}/score', [MyEventController::class, 'storeScore'])->name('my-events.score.store');
-    Route::post('/my-events/registrations/{registration}/submit', [MyEventController::class, 'submitAll'])->name('my-events.score.submit');
 });
 
 //快速報名

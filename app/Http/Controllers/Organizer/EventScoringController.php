@@ -13,6 +13,10 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\View\View;
+use BaconQrCode\Renderer\Image\SvgImageBackEnd;
+use BaconQrCode\Renderer\ImageRenderer;
+use BaconQrCode\Renderer\RendererStyle\RendererStyle;
+use BaconQrCode\Writer;
 
 class EventScoringController extends Controller
 {
@@ -76,6 +80,7 @@ class EventScoringController extends Controller
                     $target = $session->targets()->create([
                         'target_number'=>$targetIndex + 1,
                         'access_token'=>(string) Str::uuid(),
+                        'device_pin'=>(string) random_int(100000, 999999),
                         'status'=>'ready',
                     ]);
                     foreach ($members->values() as $position => $registration) {
@@ -114,6 +119,7 @@ class EventScoringController extends Controller
             $lockedTarget = EventScoringTarget::whereKey($target->id)->lockForUpdate()->firstOrFail();
             $lockedTarget->update([
                 'access_token'=>(string) Str::uuid(),
+                'device_pin'=>(string) random_int(100000, 999999),
                 'device_token_hash'=>null,
                 'device_bound_at'=>null,
                 'device_last_seen_at'=>null,
@@ -131,5 +137,19 @@ class EventScoringController extends Controller
         });
 
         return back()->with('success', '靶號 '.$target->target_number.' 的舊連結與設備已失效，請使用畫面上的新連結開啟替代設備。');
+    }
+
+    public function qrCode(Event $event, EventScoringTarget $target)
+    {
+        $this->authorize('manageScores', $event);
+        abort_unless($target->session()->where('event_id', $event->id)->exists(), 404);
+
+        $renderer = new ImageRenderer(new RendererStyle(320, 2), new SvgImageBackEnd());
+        $svg = (new Writer($renderer))->writeString(route('scoring-stations.show', $target->access_token));
+
+        return response($svg, 200, [
+            'Content-Type'=>'image/svg+xml',
+            'Cache-Control'=>'no-store, private',
+        ]);
     }
 }

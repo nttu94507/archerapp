@@ -17,21 +17,88 @@ class ScoringStationController extends Controller
     public function show(Request $request, string $token)
     {
         $target = $this->target($token);
-        if (! $this->claimOrValidateDevice($request, $target)) {
+
+        if ($this->isAuthorizedDevice($request, $target)) {
+            $this->loadScoringData($target);
+            $endNumber = min($target->last_completed_end + 1, $target->session->totalEnds());
+
+            return view('scoring-stations.show', compact('target', 'endNumber'));
+        }
+
+        if ($target->device_token_hash !== null) {
             return response()->view('scoring-stations.device-locked', [], 423);
         }
 
-        $endNumber = min($target->last_completed_end + 1, $target->session->totalEnds());
+        return view('scoring-stations.claim', compact('target'));
+    }
 
-        return view('scoring-stations.show', compact('target', 'endNumber'));
+    public function claim(Request $request, string $token): RedirectResponse
+    {
+        $target = $this->target($token);
+        $validated = $request->validate([
+            'pin'=>['required', 'digits:6'],
+        ]);
+        $deviceToken = null;
+
+        $result = DB::transaction(function () use ($target, $validated, $request, &$deviceToken): string {
+            $lockedTarget = EventScoringTarget::whereKey($target->id)->lockForUpdate()->firstOrFail();
+
+            if ($lockedTarget->device_token_hash !== null) {
+                return 'locked';
+            }
+
+            if (! hash_equals((string) $lockedTarget->device_pin, (string) $validated['pin'])) {
+                return 'invalid_pin';
+            }
+
+            $deviceToken = Str::random(64);
+            $lockedTarget->update([
+                'device_token_hash'=>hash('sha256', $deviceToken),
+                'device_bound_at'=>now(),
+                'device_last_seen_at'=>now(),
+                'device_user_agent'=>Str::limit((string) $request->userAgent(), 500, ''),
+            ]);
+
+            EventAuditLog::create([
+                'event_id'=>$target->session->event_id,
+                'action'=>'scoring.target_device_bound',
+                'subject_type'=>EventScoringTarget::class,
+                'subject_id'=>$target->id,
+                'metadata'=>['target'=>$target->target_number],
+            ]);
+
+            return 'claimed';
+        });
+
+        if ($result === 'locked') {
+            return redirect()->route('scoring-stations.show', $token);
+        }
+        if ($result === 'invalid_pin') {
+            return back()->withInput()->withErrors(['pin'=>'PIN 碼錯誤，請向主辦方確認後再輸入。']);
+        }
+
+        Cookie::queue(cookie(
+            $this->deviceCookieName($target),
+            $deviceToken,
+            60 * 24 * 30,
+            '/',
+            null,
+            $request->isSecure(),
+            true,
+            false,
+            'strict'
+        ));
+
+        return redirect()->route('scoring-stations.show', $token);
     }
 
     public function storeEnd(Request $request, string $token): RedirectResponse
     {
         $target = $this->target($token);
-        if (! $this->claimOrValidateDevice($request, $target, false)) {
+        if (! $this->isAuthorizedDevice($request, $target)) {
             return redirect()->route('scoring-stations.show', $token);
         }
+        $this->loadScoringData($target);
 
         $session = $target->session;
         if ($target->status === 'completed') {
@@ -110,45 +177,21 @@ class ScoringStationController extends Controller
             ->with([
                 'session.event',
                 'session.group',
-                'assignments.registration.scoreEntries' => fn ($query) => $query->orderBy('end_number'),
             ])
             ->firstOrFail();
     }
 
-    private function claimOrValidateDevice(Request $request, EventScoringTarget $target, bool $allowClaim = true): bool
+    private function isAuthorizedDevice(Request $request, EventScoringTarget $target): bool
     {
-        $cookieName = $this->deviceCookieName($target);
-        $deviceToken = $request->cookie($cookieName);
-        $newDeviceToken = null;
+        $deviceToken = $request->cookie($this->deviceCookieName($target));
+        if (! is_string($deviceToken) || $target->device_token_hash === null
+            || ! hash_equals($target->device_token_hash, hash('sha256', $deviceToken))) {
+            return false;
+        }
 
-        $authorized = DB::transaction(function () use ($target, $deviceToken, $allowClaim, $request, &$newDeviceToken): bool {
+        return DB::transaction(function () use ($target, $deviceToken): bool {
             $lockedTarget = EventScoringTarget::whereKey($target->id)->lockForUpdate()->firstOrFail();
-
-            if ($lockedTarget->device_token_hash === null) {
-                if (! $allowClaim) {
-                    return false;
-                }
-
-                $newDeviceToken = Str::random(64);
-                $lockedTarget->update([
-                    'device_token_hash'=>hash('sha256', $newDeviceToken),
-                    'device_bound_at'=>now(),
-                    'device_last_seen_at'=>now(),
-                    'device_user_agent'=>Str::limit((string) $request->userAgent(), 500, ''),
-                ]);
-
-                EventAuditLog::create([
-                    'event_id'=>$target->session->event_id,
-                    'action'=>'scoring.target_device_bound',
-                    'subject_type'=>EventScoringTarget::class,
-                    'subject_id'=>$target->id,
-                    'metadata'=>['target'=>$target->target_number],
-                ]);
-
-                return true;
-            }
-
-            if (! is_string($deviceToken)
+            if ($lockedTarget->device_token_hash === null
                 || ! hash_equals($lockedTarget->device_token_hash, hash('sha256', $deviceToken))) {
                 return false;
             }
@@ -157,28 +200,13 @@ class ScoringStationController extends Controller
 
             return true;
         });
+    }
 
-        if ($newDeviceToken !== null) {
-            Cookie::queue(cookie(
-                $cookieName,
-                $newDeviceToken,
-                60 * 24 * 30,
-                '/',
-                null,
-                $request->isSecure(),
-                true,
-                false,
-                'strict'
-            ));
-        }
-
-        $target->refresh()->load([
-            'session.event',
-            'session.group',
+    private function loadScoringData(EventScoringTarget $target): void
+    {
+        $target->load([
             'assignments.registration.scoreEntries' => fn ($query) => $query->orderBy('end_number'),
         ]);
-
-        return $authorized;
     }
 
     private function deviceCookieName(EventScoringTarget $target): string

@@ -8,7 +8,7 @@ class EventScoringTarget extends Model
 {
     protected $fillable = [
         'event_scoring_session_id', 'target_number', 'access_token', 'status',
-        'last_completed_end', 'last_synced_at', 'device_token_hash',
+        'last_completed_end', 'last_synced_at', 'device_pin', 'device_token_hash',
         'device_bound_at', 'device_last_seen_at', 'device_user_agent',
     ];
 
