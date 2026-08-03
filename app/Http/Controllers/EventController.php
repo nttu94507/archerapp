@@ -231,6 +231,7 @@ class EventController extends Controller
         $now = Carbon::now();
 
         $selectedGroupId = $request->input('group');
+        $sortDirection = $request->input('sort') === 'asc' ? 'asc' : 'desc';
 
         $registrations = EventRegistration::query()
             ->with('event_group')
@@ -274,6 +275,7 @@ class EventController extends Controller
                 'group_id'      => $registration->event_group_id,
                 'x_count'       => $scoreStats['x_count'],
                 'ten_plus'      => $scoreStats['ten_plus'],
+                'ten_count'     => $scoreStats['ten_count'],
                 'avg_per_arrow' => $scoreStats['recorded_arrows'] > 0
                     ? round($scoreStats['total_score'] / $scoreStats['recorded_arrows'], 2)
                     : null,
@@ -297,14 +299,29 @@ class EventController extends Controller
 
         $groupedBoards = $scoreboard
             ->groupBy('group_id')
-            ->map(function (Collection $rows) use ($event) {
-                $sorted = $rows->sortByDesc('total_score')->values()->map(function ($row, $idx) {
-                    $row['rank_position'] = $idx + 1;
+            ->map(function (Collection $rows) use ($event, $sortDirection) {
+                $ranked = $rows->sort(function (array $left, array $right): int {
+                    return [$right['total_score'], $right['ten_count'], $right['x_count']]
+                        <=> [$left['total_score'], $left['ten_count'], $left['x_count']];
+                })->values();
 
+                $previousSignature = null;
+                $currentRank = 1;
+                $ranked = $ranked->map(function ($row, $idx) use (&$previousSignature, &$currentRank) {
+                    $signature = [$row['total_score'], $row['ten_count'], $row['x_count']];
+                    if ($previousSignature !== null && $signature !== $previousSignature) {
+                        $currentRank = $idx + 1;
+                    }
+                    $row['rank_position'] = $currentRank;
+                    $previousSignature = $signature;
                     return $row;
                 });
 
-                $firstRow = $sorted->first();
+                $sorted = $sortDirection === 'asc'
+                    ? $ranked->sortBy('total_score')->values()
+                    : $ranked;
+
+                $firstRow = $ranked->first();
                 /** @var EventGroup|null $group */
                 $group = $firstRow['registration']->event_group ?? null;
                 [$arrowsPerEnd, $totalArrows, $totalEnds] = $this->resolveGroupArrowSettings($event, $group);
@@ -344,6 +361,7 @@ class EventController extends Controller
                 return [
                     'group'        => $group,
                     'rows'         => $sorted,
+                    'leader'       => $ranked->first(),
                     'analysis'     => $analysis,
                     'totalEnds'    => $totalEnds,
                     'arrowsPerEnd' => $arrowsPerEnd,
@@ -364,7 +382,7 @@ class EventController extends Controller
 
         $groupLeaders = $groupedBoards
             ->map(function (array $board) {
-                $leader = $board['rows']->first();
+                $leader = $board['leader'];
 
                 if (!$leader) {
                     return null;
@@ -412,6 +430,7 @@ class EventController extends Controller
             'activeGroup'    => $activeGroup,
             'selectedBoard'  => $selectedBoard,
             'selectedGroupId' => $selectedGroupId,
+            'sortDirection' => $sortDirection,
             'eventFinished'  => $eventFinished,
         ]);
     }
@@ -428,6 +447,7 @@ class EventController extends Controller
     private function tallyScores(iterable $scores): array
     {
         $xCount = 0;
+        $tenCount = 0;
         $tenPlus = 0;
         $totalScore = 0;
         $recorded = 0;
@@ -455,6 +475,7 @@ class EventController extends Controller
             $num = max(0, min(10, (int) $val));
 
             if ($num === 10) {
+                $tenCount++;
                 $tenPlus++;
             }
 
@@ -463,6 +484,7 @@ class EventController extends Controller
 
         return [
             'x_count' => $xCount,
+            'ten_count' => $tenCount,
             'ten_plus' => $tenPlus,
             'total_score' => $totalScore,
             'recorded_arrows' => $recorded,

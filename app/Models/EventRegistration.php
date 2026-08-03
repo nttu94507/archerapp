@@ -12,7 +12,7 @@ class EventRegistration extends Model
         'name','email','phone','team_name',
         'status','withdraw_reason','withdrawn_at','withdrawn_by',
         'paid','payment_status','payment_confirmed_at','payment_confirmed_by','payment_amount','payment_method','payment_reference','payment_note','score_submitted_at','checked_in_at','checked_in_by',
-        'score_verified_at','score_verified_by','result_published_at',
+        'score_verified_at','score_verified_by','result_published_at','result_status',
     ];
 
     protected $casts = [
@@ -40,5 +40,10 @@ class EventRegistration extends Model
     public function scoreEntries()
     {
         return $this->hasMany(EventScoreEntry::class);
+    }
+
+    public function scoringAssignment()
+    {
+        return $this->hasOne(EventScoringAssignment::class, 'event_registration_id');
     }
 }

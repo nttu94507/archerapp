@@ -134,7 +134,8 @@ Route::prefix('organizer')->middleware('auth')->name('organizer.')->group(functi
     Route::patch('events/{event}/registrations/{registration}', [OrganizerRegistrationController::class, 'update'])->name('events.registrations.update');
     Route::get('events/{event}/results', [OrganizerResultController::class, 'index'])->name('events.results.index');
     Route::post('events/{event}/results/verify', [OrganizerResultController::class, 'verify'])->name('events.results.verify');
-    Route::post('events/{event}/results/publish', [OrganizerResultController::class, 'publish'])->name('events.results.publish');
+    Route::post('events/{event}/results/groups/{group}/verify', [OrganizerResultController::class, 'verifyGroup'])->name('events.results.groups.verify');
+    Route::post('events/{event}/results/groups/{group}/publish', [OrganizerResultController::class, 'publish'])->name('events.results.publish');
     Route::get('events/{event}/scoring', [OrganizerScoringController::class, 'index'])->name('events.scoring.index');
     Route::post('events/{event}/scoring', [OrganizerScoringController::class, 'store'])->name('events.scoring.store');
     Route::delete('events/{event}/scoring/targets/{target}/device', [OrganizerScoringController::class, 'releaseDevice'])->name('events.scoring.targets.device.destroy');
@@ -199,6 +200,7 @@ Route::middleware(['auth'])->group(function () {
 
 Route::middleware(['auth', 'profile.completed'])->group(function () {
     Route::get('/my-events', [MyEventController::class, 'index'])->name('my-events.index');
+    Route::get('/my-events/registrations/{registration}/result', [MyEventController::class, 'result'])->name('my-events.results.show');
 });
 
 //快速報名

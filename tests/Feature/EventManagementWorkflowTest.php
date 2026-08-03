@@ -183,7 +183,7 @@ class EventManagementWorkflowTest extends TestCase
 
         $this->actingAs($owner)->post(route('organizer.events.results.verify',$event),['registration_ids'=>[$registration->id]])->assertSessionHas('success');
         $this->assertNotNull($registration->fresh()->score_verified_at);
-        $this->actingAs($owner)->post(route('organizer.events.results.publish',$event))->assertSessionHas('success');
+        $this->actingAs($owner)->post(route('organizer.events.results.publish',[$event,$group]))->assertSessionHas('success');
         $this->assertNotNull($registration->fresh()->result_published_at);
         $this->assertNotNull($event->fresh()->completed_at);
     }

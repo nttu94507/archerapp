@@ -306,9 +306,9 @@ class EventBadgeWorkflowTest extends TestCase
         [$owner,$event]=$this->eventWithOwner(); $group=EventGroup::factory()->create(['event_id'=>$event->id]); $members=User::factory()->count(2)->create();
         $registrations=[]; foreach([50,40] as $i=>$score){$registrations[$i]=EventRegistration::create(['event_id'=>$event->id,'event_group_id'=>$group->id,'user_id'=>$members[$i]->id,'name'=>$members[$i]->name,'email'=>$members[$i]->email,'status'=>'checked_in','score_submitted_at'=>now(),'score_verified_at'=>now()]); EventScoreEntry::create(['event_id'=>$event->id,'event_registration_id'=>$registrations[$i]->id,'user_id'=>$members[$i]->id,'end_number'=>1,'scores'=>[$score],'end_total'=>$score]);}
         $badge=EventBadge::create(['event_id'=>$event->id,'event_group_id'=>$group->id,'created_by'=>$owner->id,'name'=>'金牌修正','type'=>'special','eligibility'=>'scored','award_rule'=>'placement','placement'=>1]);
-        $this->actingAs($owner)->post(route('organizer.events.results.publish',$event));
+        $this->actingAs($owner)->post(route('organizer.events.results.publish',[$event,$group]));
         EventScoreEntry::where('event_registration_id',$registrations[1]->id)->update(['end_total'=>60,'scores'=>[60]]);
-        $this->actingAs($owner)->post(route('organizer.events.results.publish',$event));
+        $this->actingAs($owner)->post(route('organizer.events.results.publish',[$event,$group]));
         $this->assertDatabaseHas('user_event_badges',['event_badge_id'=>$badge->id,'user_id'=>$members[0]->id,'revoked_reason'=>'正式成績修正，名次重新判定']);
         $this->assertDatabaseHas('user_event_badges',['event_badge_id'=>$badge->id,'user_id'=>$members[1]->id,'revoked_at'=>null,'score_snapshot'=>60]);
     }
@@ -384,8 +384,8 @@ class EventBadgeWorkflowTest extends TestCase
         }
         $badge = EventBadge::create(['event_id'=>$event->id,'event_group_id'=>$group->id,'created_by'=>$owner->id,'name'=>'金牌','type'=>'special','eligibility'=>'scored','award_rule'=>'placement','placement'=>1]);
 
-        $this->actingAs($owner)->post(route('organizer.events.results.publish',$event))->assertSessionHas('success');
-        $this->actingAs($owner)->post(route('organizer.events.results.publish',$event))->assertSessionHas('success');
+        $this->actingAs($owner)->post(route('organizer.events.results.publish',[$event,$group]))->assertSessionHas('success');
+        $this->actingAs($owner)->post(route('organizer.events.results.publish',[$event,$group]))->assertSessionHas('success');
 
         $this->assertDatabaseCount('user_event_badges', 1);
         $this->assertDatabaseHas('user_event_badges', ['event_badge_id'=>$badge->id,'user_id'=>$members[0]->id,'award_source'=>'placement']);

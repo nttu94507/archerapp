@@ -46,25 +46,39 @@ class EventBadgeAwardService
         return $badges->count();
     }
 
-    public function awardPlacementsFor(Event $event): int
+    public function awardPlacementsFor(Event $event, ?int $eventGroupId = null): int
     {
         $count = 0;
-        $badges = $event->badges()->where('award_rule', 'placement')->where('is_active', true)->get();
+        $badges = $event->badges()->where('award_rule', 'placement')->where('is_active', true)
+            ->when($eventGroupId !== null, fn ($query) => $query->where('event_group_id', $eventGroupId))
+            ->get();
         foreach ($badges as $badge) {
             $ranked = $event->registrations()->with(['scoreEntries','event_group'])
                 ->where('event_group_id', $badge->event_group_id)
                 ->whereIn('status', ['registered', 'checked_in'])
+                ->where(fn ($query) => $query->whereNull('result_status')->orWhere('result_status', '!=', 'dnf'))
                 ->whereNotNull('score_verified_at')->whereNotNull('result_published_at')->get()
-                ->sortByDesc(fn ($registration) => $registration->scoreEntries->sum('end_total'))->values();
+                ->map(function ($registration): array {
+                    $scores = $registration->scoreEntries->flatMap(fn ($entry) => $entry->scores ?? []);
+                    return [
+                        'registration'=>$registration,
+                        'total'=>$registration->scoreEntries->sum('end_total'),
+                        'ten_count'=>$scores->filter(fn ($score) => (string) $score === '10')->count(),
+                        'x_count'=>$scores->filter(fn ($score) => strtoupper((string) $score) === 'X')->count(),
+                    ];
+                })
+                ->sort(fn (array $left, array $right) => [$right['total'], $right['ten_count'], $right['x_count']] <=> [$left['total'], $left['ten_count'], $left['x_count']])
+                ->values();
             $rank = 1; $winnerIds = [];
-            foreach ($ranked->groupBy(fn ($registration) => (string) $registration->scoreEntries->sum('end_total')) as $sameScore) {
+            foreach ($ranked->groupBy(fn (array $row) => $row['total'].'|'.$row['ten_count'].'|'.$row['x_count']) as $sameScore) {
                 if ($rank === (int) $badge->placement) {
-                    foreach ($sameScore as $winner) {
+                    foreach ($sameScore as $row) {
+                        $winner = $row['registration'];
                         $winnerIds[] = $winner->user_id;
                         if ($this->award($badge, $winner->user_id, 'placement', null, null, [
                             'group_name_snapshot'=>$winner->event_group?->name,
                             'placement_snapshot'=>$badge->placement,
-                            'score_snapshot'=>$winner->scoreEntries->sum('end_total'),
+                            'score_snapshot'=>$row['total'],
                             'criteria_snapshot'=>'正式成績第 '.$badge->placement.' 名',
                         ], true)) $count++;
                     }

@@ -37,10 +37,22 @@
                             <div class="mt-3 flex flex-wrap gap-2 text-xs">
                                 <span class="rounded-full bg-blue-50 px-3 py-1 text-blue-700">{{ $statusLabel }}</span>
                                 <span class="rounded-full {{ $isFree || $registration->paid ? 'bg-emerald-50 text-emerald-700' : 'bg-orange-50 text-orange-700' }} px-3 py-1">{{ $paymentLabel }}</span>
+                                @if($registration->result_published_at)
+                                    <span class="rounded-full bg-emerald-50 px-3 py-1 text-emerald-700">正式成績已發布</span>
+                                @elseif($registration->score_submitted_at)
+                                    <span class="rounded-full bg-amber-50 px-3 py-1 text-amber-700">主辦方核對中</span>
+                                @elseif($row['phase'] === 'ongoing')
+                                    <span class="rounded-full bg-indigo-50 px-3 py-1 text-indigo-700">賽事進行中</span>
+                                @else
+                                    <span class="rounded-full bg-gray-100 px-3 py-1 text-gray-600">尚未發布成績</span>
+                                @endif
                             </div>
                         </div>
-                        <div class="shrink-0">
+                        <div class="flex shrink-0 flex-wrap gap-2">
                             <a href="{{ route('events.show', $event) }}" class="inline-flex min-h-11 items-center justify-center rounded-xl border px-4 text-sm font-medium">賽事資訊</a>
+                            @if($registration->result_published_at)
+                                <a href="{{ route('my-events.results.show', $registration) }}" class="inline-flex min-h-11 items-center justify-center rounded-xl bg-emerald-600 px-4 text-sm font-medium text-white">查看正式成績</a>
+                            @endif
                         </div>
                     </div>
                 </article>
