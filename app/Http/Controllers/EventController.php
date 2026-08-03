@@ -300,7 +300,12 @@ class EventController extends Controller
         $groupedBoards = $scoreboard
             ->groupBy('group_id')
             ->map(function (Collection $rows) use ($event, $sortDirection) {
-                $ranked = $rows->sort(function (array $left, array $right): int {
+                $dnfRows = $rows->filter(fn (array $row) => $row['registration']->result_status === 'dnf')
+                    ->map(function (array $row): array {
+                        $row['rank_position'] = 'DNF';
+                        return $row;
+                    })->values();
+                $ranked = $rows->reject(fn (array $row) => $row['registration']->result_status === 'dnf')->sort(function (array $left, array $right): int {
                     return [$right['total_score'], $right['ten_count'], $right['x_count']]
                         <=> [$left['total_score'], $left['ten_count'], $left['x_count']];
                 })->values();
@@ -317,11 +322,12 @@ class EventController extends Controller
                     return $row;
                 });
 
-                $sorted = $sortDirection === 'asc'
+                $sortedRanked = $sortDirection === 'asc'
                     ? $ranked->sortBy('total_score')->values()
                     : $ranked;
+                $sorted = $sortedRanked->concat($dnfRows)->values();
 
-                $firstRow = $ranked->first();
+                $firstRow = $rows->first();
                 /** @var EventGroup|null $group */
                 $group = $firstRow['registration']->event_group ?? null;
                 [$arrowsPerEnd, $totalArrows, $totalEnds] = $this->resolveGroupArrowSettings($event, $group);

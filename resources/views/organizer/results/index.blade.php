@@ -7,7 +7,7 @@
     <div>
         <a href="{{ route('organizer.events.show', $event) }}" class="text-sm text-indigo-600">← 返回賽事工作台</a>
         <h1 class="mt-2 text-2xl font-bold">成績確認與分組發布</h1>
-        <p class="mt-1 text-sm text-gray-500">完賽與未完成選手都可以審核；未完成成績經個別確認後會標記為棄賽（DNF），不參與正式名次。</p>
+        <p class="mt-1 text-sm text-gray-500">已報到選手即使中途停止，也會依現有分數結算並參與排名；只有未報到選手會標記為棄賽（DNF）。</p>
     </div>
 
     @if(session('success'))<div class="rounded-xl bg-green-50 p-4 text-sm text-green-700">{{ session('success') }}</div>@endif
@@ -24,15 +24,11 @@
                 $canPublish = $items->isNotEmpty()
                     && $state['has_session']
                     && $state['has_targets']
-                    && $state['unfinished_targets'] === 0
-                    && $state['incomplete_scores'] === 0
                     && $state['unverified'] === 0
                     && !$state['published'];
                 $canVerifyGroup = $items->isNotEmpty()
                     && $state['has_session']
                     && $state['has_targets']
-                    && $state['unfinished_targets'] === 0
-                    && $state['incomplete_scores'] === 0
                     && $state['unverified'] > 0
                     && !$state['published'];
                 $checkClass = 'result-check-group-'.$group->id;
@@ -53,7 +49,7 @@
                         <div class="mt-2 flex flex-wrap gap-2 text-xs">
                             <span class="rounded-lg bg-white px-2.5 py-1.5 text-gray-600">選手 {{ $items->count() }} 人</span>
                             <span class="rounded-lg bg-white px-2.5 py-1.5 {{ $state['unfinished_targets'] ? 'text-red-600' : 'text-green-700' }}">未完成靶位 {{ $state['unfinished_targets'] }}</span>
-                            <span class="rounded-lg bg-white px-2.5 py-1.5 {{ $state['incomplete_scores'] ? 'text-red-600' : 'text-green-700' }}">成績不完整 {{ $state['incomplete_scores'] }}</span>
+                            <span class="rounded-lg bg-white px-2.5 py-1.5 {{ $state['incomplete_scores'] ? 'text-amber-700' : 'text-green-700' }}">待審核的部分成績 {{ $state['incomplete_scores'] }}</span>
                             <span class="rounded-lg bg-white px-2.5 py-1.5 {{ $state['unverified'] ? 'text-red-600' : 'text-green-700' }}">尚未確認 {{ $state['unverified'] }}</span>
                         </div>
                         @if(!$state['has_session'] || !$state['has_targets'])
@@ -107,7 +103,7 @@
                                     </td>
                                     <td class="p-3 font-medium">{{ $registration->name }}</td>
                                     <td class="p-3 font-semibold">{{ $registration->calculated_total }}</td>
-                                    <td class="p-3 {{ $registration->result_status === 'dnf' ? 'text-amber-700' : ($complete ? 'text-green-700' : 'text-red-600') }}">{{ $registration->result_status === 'dnf' ? '棄賽（DNF）' : ($complete ? '完整' : '未完成') }}</td>
+                                    <td class="p-3 {{ $registration->result_status === 'dnf' ? 'text-amber-700' : ($complete ? 'text-green-700' : 'text-indigo-700') }}">{{ $registration->result_status === 'dnf' ? '未報到（DNF）' : ($complete ? '完整' : ($registration->score_verified_at ? '以現有分數結算' : '部分成績待審核')) }}</td>
                                     <td class="p-3">{{ $registration->score_verified_at ? '已確認' : '待確認' }}</td>
                                     <td class="p-3">{{ $registration->result_published_at ? '已發布' : '—' }}</td>
                                 </tr>
@@ -117,7 +113,7 @@
                     </div>
                     @if($items->contains(fn ($item) => !$item->score_verified_at))
                         <div class="flex justify-end border-t p-4">
-                            <button form="verify-form" onclick="return confirm('確定審核選取成績？未完成全部趟次的選手會標記為棄賽（DNF）。')" class="rounded-xl bg-indigo-600 px-4 py-2 text-sm font-medium text-white">確認選取成績</button>
+                            <button form="verify-form" onclick="return confirm('確定審核選取成績？已報到的未完賽選手將以現有分數結算；未報到選手才會標記為 DNF。')" class="rounded-xl bg-indigo-600 px-4 py-2 text-sm font-medium text-white">確認選取成績</button>
                         </div>
                     @endif
                 @endif

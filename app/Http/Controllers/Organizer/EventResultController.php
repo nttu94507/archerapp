@@ -38,7 +38,7 @@ class EventResultController extends Controller
                 'has_session'=>$group->scoringSessions->isNotEmpty(),
                 'has_targets'=>$targets->isNotEmpty(),
                 'unfinished_targets'=>$targets->where('status', '!=', 'completed')->count(),
-                'incomplete_scores'=>$items->filter(fn ($item) => $item->result_status !== 'dnf' && (! $item->score_submitted_at || $item->scoreEntries->count() < $requiredEnds))->count(),
+                'incomplete_scores'=>$items->filter(fn ($item) => ! $item->score_verified_at && $item->scoreEntries->count() < $requiredEnds)->count(),
                 'unverified'=>$items->whereNull('score_verified_at')->count(),
                 'published'=>$items->isNotEmpty() && $items->every(fn ($item) => $item->result_published_at !== null),
             ]];
@@ -54,14 +54,12 @@ class EventResultController extends Controller
         $items = $event->registrations()->with(['event_group','scoreEntries'])->whereIn('id',$validated['registration_ids'])->get();
         $dnfCount = 0;
         foreach ($items as $registration) {
-            $totalArrows = $registration->event_group?->arrow_count ?: ($event->mode === 'indoor' ? 30 : 36);
-            $requiredEnds = (int) ceil($totalArrows / max(1, $registration->event_group?->arrows_per_end ?: 6));
-            $completed = $registration->score_submitted_at && $registration->scoreEntries->count() >= $requiredEnds;
-            if (! $completed) $dnfCount++;
+            $didNotStart = $registration->status !== 'checked_in' && $registration->checked_in_at === null;
+            if ($didNotStart) $dnfCount++;
             $registration->update([
                 'score_verified_at'=>now(),
                 'score_verified_by'=>$request->user()->id,
-                'result_status'=>$completed ? 'completed' : 'dnf',
+                'result_status'=>$didNotStart ? 'dnf' : 'completed',
             ]);
         }
         EventAuditLog::create(['event_id'=>$event->id,'user_id'=>$request->user()->id,'action'=>'results.verified','metadata'=>['count'=>$items->count(),'dnf_count'=>$dnfCount]]);
@@ -97,21 +95,14 @@ class EventResultController extends Controller
                 return ['error'=>'此組別尚未建立排靶與計分場次。'];
             }
 
-            $unfinishedTargets = $targets->where('status', '!=', 'completed')->count();
-            if ($unfinishedTargets > 0) {
-                return ['error'=>'此組別還有 '.$unfinishedTargets.' 個靶位尚未完成。'];
-            }
-
-            $totalArrows = $group->arrow_count ?: ($event->mode === 'indoor' ? 30 : 36);
-            $requiredEnds = (int) ceil($totalArrows / max(1, $group->arrows_per_end ?: 6));
-            $incomplete = $registrations->filter(fn ($registration) => $registration->result_status !== 'dnf' && (! $registration->score_submitted_at || $registration->scoreEntries->count() < $requiredEnds))->count();
-            if ($incomplete > 0) {
-                return ['error'=>'此組別還有 '.$incomplete.' 位選手成績不完整。'];
-            }
-
             $unverified = $registrations->whereNull('score_verified_at');
             foreach ($unverified as $registration) {
-                $registration->update(['score_verified_at'=>now(), 'score_verified_by'=>$request->user()->id, 'result_status'=>'completed']);
+                $didNotStart = $registration->status !== 'checked_in' && $registration->checked_in_at === null;
+                $registration->update([
+                    'score_verified_at'=>now(),
+                    'score_verified_by'=>$request->user()->id,
+                    'result_status'=>$didNotStart ? 'dnf' : 'completed',
+                ]);
             }
 
             EventAuditLog::create([
@@ -158,14 +149,6 @@ class EventResultController extends Controller
             abort_if($sessions->isEmpty(), 422, '此組別尚未建立排靶與計分場次。');
             $targets = $sessions->flatMap->targets;
             abort_if($targets->isEmpty(), 422, '此組別尚未建立任何靶位。');
-            $unfinishedTargets = $targets->where('status', '!=', 'completed')->count();
-            abort_if($unfinishedTargets > 0, 422, '此組別還有 '.$unfinishedTargets.' 個靶位尚未完成。');
-
-            $totalArrows = $group->arrow_count ?: ($event->mode === 'indoor' ? 30 : 36);
-            $requiredEnds = (int) ceil($totalArrows / max(1, $group->arrows_per_end ?: 6));
-            $incomplete = $registrations->filter(fn ($registration) => $registration->result_status !== 'dnf' && (! $registration->score_submitted_at || $registration->scoreEntries->count() < $requiredEnds))->count();
-            abort_if($incomplete > 0, 422, '此組別還有 '.$incomplete.' 位選手成績不完整。');
-
             $unverified = $registrations->whereNull('score_verified_at')->count();
             abort_if($unverified > 0, 422, '此組別還有 '.$unverified.' 位選手尚未經主辦方確認。');
 
