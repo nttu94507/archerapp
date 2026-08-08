@@ -194,20 +194,29 @@ class EventManagementWorkflowTest extends TestCase
         $group->update(['name'=>'反曲公開組','arrow_count'=>12,'arrows_per_end'=>6]);
         $members = User::factory()->count(2)->create();
         $registrations = $members->map(fn ($member) => $this->registration($event,$group,$member));
+        $secondGroup = EventGroup::factory()->create(['event_id'=>$event->id, 'name'=>'複合弓公開組', 'arrow_count'=>12, 'arrows_per_end'=>6]);
+        $secondRegistration = $this->registration($event, $secondGroup, User::factory()->create());
+        $emptyGroup = EventGroup::factory()->create(['event_id'=>$event->id, 'name'=>'無選手組']);
 
         $this->actingAs($owner)->post(route('organizer.events.scoring.store',$event), [
-            'event_group_id'=>$group->id, 'name'=>'上午資格賽', 'athletes_per_target'=>2,
+            'name'=>'上午資格賽', 'athletes_per_target'=>2,
         ])->assertSessionHas('success');
 
         $this->assertNotNull($event->fresh()->reg_end);
         $this->assertTrue($event->fresh()->registrationStatus() === 'closed');
+        $this->assertNotNull($group->fresh()->reg_end);
+        $this->assertNotNull($secondGroup->fresh()->reg_end);
+        $this->assertNotNull($emptyGroup->fresh()->reg_end);
+        $this->assertSame(2, EventScoringSession::where('event_id', $event->id)->count());
+        $this->assertDatabaseHas('event_scoring_assignments', ['event_registration_id'=>$secondRegistration->id]);
+        $this->assertSame(0, EventScoringSession::where('event_group_id', $emptyGroup->id)->count());
 
         $this->actingAs($owner)->post(route('organizer.events.scoring.store',$event), [
-            'event_group_id'=>$group->id, 'name'=>'重複排靶', 'athletes_per_target'=>2,
-        ])->assertSessionHas('error', '此組別已完成排靶，不能重複執行。');
+            'name'=>'重複排靶', 'athletes_per_target'=>2,
+        ])->assertSessionHas('error', '此賽事已完成排靶，不能重複執行。');
         $this->assertSame(1, EventScoringSession::where('event_group_id', $group->id)->count());
 
-        $session = EventScoringSession::with('targets.assignments')->firstOrFail();
+        $session = EventScoringSession::where('event_group_id', $group->id)->with('targets.assignments')->firstOrFail();
         $target = $session->targets->first();
         $this->assertCount(2,$target->assignments);
         $this->assertMatchesRegularExpression('/^\d{6}$/', $target->device_pin);

@@ -20,27 +20,31 @@
 
     @if($sessions->isNotEmpty())
         <div class="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
-            賽事已執行排靶，報名已停止。已排靶的組別會永久鎖定，不能再次執行。
+            賽事已完成全部組別排靶，所有組別報名均已停止，不能再次執行排靶。
         </div>
     @endif
 
     <section class="rounded-2xl border bg-white p-4 shadow-sm sm:p-6">
-        <h2 class="font-semibold">建立計分場次</h2>
-        <p class="mt-1 text-sm text-gray-500">系統會依姓名排序，自動將已報名或已報到選手排入 1A、1B…。第一次排靶後，整場賽事會立即停止報名。</p>
-        <form method="POST" action="{{ route('organizer.events.scoring.store',$event) }}" onsubmit="return confirm('排靶後將立即停止整場賽事報名，且此組別不能重新排靶。確定執行？')" class="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-[1fr_1fr_12rem_auto]">
-            @csrf
-            <select name="event_group_id" required class="min-h-12 rounded-xl border-gray-300">
-                <option value="">選擇組別</option>
-                @foreach($event->groups as $group)
-                    <option value="{{ $group->id }}" @disabled($group->scoring_sessions_count > 0)>
-                        {{ $group->name }}（{{ $group->active_registrations_count }} 人{{ $group->scoring_sessions_count > 0 ? '，已排靶' : '' }}）
-                    </option>
-                @endforeach
-            </select>
-            <input name="name" required value="{{ old('name',$event->name.' 資格賽') }}" class="min-h-12 rounded-xl border-gray-300" placeholder="場次名稱">
-            <select name="athletes_per_target" class="min-h-12 rounded-xl border-gray-300"><option value="4">每靶 4 人</option><option value="3">每靶 3 人</option><option value="2">每靶 2 人</option></select>
-            <button class="min-h-12 rounded-xl bg-indigo-600 px-5 text-sm font-medium text-white">確認排靶並停止報名</button>
-        </form>
+        <h2 class="font-semibold">全部組別排靶</h2>
+        <p class="mt-1 text-sm text-gray-500">系統會一次處理所有組別，依姓名將已報名或已報到選手排入 1A、1B…。無選手組別會略過；成功後所有組別立即截止報名，且整場只能執行一次。</p>
+        <div class="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+            @foreach($event->groups as $group)
+                <div class="flex items-center justify-between rounded-xl bg-gray-50 px-4 py-3 text-sm">
+                    <span class="font-medium">{{ $group->name }}</span>
+                    <span class="{{ $group->active_registrations_count > 0 ? 'text-gray-600' : 'text-amber-600' }}">{{ $group->active_registrations_count > 0 ? $group->active_registrations_count.' 人' : '無選手，將略過' }}</span>
+                </div>
+            @endforeach
+        </div>
+        @if($sessions->isEmpty())
+            <form method="POST" action="{{ route('organizer.events.scoring.store',$event) }}" onsubmit="return confirm('確定要截止所有組別報名並一次完成全賽事排靶？成功後不能重新排靶。')" class="mt-4 grid gap-3 lg:grid-cols-[1fr_12rem_auto]">
+                @csrf
+                <input name="name" required value="{{ old('name',$event->name.' 資格賽') }}" class="min-h-12 rounded-xl border-gray-300" placeholder="場次名稱">
+                <select name="athletes_per_target" class="min-h-12 rounded-xl border-gray-300"><option value="4">每靶 4 人</option><option value="3">每靶 3 人</option><option value="2">每靶 2 人</option></select>
+                <button class="min-h-12 rounded-xl bg-indigo-600 px-5 text-sm font-medium text-white">確認全部排靶並停止報名</button>
+            </form>
+        @else
+            <div class="mt-4 rounded-xl bg-gray-100 px-4 py-3 text-sm font-medium text-gray-500">全賽事排靶已完成，此操作已鎖定。</div>
+        @endif
     </section>
 
     <div class="space-y-5">

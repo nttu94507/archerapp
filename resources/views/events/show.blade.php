@@ -55,7 +55,13 @@
 
         {{-- 組別清單（公開） --}}
         <section id="groups" class="rounded-2xl border bg-white p-4 shadow-sm">
-            <h2 class="text-lg font-semibold text-gray-900 mb-3">可報名組別</h2>
+            <h2 class="text-lg font-semibold text-gray-900 mb-3">賽事組別</h2>
+
+            @if($registrationLocked)
+                <div class="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-800">
+                    本賽事已完成排靶，所有組別報名均已截止。
+                </div>
+            @endif
 
             @auth
                 @if($myRegistrations->isNotEmpty())
@@ -117,6 +123,13 @@
                             $groupRegStart = $g->reg_start ?: $regStartAt;
                             $groupRegEnd = $g->reg_end ?: $regEndAt;
                             $groupIsBetween = !$registrationLocked && $groupRegStart && $groupRegEnd && now()->between($groupRegStart, $groupRegEnd);
+                            $registrationUnavailableLabel = match (true) {
+                                $registrationLocked => '排靶完成，報名截止',
+                                !$groupRegStart || !$groupRegEnd => '尚未設定報名時間',
+                                now()->lt($groupRegStart) => '報名尚未開始',
+                                now()->gt($groupRegEnd) => '報名已截止',
+                                default => '目前不可報名',
+                            };
                         @endphp
 
                         <li class="py-3 flex items-center justify-between">
@@ -136,7 +149,7 @@
                                 已報名
                             </span>
                                 @elseif(!$groupIsBetween)
-                                    <span class="text-xs text-gray-400">{{ $registrationLocked ? '排靶完成，報名截止' : '目前不可報名' }}</span>
+                                    <span class="text-xs text-gray-400">{{ $registrationUnavailableLabel }}</span>
                                 @elseif($full)
                                     <span class="inline-flex items-center rounded-xl bg-gray-100 px-3 py-1.5 text-xs font-medium text-gray-500">
                                 名額已滿

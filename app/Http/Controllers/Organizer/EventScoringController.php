@@ -38,76 +38,112 @@ class EventScoringController extends Controller
     {
         $this->authorize('manageScores', $event);
         $validated = $request->validate([
-            'event_group_id' => ['required', 'integer'],
             'name' => ['required', 'string', 'max:120'],
             'athletes_per_target' => ['required', 'integer', 'between:2,4'],
         ]);
         try {
-            DB::transaction(function () use ($event, $validated, $request): void {
+            $summary = DB::transaction(function () use ($event, $validated, $request): array {
                 $lockedEvent = Event::whereKey($event->id)->lockForUpdate()->firstOrFail();
-                $group = EventGroup::where('event_id', $event->id)
-                    ->whereKey($validated['event_group_id'])
-                    ->lockForUpdate()
-                    ->firstOrFail();
 
-                if (EventScoringSession::where('event_group_id', $group->id)->exists()) {
-                    abort(422, '此組別已完成排靶，不能重複執行。');
+                if (EventScoringSession::where('event_id', $event->id)->exists()) {
+                    abort(422, '此賽事已完成排靶，不能重複執行。');
                 }
 
-                $registrations = $group->registrations()
-                    ->whereIn('status', ['registered', 'checked_in'])
-                    ->orderBy('name')
+                $groups = EventGroup::where('event_id', $event->id)
+                    ->orderBy('id')
+                    ->lockForUpdate()
                     ->get();
-                if ($registrations->isEmpty()) {
-                    abort(422, '此組別目前沒有可排靶的選手。');
+
+                if ($groups->isEmpty()) {
+                    abort(422, '此賽事尚未建立任何組別。');
+                }
+
+                $registrationsByGroup = $groups->mapWithKeys(fn (EventGroup $group) => [
+                    $group->id => $group->registrations()
+                        ->whereIn('status', ['registered', 'checked_in'])
+                        ->orderBy('name')
+                        ->get(),
+                ]);
+
+                if ($registrationsByGroup->every(fn ($registrations) => $registrations->isEmpty())) {
+                    abort(422, '目前所有組別都沒有可排靶的選手。');
                 }
 
                 $registrationClosedAt = now();
                 $lockedEvent->update(['reg_end' => $registrationClosedAt]);
+                EventGroup::where('event_id', $event->id)->update(['reg_end' => $registrationClosedAt]);
 
-                $session = EventScoringSession::create([
-                    'event_id'=>$event->id,
-                    'event_group_id'=>$group->id,
-                    'name'=>$validated['name'],
-                    'total_arrows'=>$group->arrow_count ?: ($event->mode === 'indoor' ? 30 : 36),
-                    'arrows_per_end'=>$group->arrows_per_end ?: 6,
-                    'athletes_per_target'=>$validated['athletes_per_target'],
-                    'status'=>'ready',
-                    'created_by'=>$request->user()->id,
-                ]);
+                $createdGroups = 0;
+                $createdTargets = 0;
+                $assignedAthletes = 0;
 
-                foreach ($registrations->chunk($validated['athletes_per_target']) as $targetIndex => $members) {
-                    $target = $session->targets()->create([
-                        'target_number'=>$targetIndex + 1,
-                        'access_token'=>(string) Str::uuid(),
-                        'device_pin'=>(string) random_int(100000, 999999),
-                        'status'=>'ready',
-                    ]);
-                    foreach ($members->values() as $position => $registration) {
-                        $target->assignments()->create([
-                            'event_registration_id'=>$registration->id,
-                            'position'=>['A','B','C','D'][$position],
-                        ]);
+                foreach ($groups as $group) {
+                    $registrations = $registrationsByGroup->get($group->id);
+                    if ($registrations->isEmpty()) {
+                        continue;
                     }
+
+                    $session = EventScoringSession::create([
+                        'event_id'=>$event->id,
+                        'event_group_id'=>$group->id,
+                        'name'=>Str::limit($validated['name'].'－'.$group->name, 120, ''),
+                        'total_arrows'=>$group->arrow_count ?: ($event->mode === 'indoor' ? 30 : 36),
+                        'arrows_per_end'=>$group->arrows_per_end ?: 6,
+                        'athletes_per_target'=>$validated['athletes_per_target'],
+                        'status'=>'ready',
+                        'created_by'=>$request->user()->id,
+                    ]);
+
+                    foreach ($registrations->chunk($validated['athletes_per_target']) as $targetIndex => $members) {
+                        $target = $session->targets()->create([
+                            'target_number'=>$targetIndex + 1,
+                            'access_token'=>(string) Str::uuid(),
+                            'device_pin'=>(string) random_int(100000, 999999),
+                            'status'=>'ready',
+                        ]);
+                        foreach ($members->values() as $position => $registration) {
+                            $target->assignments()->create([
+                                'event_registration_id'=>$registration->id,
+                                'position'=>['A','B','C','D'][$position],
+                            ]);
+                        }
+                    }
+
+                    $targetCount = $session->targets()->count();
+                    $createdGroups++;
+                    $createdTargets += $targetCount;
+                    $assignedAthletes += $registrations->count();
+
+                    EventAuditLog::create([
+                        'event_id'=>$event->id, 'user_id'=>$request->user()->id,
+                        'action'=>'scoring.session_created', 'subject_type'=>EventScoringSession::class,
+                        'subject_id'=>$session->id,
+                        'metadata'=>[
+                            'group_id'=>$group->id,
+                            'targets'=>$targetCount,
+                            'athletes'=>$registrations->count(),
+                            'registration_closed_at'=>$registrationClosedAt->toIso8601String(),
+                        ],
+                    ]);
                 }
 
-                EventAuditLog::create([
-                    'event_id'=>$event->id, 'user_id'=>$request->user()->id,
-                    'action'=>'scoring.session_created', 'subject_type'=>EventScoringSession::class,
-                    'subject_id'=>$session->id,
-                    'metadata'=>[
-                        'group_id'=>$group->id,
-                        'targets'=>$session->targets()->count(),
-                        'athletes'=>$registrations->count(),
-                        'registration_closed_at'=>$registrationClosedAt->toIso8601String(),
-                    ],
-                ]);
+                return [
+                    'groups'=>$createdGroups,
+                    'targets'=>$createdTargets,
+                    'athletes'=>$assignedAthletes,
+                    'skipped_groups'=>$groups->count() - $createdGroups,
+                ];
             });
         } catch (\Symfony\Component\HttpKernel\Exception\HttpException $e) {
             return back()->withInput()->with('error', $e->getMessage());
         }
 
-        return back()->with('success', '排靶完成，賽事報名已自動截止。');
+        $message = "已完成 {$summary['groups']} 個組別、{$summary['targets']} 個靶位、{$summary['athletes']} 位選手的排靶，全部組別報名已截止。";
+        if ($summary['skipped_groups'] > 0) {
+            $message .= "另有 {$summary['skipped_groups']} 個無選手組別已略過。";
+        }
+
+        return back()->with('success', $message);
     }
 
     public function releaseDevice(Request $request, Event $event, EventScoringTarget $target): RedirectResponse
