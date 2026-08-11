@@ -24,6 +24,7 @@
                 $canPublish = $items->isNotEmpty()
                     && $state['has_session']
                     && $state['has_targets']
+                    && $state['unconfirmed_targets'] === 0
                     && $state['unverified'] === 0
                     && !$state['published'];
                 $canVerifyGroup = $items->isNotEmpty()
@@ -49,6 +50,7 @@
                         <div class="mt-2 flex flex-wrap gap-2 text-xs">
                             <span class="rounded-lg bg-white px-2.5 py-1.5 text-gray-600">選手 {{ $items->count() }} 人</span>
                             <span class="rounded-lg bg-white px-2.5 py-1.5 {{ $state['unfinished_targets'] ? 'text-red-600' : 'text-green-700' }}">未完成靶位 {{ $state['unfinished_targets'] }}</span>
+                            @if($state['requires_judge_review'])<span class="rounded-lg bg-white px-2.5 py-1.5 {{ $state['unconfirmed_targets'] ? 'text-red-600' : 'text-green-700' }}">待主裁判簽核 {{ $state['unconfirmed_targets'] }}</span>@endif
                             <span class="rounded-lg bg-white px-2.5 py-1.5 {{ $state['incomplete_scores'] ? 'text-amber-700' : 'text-green-700' }}">待審核的部分成績 {{ $state['incomplete_scores'] }}</span>
                             <span class="rounded-lg bg-white px-2.5 py-1.5 {{ $state['unverified'] ? 'text-red-600' : 'text-green-700' }}">尚未確認 {{ $state['unverified'] }}</span>
                         </div>

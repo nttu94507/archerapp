@@ -102,7 +102,7 @@
                                         </span>
                                     </div>
                                 </div>
-                                @if($registration->status === 'registered')<form method="POST" action="{{ route('event-registrations.withdraw',$registration) }}" onsubmit="return confirm('確定取消報名？')">@csrf @method('PATCH')<button class="text-xs text-red-600">取消報名</button></form>@endif
+                                @if($registration->status === 'registered' && !$registrationLocked)<form method="POST" action="{{ route('event-registrations.withdraw',$registration) }}" onsubmit="return confirm('確定取消報名？')">@csrf @method('PATCH')<button class="text-xs text-red-600">取消報名</button></form>@endif
                             @endforeach
                         </div>
                     </div>

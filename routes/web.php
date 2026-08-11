@@ -23,6 +23,7 @@ use App\Http\Controllers\Organizer\EventController as OrganizerEventController;
 use App\Http\Controllers\Organizer\EventRegistrationController as OrganizerRegistrationController;
 use App\Http\Controllers\Organizer\EventResultController as OrganizerResultController;
 use App\Http\Controllers\Organizer\EventScoringController as OrganizerScoringController;
+use App\Http\Controllers\Organizer\EventJudgingController as OrganizerJudgingController;
 use App\Http\Controllers\Organizer\QualificationController;
 use App\Http\Controllers\Admin\OrganizerQualificationController as AdminOrganizerQualificationController;
 use Illuminate\Support\Facades\Route;
@@ -140,6 +141,8 @@ Route::prefix('organizer')->middleware('auth')->name('organizer.')->group(functi
     Route::post('events/{event}/scoring', [OrganizerScoringController::class, 'store'])->name('events.scoring.store');
     Route::delete('events/{event}/scoring/targets/{target}/device', [OrganizerScoringController::class, 'releaseDevice'])->name('events.scoring.targets.device.destroy');
     Route::get('events/{event}/scoring/targets/{target}/qrcode', [OrganizerScoringController::class, 'qrCode'])->name('events.scoring.targets.qrcode');
+    Route::get('events/{event}/judging', [OrganizerJudgingController::class, 'index'])->name('events.judging.index');
+    Route::patch('events/{event}/judging/targets/{target}', [OrganizerJudgingController::class, 'update'])->name('events.judging.targets.update');
 
     Route::prefix('events/{event}')->name('events.')->group(function () {
         Route::get('badges', [OrganizerEventBadgeController::class, 'index'])->name('badges.index');

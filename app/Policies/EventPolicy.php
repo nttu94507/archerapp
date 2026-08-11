@@ -14,7 +14,7 @@ class EventPolicy
 
     public function viewManagement(User $user, Event $event): bool
     {
-        return $this->hasRole($user, $event, ['owner', 'manager', 'staff', 'volunteer', 'viewer']);
+        return $this->hasRole($user, $event, ['owner', 'manager', 'staff', 'judge', 'chief_judge', 'volunteer', 'viewer']);
     }
 
     public function update(User $user, Event $event): bool
@@ -40,6 +40,11 @@ class EventPolicy
     public function manageStaff(User $user, Event $event): bool
     {
         return $this->canOperate($user) && $this->hasRole($user, $event, ['owner', 'manager']);
+    }
+
+    public function manageJudging(User $user, Event $event): bool
+    {
+        return $this->canOperate($user) && $this->hasRole($user, $event, ['owner', 'manager', 'judge', 'chief_judge']);
     }
 
     private function canOperate(User $user): bool

@@ -109,6 +109,8 @@ class EventRegistrationController extends Controller
     {
         abort_unless($registration->user_id === $request->user()->id, 403);
         abort_unless(in_array($registration->status, ['registered'], true), 422);
+        abort_if($registration->event()->whereHas('scoringSessions')->exists(), 422, '賽事已完成排靶，請聯絡主辦方處理退賽。');
+        abort_if($registration->checked_in_at !== null, 422, '已完成報到，請聯絡主辦方處理退賽。');
         $registration->update(['status'=>'withdrawn','withdraw_reason'=>$request->input('reason'),'withdrawn_at'=>now(),'withdrawn_by'=>$request->user()->id]);
         return back()->with('success', '已取消報名。');
     }
