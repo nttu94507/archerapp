@@ -18,8 +18,11 @@ class EventGroupController extends Controller
     public function index(Event $event)
     {
         $this->authorize('manageGroups', $event);
+        $groupCreationLocked = $event->scoringSessions()->exists();
+
         return view('event-groups.index', [
             'event'       => $event,
+            'groupCreationLocked' => $groupCreationLocked,
             'groupsAll'   => $event->groups()
                 ->withCount('registrations')          // => $group->registrations_count
                 ->latest()
@@ -35,12 +38,22 @@ class EventGroupController extends Controller
     public function create(Event $event)
     {
         $this->authorize('manageGroups', $event);
+        if ($event->scoringSessions()->exists()) {
+            return redirect()->route('events.groups.index', $event)
+                ->with('error', '賽事已完成排靶，不能再新增組別。');
+        }
+
         return view('event-groups.create', ['event' => $event]);
     }
 
     public function store(Request $req, Event $event)
     {
         $this->authorize('manageGroups', $event);
+        if ($event->scoringSessions()->exists()) {
+            return redirect()->route('events.groups.index', $event)
+                ->with('error', '賽事已完成排靶，不能再新增組別。');
+        }
+
         $arrowRule = ['required','integer','min:6','max:180', function ($attribute, $value, $fail) {
             if ($value % 6 !== 0) {
                 $fail('箭數需為 6 的倍數');

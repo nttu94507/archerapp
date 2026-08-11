@@ -9,15 +9,26 @@
                 <h1 class="text-2xl font-bold">組別管理 — {{ $event->name }}</h1>
                 <p class="text-sm text-gray-500 mt-1">共 {{ $groupsAll->total() }} 個組別</p>
             </div>
-            <a href="{{ route('events.groups.create', $event) }}"
-               class="rounded-xl bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-500">
-                新增組別
-            </a>
+            @if($groupCreationLocked)
+                <span class="rounded-xl border border-amber-200 bg-amber-50 px-4 py-2 text-sm font-medium text-amber-700">
+                    已完成排靶，無法新增組別
+                </span>
+            @else
+                <a href="{{ route('events.groups.create', $event) }}"
+                   class="rounded-xl bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-500">
+                    新增組別
+                </a>
+            @endif
         </div>
 
         @if(session('success'))
             <div class="mb-4 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">
                 {{ session('success') }}
+            </div>
+        @endif
+        @if(session('error'))
+            <div class="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                {{ session('error') }}
             </div>
         @endif
 
