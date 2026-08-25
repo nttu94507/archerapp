@@ -7,6 +7,10 @@
     $session = $target->session;
     $totalEnds = $session->totalEnds();
     $isComplete = $target->status === 'completed';
+    $isRoundBreak = $target->status === 'round_break';
+    $usesTwoRounds = $session->total_arrows === 72 && $session->arrows_per_end === 6;
+    $roundNumber = $usesTwoRounds && $endNumber > 6 ? 2 : 1;
+    $endInRound = $usesTwoRounds && $endNumber > 6 ? $endNumber - 6 : $endNumber;
 @endphp
 
 <div id="scoring-station" class="mx-auto flex min-h-[calc(100dvh-4rem)] max-w-7xl flex-col bg-gray-50 pb-20 sm:px-4 sm:py-4">
@@ -18,7 +22,7 @@
             </div>
             <div class="shrink-0 text-right">
                 <span class="inline-flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
-                    <span class="h-2 w-2 rounded-full bg-emerald-500"></span>{{ $isComplete ? '計分完成' : '計分中' }}
+                    <span class="h-2 w-2 rounded-full {{ $isRoundBreak ? 'bg-amber-500' : 'bg-emerald-500' }}"></span>{{ $isComplete ? '計分完成' : ($isRoundBreak ? '上半局完成' : '計分中') }}
                 </span>
             </div>
         </div>
@@ -72,10 +76,26 @@
                     <h2 class="mt-3 text-xl font-bold">本靶已完成全部計分</h2>
                     <p class="mt-2 text-sm text-gray-500">請保留紙本記分卡，並交由主辦方進行最終核對。</p>
                 </div>
+            @elseif($isRoundBreak)
+                <div class="mx-auto max-w-xl rounded-2xl border border-amber-200 bg-white p-8 text-center shadow-sm">
+                    <p class="text-4xl text-amber-500">Ⅱ</p>
+                    <h2 class="mt-3 text-xl font-bold">上半局 36 箭已完成</h2>
+                    <p class="mt-2 text-sm leading-6 text-gray-500">前 6 趟成績已保存。休息與核對完成後，再由本設備開始下半局，接續記錄第 7～12 趟。</p>
+                    <form method="POST" action="{{ route('scoring-stations.second-round.start', $target->access_token) }}" class="mt-6" onsubmit="return confirm('確定開始下半局？開始後將進入第 7 趟計分。')">
+                        @csrf
+                        <button class="min-h-12 w-full rounded-xl bg-indigo-600 px-5 text-sm font-semibold text-white">開始下半局</button>
+                    </form>
+                </div>
             @else
                 <form method="POST" action="{{ route('scoring-stations.ends.store', $target->access_token) }}" id="station-form" class="mx-auto flex max-w-5xl flex-col gap-3">
                     @csrf
                     <input type="hidden" name="end_number" value="{{ $endNumber }}">
+
+                    @if($usesTwoRounds)
+                        <div class="rounded-xl bg-indigo-50 px-4 py-2 text-center text-sm font-semibold text-indigo-700">
+                            {{ $roundNumber === 1 ? '上半局' : '下半局' }}・第 {{ $endInRound }} / 6 趟
+                        </div>
+                    @endif
 
                     <div class="rounded-2xl border bg-white p-3 shadow-sm">
                         <div class="divide-y rounded-xl border">

@@ -104,6 +104,9 @@ class ScoringStationController extends Controller
         if ($target->status === 'completed') {
             return back()->with('error', '此靶位已完成全部計分。');
         }
+        if ($target->status === 'round_break') {
+            return back()->with('error', '第一局已完成，請先開始下半局。');
+        }
 
         $expectedEnd = $target->last_completed_end + 1;
         $validated = $request->validate([
@@ -142,10 +145,12 @@ class ScoringStationController extends Controller
             }
 
             $completed = $expectedEnd >= $session->totalEnds();
+            $roundBreak = $session->total_arrows === 72 && $session->arrows_per_end === 6 && $expectedEnd === 6;
             $target->update([
                 'last_completed_end'=>$expectedEnd,
                 'last_synced_at'=>now(),
-                'status'=>$completed ? 'completed' : 'scoring',
+                'status'=>$completed ? 'completed' : ($roundBreak ? 'round_break' : 'scoring'),
+                'first_round_completed_at'=>$roundBreak ? now() : $target->first_round_completed_at,
             ]);
             if ($session->started_at === null) {
                 $session->update(['status'=>'scoring', 'started_at'=>now()]);
@@ -166,8 +171,47 @@ class ScoringStationController extends Controller
             ]);
         });
 
+        $message = $session->total_arrows === 72 && $session->arrows_per_end === 6 && $expectedEnd === 6
+            ? '上半局 36 箭已完成並保存。'
+            : '第 '.$expectedEnd.' 趟已完成同步。';
+
+        return redirect()->route('scoring-stations.show', $token)->with('success', $message);
+    }
+
+    public function startSecondRound(Request $request, string $token): RedirectResponse
+    {
+        $target = $this->target($token);
+        if (! $this->isAuthorizedDevice($request, $target)) {
+            return redirect()->route('scoring-stations.show', $token);
+        }
+
+        DB::transaction(function () use ($target): void {
+            $lockedTarget = EventScoringTarget::whereKey($target->id)->lockForUpdate()->firstOrFail();
+            abort_unless(
+                $lockedTarget->status === 'round_break'
+                && $lockedTarget->last_completed_end === 6
+                && $target->session->total_arrows === 72
+                && $target->session->arrows_per_end === 6,
+                422,
+                '目前不能開始下半局。'
+            );
+
+            $lockedTarget->update([
+                'status'=>'scoring',
+                'second_round_started_at'=>now(),
+            ]);
+
+            EventAuditLog::create([
+                'event_id'=>$target->session->event_id,
+                'action'=>'scoring.target_second_round_started',
+                'subject_type'=>EventScoringTarget::class,
+                'subject_id'=>$target->id,
+                'metadata'=>['target'=>$target->target_number],
+            ]);
+        });
+
         return redirect()->route('scoring-stations.show', $token)
-            ->with('success', '第 '.$expectedEnd.' 趟已完成同步。');
+            ->with('success', '下半局已開始，接續記錄第 7～12 趟。');
     }
 
     private function target(string $token): EventScoringTarget

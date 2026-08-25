@@ -159,6 +159,7 @@ Route::prefix('organizer')->middleware('auth')->name('organizer.')->group(functi
 Route::get('/scoring-stations/{token}', [ScoringStationController::class, 'show'])->name('scoring-stations.show');
 Route::post('/scoring-stations/{token}/claim', [ScoringStationController::class, 'claim'])->middleware('throttle:10,1')->name('scoring-stations.claim');
 Route::post('/scoring-stations/{token}/ends', [ScoringStationController::class, 'storeEnd'])->name('scoring-stations.ends.store');
+Route::post('/scoring-stations/{token}/second-round', [ScoringStationController::class, 'startSecondRound'])->name('scoring-stations.second-round.start');
 
 Route::middleware('auth')->group(function () {
     Route::get('/badge-claims/{token}', [EventBadgeClaimController::class, 'show'])->name('badge-claims.show');
