@@ -57,13 +57,21 @@
 
                                     @if($twoRounds)
                                         <div class="mt-3 grid grid-cols-3 gap-2">
-                                            @foreach([['上半局', $firstRoundStats], ['下半局', $secondRoundStats], ['全場', $totalStats]] as [$label, $stats])
-                                                <div class="rounded-xl {{ $label === '全場' ? 'bg-indigo-50 ring-1 ring-indigo-100' : 'bg-white' }} p-3 text-center">
-                                                    <p class="text-xs {{ $label === '全場' ? 'font-medium text-indigo-600' : 'text-gray-500' }}">{{ $label }}</p>
-                                                    <p class="mt-1 text-xl font-bold tabular-nums {{ $label === '全場' ? 'text-indigo-900' : 'text-gray-900' }}">{{ $stats['total'] }}</p>
-                                                    <p class="mt-1 whitespace-nowrap text-xs text-gray-500">10：{{ $stats['ten'] }}・X：{{ $stats['x'] }}</p>
-                                                </div>
-                                            @endforeach
+                                            <div class="rounded-xl bg-white p-3 text-center">
+                                                <p class="text-xs text-gray-500">上半局</p>
+                                                <p class="mt-1 text-xl font-bold tabular-nums text-gray-900">{{ $firstRoundStats['total'] }}</p>
+                                                <p class="mt-1 whitespace-nowrap text-xs text-gray-500">10：{{ $firstRoundStats['ten'] }}・X：{{ $firstRoundStats['x'] }}</p>
+                                            </div>
+                                            <div class="rounded-xl bg-white p-3 text-center">
+                                                <p class="text-xs text-gray-500">下半局</p>
+                                                <p class="mt-1 text-xl font-bold tabular-nums text-gray-900">{{ $secondRoundStats['total'] }}</p>
+                                                <p class="mt-1 whitespace-nowrap text-xs text-gray-500">10：{{ $secondRoundStats['ten'] }}・X：{{ $secondRoundStats['x'] }}</p>
+                                            </div>
+                                            <div class="rounded-xl bg-indigo-50 p-3 text-center ring-1 ring-indigo-100">
+                                                <p class="text-xs font-medium text-indigo-600">全場</p>
+                                                <p class="mt-1 text-xl font-bold tabular-nums text-indigo-900">{{ $totalStats['total'] }}</p>
+                                                <p class="mt-1 whitespace-nowrap text-xs text-gray-500">10：{{ $totalStats['ten'] }}・X：{{ $totalStats['x'] }}</p>
+                                            </div>
                                         </div>
                                     @else
                                         <div class="mt-3 grid grid-cols-3 gap-2 text-center">
