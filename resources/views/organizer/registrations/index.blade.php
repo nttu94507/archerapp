@@ -146,15 +146,10 @@
         </form>
     @endif
 
-    <details class="rounded-2xl border bg-white p-4 shadow-sm">
-        <summary class="flex min-h-11 cursor-pointer items-center justify-between gap-3 font-semibold"><span>現場掃碼報到</span><span class="text-xs font-normal text-gray-500">比賽當天使用</span></summary>
-        <div class="mt-4 border-t pt-4">
-            <video id="checkin-video" playsinline muted class="hidden aspect-square w-full max-w-sm rounded-xl bg-gray-900 object-cover"></video>
-            <p id="checkin-status" class="mt-2 text-sm text-gray-500">掃描會員 QR Code，或輸入會員編號。</p>
-            <button id="start-camera" type="button" class="mt-3 min-h-11 w-full rounded-xl border px-4 text-sm sm:w-auto">開啟相機</button>
-            <form id="checkin-form" method="POST" action="{{ route('organizer.events.registrations.check-in',$event) }}" class="mt-3 flex flex-col gap-2 sm:flex-row">@csrf<input id="checkin-uuid" name="uuid" required class="min-h-11 flex-1 rounded-xl border-gray-300 text-sm" placeholder="會員 UUID"><button class="min-h-11 rounded-xl bg-green-600 px-5 text-sm text-white">確認報到</button></form>
-        </div>
-    </details>
+    <section class="flex flex-col gap-4 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+        <div><h2 class="font-semibold text-emerald-950">比賽當天現場報到</h2><p class="mt-1 text-sm text-emerald-700">使用獨立報到模式連續掃描，不需要每位選手重新載入頁面。</p></div>
+        <a href="{{ route('organizer.events.check-in.index', $event) }}" class="inline-flex min-h-11 shrink-0 items-center justify-center rounded-xl bg-emerald-600 px-5 text-sm font-medium text-white">開啟快速報到</a>
+    </section>
 </div>
 
 <script>
@@ -171,8 +166,6 @@
     checks.forEach(check => check.addEventListener('change', sync));
     clear?.addEventListener('click', () => { checks.forEach(check => check.checked = false); sync(); });
 
-    const button=document.getElementById('start-camera'),video=document.getElementById('checkin-video'),status=document.getElementById('checkin-status'),input=document.getElementById('checkin-uuid');
-    button?.addEventListener('click',async()=>{if(!('BarcodeDetector'in window)){status.textContent='瀏覽器不支援相機掃描，請手動輸入。';return}try{const stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'}}});video.srcObject=stream;video.classList.remove('hidden');await video.play();const detector=new BarcodeDetector({formats:['qr_code']});button.classList.add('hidden');const scan=async()=>{const codes=await detector.detect(video);if(codes[0]){let value=codes[0].rawValue;try{value=new URL(value).pathname.split('/').filter(Boolean).pop()}catch(e){}input.value=value;stream.getTracks().forEach(t=>t.stop());document.getElementById('checkin-form').submit();return}requestAnimationFrame(scan)};scan()}catch(e){status.textContent='無法開啟相機，請確認權限或手動輸入。'}});
 })();
 </script>
 @endsection

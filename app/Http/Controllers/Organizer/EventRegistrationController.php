@@ -10,6 +10,7 @@ use App\Models\EventPaymentAudit;
 use App\Models\User;
 use App\Services\EventBadgeAwardService;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
@@ -94,6 +95,45 @@ class EventRegistrationController extends Controller
         return back()->with('success', '報名狀態已更新。');
     }
 
+    public function checkInDesk(Request $request, Event $event): View
+    {
+        $this->authorize('manageRegistrations', $event);
+
+        $activeRegistrations = $event->registrations()
+            ->whereIn('status', ['registered', 'checked_in']);
+        $totals = [
+            'active' => (clone $activeRegistrations)->count(),
+            'checked_in' => (clone $activeRegistrations)->where('status', 'checked_in')->count(),
+        ];
+
+        $recentCheckIns = $event->registrations()
+            ->with('event_group')
+            ->where('status', 'checked_in')
+            ->whereNotNull('checked_in_at')
+            ->latest('checked_in_at')
+            ->limit(5)
+            ->get();
+
+        $searchResults = collect();
+        if ($request->filled('q')) {
+            $keyword = trim((string) $request->q);
+            $searchResults = $event->registrations()
+                ->with(['user', 'event_group'])
+                ->whereIn('status', ['registered', 'checked_in'])
+                ->where(fn ($query) => $query
+                    ->where('name', 'like', '%'.$keyword.'%')
+                    ->orWhere('email', 'like', '%'.$keyword.'%')
+                    ->orWhereHas('user', fn ($user) => $user
+                        ->where('uuid', 'like', '%'.$keyword.'%')
+                        ->orWhere('nickname', 'like', '%'.$keyword.'%')))
+                ->orderBy('name')
+                ->limit(20)
+                ->get();
+        }
+
+        return view('organizer.registrations.check-in', compact('event', 'totals', 'recentCheckIns', 'searchResults'));
+    }
+
     public function bulk(Request $request, Event $event, EventBadgeAwardService $badges): RedirectResponse
     {
         $this->authorize('manageRegistrations', $event);
@@ -115,17 +155,53 @@ class EventRegistrationController extends Controller
         return back()->with('success', '已更新 '.$registrations->count().' 筆報名。');
     }
 
-    public function checkIn(Request $request, Event $event, EventBadgeAwardService $badges): RedirectResponse
+    public function checkIn(Request $request, Event $event, EventBadgeAwardService $badges): RedirectResponse|JsonResponse
     {
         $this->authorize('manageRegistrations', $event);
         $validated = $request->validate(['uuid' => ['required', 'uuid']]);
         $user = User::where('uuid', $validated['uuid'])->first();
-        $registration = $user ? $event->registrations()->where('user_id', $user->id)->where('status', 'registered')->first() : null;
-        if (! $registration) return back()->with('error', '找不到此會員可報到的有效報名。');
-        $this->applyStatus($registration, 'checked_in', $request->user()->id);
-        $badges->awardAttendanceFor($registration->fresh());
-        $this->audit($event, $request, 'registration.checked_in', $registration);
-        return back()->with('success', $registration->name.' 已完成報到。');
+        $registrations = $user ? $event->registrations()
+            ->with('event_group')
+            ->where('user_id', $user->id)
+            ->whereIn('status', ['registered', 'checked_in'])
+            ->get() : collect();
+
+        if ($registrations->isEmpty()) {
+            $message = '找不到此會員可報到的有效報名。';
+            return $request->expectsJson()
+                ? response()->json(['message' => $message], 422)
+                : back()->with('error', $message);
+        }
+
+        $newCheckIns = $registrations->where('status', 'registered');
+        foreach ($newCheckIns as $registration) {
+            $this->applyStatus($registration, 'checked_in', $request->user()->id);
+            $badges->awardAttendanceFor($registration->fresh());
+            $this->audit($event, $request, 'registration.checked_in', $registration);
+        }
+
+        $first = $registrations->first();
+        $groupNames = $registrations->pluck('event_group.name')->filter()->values();
+        $alreadyCheckedIn = $newCheckIns->isEmpty();
+        $message = $alreadyCheckedIn
+            ? $first->name.' 已完成過報到。'
+            : $first->name.' 已完成報到。';
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'message' => $message,
+                'name' => $first->name,
+                'groups' => $groupNames,
+                'checked_in_count' => $event->registrations()->where('status', 'checked_in')->count(),
+                'already_checked_in' => $alreadyCheckedIn,
+                'payment_warning' => $registrations->contains(fn ($registration) =>
+                    (int) $registration->event_group?->fee > 0
+                    && ! in_array($registration->payment_status, ['paid', 'exempt'], true)
+                ),
+            ]);
+        }
+
+        return back()->with($alreadyCheckedIn ? 'error' : 'success', $message);
     }
 
     public function bulkPayment(Request $request, Event $event, EventBadgeAwardService $badges): RedirectResponse
