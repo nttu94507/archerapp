@@ -14,7 +14,9 @@
     @if($errors->any())<div class="rounded-xl bg-red-50 p-4 text-sm text-red-700">{{ $errors->first() }}</div>@endif
 
     <div class="grid grid-cols-3 gap-3">
-        @php($targets = $event->scoringSessions->flatMap->targets)
+        @php
+            $targets = $event->scoringSessions->flatMap->targets;
+        @endphp
         <div class="rounded-2xl border bg-white p-4"><p class="text-xs text-gray-500">全部靶位</p><p class="mt-1 text-2xl font-bold">{{ $targets->count() }}</p></div>
         <div class="rounded-2xl border bg-white p-4"><p class="text-xs text-gray-500">待主裁判簽核</p><p class="mt-1 text-2xl font-bold text-amber-700">{{ $targets->where('status', '!=', 'dns')->where('judge_status', '!=', 'confirmed')->count() }}</p></div>
         <div class="rounded-2xl border bg-white p-4"><p class="text-xs text-gray-500">爭議靶位</p><p class="mt-1 text-2xl font-bold text-red-700">{{ $targets->where('judge_status', 'disputed')->count() }}</p></div>
@@ -32,7 +34,10 @@
                             <div><h3 class="font-semibold">靶號 {{ $target->target_number }}</h3><p class="mt-1 text-xs text-gray-500">計分 {{ $target->last_completed_end }} / {{ $session->totalEnds() }} 趟</p></div>
                             <span class="rounded-full px-2.5 py-1 text-xs font-medium {{ $target->status === 'dns' ? 'bg-amber-100 text-amber-700' : ($target->judge_status === 'confirmed' ? 'bg-green-100 text-green-700' : ($target->judge_status === 'disputed' ? 'bg-red-100 text-red-700' : ($target->judge_status === 'reviewed' ? 'bg-indigo-100 text-indigo-700' : 'bg-gray-100 text-gray-600'))) }}">{{ $target->status === 'dns' ? '全靶 DNS・無需核對' : (['pending'=>'待核對','reviewed'=>'裁判已核對','confirmed'=>'主裁判已簽核','disputed'=>'成績爭議'][$target->judge_status] ?? $target->judge_status) }}</span>
                         </div>
-                        @php($twoRounds = (int) $session->total_arrows === 72 && (int) $session->arrows_per_end === 6)
+                        @php
+                            $twoRounds = (int) $session->total_arrows === 72
+                                && (int) $session->arrows_per_end === 6;
+                        @endphp
                         <div class="mt-3 divide-y rounded-xl border bg-gray-50 px-3 sm:px-4">
                             @foreach($target->assignments as $assignment)
                                 @php
