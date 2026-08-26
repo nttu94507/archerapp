@@ -20,7 +20,7 @@ class EventResultController extends Controller
     public function index(Event $event): View
     {
         $this->authorize('manageScores', $event);
-        $registrations = $event->registrations()->with(['event_group', 'scoreEntries'])->whereIn('status', ['registered','checked_in'])->get()->map(function ($registration) {
+        $registrations = $event->registrations()->with(['event_group', 'scoreEntries', 'scoringAssignment.target'])->whereIn('status', ['registered','checked_in'])->get()->map(function ($registration) {
             $registration->calculated_total = $registration->scoreEntries->sum('end_total');
             $scores = $registration->scoreEntries->flatMap(fn ($entry) => $entry->scores ?? []);
             $registration->calculated_ten_count = $scores->filter(fn ($score) => (string) $score === '10')->count();
