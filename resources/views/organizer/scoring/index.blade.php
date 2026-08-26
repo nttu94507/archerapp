@@ -31,13 +31,25 @@
             @foreach($event->groups as $group)
                 <div class="flex items-center justify-between rounded-xl bg-gray-50 px-4 py-3 text-sm">
                     <span class="font-medium">{{ $group->name }}</span>
-                    <span class="{{ $group->active_registrations_count > 0 ? 'text-gray-600' : 'text-amber-600' }}">{{ $group->active_registrations_count > 0 ? $group->active_registrations_count.' 人' : '無選手，將略過' }}</span>
+                    <span class="{{ $group->active_registrations_count > 0 ? 'text-gray-600' : 'text-amber-600' }}">{{ $group->active_registrations_count > 0 ? '已報到 '.$group->checked_in_registrations_count.' / '.$group->active_registrations_count.' 人' : '無選手，將略過' }}</span>
                 </div>
             @endforeach
         </div>
+        @if($sessions->isEmpty() && $unreportedRegistrations->isNotEmpty())
+            <div class="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-4">
+                <p class="font-semibold text-amber-900">尚有 {{ $unreportedRegistrations->count() }} 位選手未報到</p>
+                <p class="mt-1 text-sm text-amber-800">若繼續排靶，以下選手仍會保留靶位，但會標記為 DNS 且計分設備不能輸入其成績。</p>
+                <div class="mt-3 flex max-h-36 flex-wrap gap-2 overflow-y-auto">
+                    @foreach($unreportedRegistrations as $registration)
+                        <span class="rounded-full bg-white px-3 py-1 text-xs text-amber-800">{{ $registration->event_group?->name }}・{{ $registration->name }}</span>
+                    @endforeach
+                </div>
+            </div>
+        @endif
         @if($sessions->isEmpty())
-            <form method="POST" action="{{ route('organizer.events.scoring.store',$event) }}" onsubmit="return confirm('確定要截止所有組別報名並一次完成全賽事排靶？成功後不能重新排靶。')" class="mt-4 grid gap-3 lg:grid-cols-[1fr_12rem_auto]">
+            <form method="POST" action="{{ route('organizer.events.scoring.store',$event) }}" onsubmit="return confirmScoringAssignment(this)" class="mt-4 grid gap-3 lg:grid-cols-[1fr_12rem_auto]">
                 @csrf
+                <input type="hidden" name="confirm_unreported" value="0">
                 <input name="name" required value="{{ old('name',$event->name.' 資格賽') }}" class="min-h-12 rounded-xl border-gray-300" placeholder="場次名稱">
                 <select name="athletes_per_target" class="min-h-12 rounded-xl border-gray-300"><option value="4">每靶 4 人</option><option value="3">每靶 3 人</option><option value="2">每靶 2 人</option></select>
                 <button class="min-h-12 rounded-xl bg-indigo-600 px-5 text-sm font-medium text-white">確認全部排靶並停止報名</button>
@@ -58,8 +70,8 @@
                     @foreach($session->targets as $target)
                         @php($stationUrl=route('scoring-stations.show',$target->access_token))
                         <article class="rounded-xl border p-4">
-                            <div class="flex items-start justify-between gap-2"><div><h3 class="font-semibold">靶號 {{ str_pad($target->target_number,2,'0',STR_PAD_LEFT) }}</h3><p class="mt-1 text-xs text-gray-500">完成 {{ $target->last_completed_end }} / {{ $session->totalEnds() }} 趟</p></div><span class="rounded-full bg-gray-100 px-2 py-1 text-xs">{{ ['ready'=>'待開始','scoring'=>'計分中','round_break'=>'上半局完成','completed'=>'完成'][$target->status] ?? $target->status }}</span></div>
-                            <div class="mt-3 space-y-1">@foreach($target->assignments as $assignment)<p class="text-sm"><span class="inline-block w-8 font-mono font-semibold">{{ $target->target_number.$assignment->position }}</span>{{ $assignment->registration?->name }}</p>@endforeach</div>
+                            <div class="flex items-start justify-between gap-2"><div><h3 class="font-semibold">靶號 {{ str_pad($target->target_number,2,'0',STR_PAD_LEFT) }}</h3><p class="mt-1 text-xs text-gray-500">完成 {{ $target->last_completed_end }} / {{ $session->totalEnds() }} 趟</p></div><span class="rounded-full bg-gray-100 px-2 py-1 text-xs">{{ ['ready'=>'待開始','scoring'=>'計分中','round_break'=>'上半局完成','completed'=>'完成','dns'=>'全靶 DNS'][$target->status] ?? $target->status }}</span></div>
+                            <div class="mt-3 space-y-1">@foreach($target->assignments as $assignment)<p class="text-sm"><span class="inline-block w-8 font-mono font-semibold">{{ $target->target_number.$assignment->position }}</span>{{ $assignment->registration?->name }} @if($assignment->registration?->status === 'no_show')<span class="ml-1 text-xs font-semibold text-amber-700">DNS</span>@endif</p>@endforeach</div>
                             <div class="mt-4 grid grid-cols-[6rem_1fr] items-center gap-3 rounded-xl bg-gray-50 p-3">
                                 <img src="{{ route('organizer.events.scoring.targets.qrcode', [$event, $target]) }}" alt="靶號 {{ $target->target_number }} 計分 QR Code" class="h-24 w-24 rounded-lg bg-white p-1">
                                 <div class="min-w-0">
@@ -94,5 +106,16 @@
         @endforelse
     </div>
 </div>
-<script>document.querySelectorAll('.copy-station').forEach(button=>button.addEventListener('click',async()=>{await navigator.clipboard.writeText(button.dataset.copy);button.textContent='已複製';setTimeout(()=>button.textContent='複製連結',1500)}));</script>
+<script>
+const unreportedCount = {{ $unreportedRegistrations->count() }};
+function confirmScoringAssignment(form) {
+    const message = unreportedCount > 0
+        ? `目前還有 ${unreportedCount} 位選手尚未報到。繼續後仍會排入靶位，但將標記為 DNS 且不能輸入分數。此操作不能重做，確定繼續？`
+        : '確定要截止所有組別報名並一次完成全賽事排靶？成功後不能重新排靶。';
+    if (!confirm(message)) return false;
+    form.elements.confirm_unreported.value = unreportedCount > 0 ? '1' : '0';
+    return true;
+}
+document.querySelectorAll('.copy-station').forEach(button=>button.addEventListener('click',async()=>{await navigator.clipboard.writeText(button.dataset.copy);button.textContent='已複製';setTimeout(()=>button.textContent='複製連結',1500)}));
+</script>
 @endsection

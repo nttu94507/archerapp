@@ -97,10 +97,10 @@
                                     <td class="p-3 font-semibold">{{ $registration->calculated_total }}</td>
                                     <td class="p-3 font-semibold">{{ $registration->calculated_ten_count }}</td>
                                     <td class="p-3 font-semibold">{{ $registration->calculated_x_count }}</td>
-                                    <td class="p-3 {{ $registration->result_status === 'dnf' ? 'text-amber-700' : ($complete ? 'text-green-700' : 'text-indigo-700') }}">{{ $registration->result_status === 'dnf' ? '未報到（DNF）' : ($complete ? '完整' : ($registration->score_verified_at ? '以現有分數結算' : '部分成績待審核')) }}</td>
+                                    <td class="p-3 {{ $registration->result_status === 'dns' ? 'text-amber-700' : ($complete ? 'text-green-700' : 'text-indigo-700') }}">{{ $registration->result_status === 'dns' ? '未報到（DNS）' : ($complete ? '完整' : ($registration->score_verified_at ? '以現有分數結算' : '部分成績待審核')) }}</td>
                                     <td class="p-3">{{ $registration->score_verified_at ? '已確認' : '待確認' }}</td>
                                     <td class="p-3">{{ $registration->result_published_at ? '已發布' : '—' }}</td>
-                                    <td class="p-3"><a href="{{ route('organizer.events.results.registrations.edit', [$event, $registration]) }}" class="whitespace-nowrap font-medium text-indigo-600 hover:underline">{{ $registration->result_published_at || !$canCorrectScores ? '查看明細' : '查看／修正' }}</a></td>
+                                    <td class="p-3"><a href="{{ route('organizer.events.results.registrations.edit', [$event, $registration]) }}" class="whitespace-nowrap font-medium text-indigo-600 hover:underline">{{ $registration->result_published_at || !$canCorrectScores || $registration->result_status === 'dns' ? '查看明細' : '查看／修正' }}</a></td>
                                 </tr>
                             @endforeach
                             </tbody>

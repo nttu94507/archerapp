@@ -236,7 +236,7 @@ class EventController extends Controller
         $registrations = EventRegistration::query()
             ->with('event_group')
             ->where('event_id', $event->id)
-            ->whereIn('status', ['registered', 'checked_in'])
+            ->whereIn('status', ['registered', 'checked_in', 'no_show'])
             ->get();
 
         $scoreEntries = EventScoreEntry::query()
@@ -300,12 +300,12 @@ class EventController extends Controller
         $groupedBoards = $scoreboard
             ->groupBy('group_id')
             ->map(function (Collection $rows) use ($event, $sortDirection) {
-                $dnfRows = $rows->filter(fn (array $row) => $row['registration']->result_status === 'dnf')
+                $dnfRows = $rows->filter(fn (array $row) => in_array($row['registration']->result_status, ['dnf', 'dns'], true))
                     ->map(function (array $row): array {
-                        $row['rank_position'] = 'DNF';
+                        $row['rank_position'] = strtoupper((string) $row['registration']->result_status);
                         return $row;
                     })->values();
-                $ranked = $rows->reject(fn (array $row) => $row['registration']->result_status === 'dnf')->sort(function (array $left, array $right): int {
+                $ranked = $rows->reject(fn (array $row) => in_array($row['registration']->result_status, ['dnf', 'dns'], true))->sort(function (array $left, array $right): int {
                     return [$right['total_score'], $right['ten_count'], $right['x_count']]
                         <=> [$left['total_score'], $left['ten_count'], $left['x_count']];
                 })->values();

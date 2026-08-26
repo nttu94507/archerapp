@@ -20,7 +20,7 @@ class EventResultController extends Controller
     public function index(Event $event): View
     {
         $this->authorize('viewResults', $event);
-        $registrations = $event->registrations()->with(['event_group', 'scoreEntries', 'scoringAssignment.target'])->whereIn('status', ['registered','checked_in'])->get()->map(function ($registration) {
+        $registrations = $event->registrations()->with(['event_group', 'scoreEntries', 'scoringAssignment.target'])->whereIn('status', ['registered','checked_in','no_show'])->get()->map(function ($registration) {
             $registration->calculated_total = $registration->scoreEntries->sum('end_total');
             $scores = $registration->scoreEntries->flatMap(fn ($entry) => $entry->scores ?? []);
             $registration->calculated_ten_count = $scores->filter(fn ($score) => (string) $score === '10')->count();
@@ -36,15 +36,16 @@ class EventResultController extends Controller
             $arrowsPerEnd = $group->arrows_per_end ?: 6;
             $requiredEnds = (int) ceil($totalArrows / max(1, $arrowsPerEnd));
             $targets = $group->scoringSessions->flatMap->targets;
+            $scoringTargets = $targets->where('status', '!=', 'dns');
 
             return [$group->id=>[
                 'registrations'=>$items,
                 'required_ends'=>$requiredEnds,
                 'has_session'=>$group->scoringSessions->isNotEmpty(),
                 'has_targets'=>$targets->isNotEmpty(),
-                'unfinished_targets'=>$targets->where('status', '!=', 'completed')->count(),
+                'unfinished_targets'=>$scoringTargets->where('status', '!=', 'completed')->count(),
                 'requires_judge_review'=>$requiresJudgeReview,
-                'unconfirmed_targets'=>$requiresJudgeReview ? $targets->where('judge_status', '!=', 'confirmed')->count() : 0,
+                'unconfirmed_targets'=>$requiresJudgeReview ? $scoringTargets->where('judge_status', '!=', 'confirmed')->count() : 0,
                 'incomplete_scores'=>$items->filter(fn ($item) => ! $item->score_verified_at && $item->scoreEntries->count() < $requiredEnds)->count(),
                 'unverified'=>$items->whereNull('score_verified_at')->count(),
                 'published'=>$items->isNotEmpty() && $items->every(fn ($item) => $item->result_published_at !== null),
@@ -82,7 +83,9 @@ class EventResultController extends Controller
             ->latest()
             ->get();
         $canCorrect = request()->user()->can('manageScoreCorrections', $event)
-            && $registration->result_published_at === null;
+            && $registration->result_published_at === null
+            && $registration->result_status !== 'dns'
+            && $registration->status !== 'no_show';
 
         return view('organizer.results.edit', compact('event', 'registration', 'arrowsPerEnd', 'requiredEnds', 'stats', 'correctionLogs', 'canCorrect'));
     }
@@ -92,6 +95,7 @@ class EventResultController extends Controller
         $this->authorize('manageScoreCorrections', $event);
         abort_unless($registration->event_id === $event->id, 404);
         abort_if($registration->result_published_at !== null, 422, '正式成績已發布，不能直接修改。');
+        abort_if($registration->result_status === 'dns' || $registration->status === 'no_show', 422, 'DNS 選手不能輸入或修改分數。');
 
         $group = $registration->event_group;
         $totalArrows = $group?->arrow_count ?: ($event->mode === 'indoor' ? 30 : 36);
@@ -202,18 +206,18 @@ class EventResultController extends Controller
         $this->authorize('manageScores', $event);
         $validated = $request->validate(['registration_ids'=>['required','array','min:1'],'registration_ids.*'=>['integer']]);
         $items = $event->registrations()->with(['event_group','scoreEntries'])->whereIn('id',$validated['registration_ids'])->get();
-        $dnfCount = 0;
+        $dnsCount = 0;
         foreach ($items as $registration) {
-            $didNotStart = $registration->status !== 'checked_in' && $registration->checked_in_at === null;
-            if ($didNotStart) $dnfCount++;
+            $didNotStart = $registration->status === 'no_show' || $registration->result_status === 'dns';
+            if ($didNotStart) $dnsCount++;
             $registration->update([
                 'score_verified_at'=>now(),
                 'score_verified_by'=>$request->user()->id,
-                'result_status'=>$didNotStart ? 'dnf' : 'completed',
+                'result_status'=>$didNotStart ? 'dns' : 'completed',
             ]);
         }
-        EventAuditLog::create(['event_id'=>$event->id,'user_id'=>$request->user()->id,'action'=>'results.verified','metadata'=>['count'=>$items->count(),'dnf_count'=>$dnfCount]]);
-        return back()->with('success','已確認 '.$items->count().' 筆成績'.($dnfCount ? '，其中 '.$dnfCount.' 位標記為棄賽（DNF）' : '').'。');
+        EventAuditLog::create(['event_id'=>$event->id,'user_id'=>$request->user()->id,'action'=>'results.verified','metadata'=>['count'=>$items->count(),'dns_count'=>$dnsCount]]);
+        return back()->with('success','已確認 '.$items->count().' 筆成績'.($dnsCount ? '，其中 '.$dnsCount.' 位標記為未出賽（DNS）' : '').'。');
     }
 
     public function verifyGroup(Request $request, Event $event, EventGroup $group): RedirectResponse
@@ -226,7 +230,7 @@ class EventResultController extends Controller
             $registrations = EventRegistration::query()
                 ->where('event_id', $event->id)
                 ->where('event_group_id', $group->id)
-                ->whereIn('status', ['registered', 'checked_in'])
+                ->whereIn('status', ['registered', 'checked_in', 'no_show'])
                 ->with('scoreEntries')
                 ->lockForUpdate()
                 ->get();
@@ -247,11 +251,11 @@ class EventResultController extends Controller
 
             $unverified = $registrations->whereNull('score_verified_at');
             foreach ($unverified as $registration) {
-                $didNotStart = $registration->status !== 'checked_in' && $registration->checked_in_at === null;
+                $didNotStart = $registration->status === 'no_show' || $registration->result_status === 'dns';
                 $registration->update([
                     'score_verified_at'=>now(),
                     'score_verified_by'=>$request->user()->id,
-                    'result_status'=>$didNotStart ? 'dnf' : 'completed',
+                    'result_status'=>$didNotStart ? 'dns' : 'completed',
                 ]);
             }
 
@@ -284,7 +288,7 @@ class EventResultController extends Controller
             $registrations = EventRegistration::query()
                 ->where('event_id', $event->id)
                 ->where('event_group_id', $group->id)
-                ->whereIn('status', ['registered', 'checked_in'])
+                ->whereIn('status', ['registered', 'checked_in', 'no_show'])
                 ->with('scoreEntries')
                 ->lockForUpdate()
                 ->get();
@@ -301,7 +305,7 @@ class EventResultController extends Controller
             abort_if($targets->isEmpty(), 422, '此組別尚未建立任何靶位。');
             $requiresJudgeReview = $event->staff()->where('status', 'active')->whereIn('role', ['judge', 'chief_judge'])->exists();
             if ($requiresJudgeReview) {
-                $unconfirmedTargets = $targets->where('judge_status', '!=', 'confirmed')->count();
+                $unconfirmedTargets = $targets->where('status', '!=', 'dns')->where('judge_status', '!=', 'confirmed')->count();
                 abort_if($unconfirmedTargets > 0, 422, '此組別還有 '.$unconfirmedTargets.' 個靶位尚未經主裁判簽核。');
             }
             $unverified = $registrations->whereNull('score_verified_at')->count();
@@ -315,7 +319,7 @@ class EventResultController extends Controller
 
             $eventHasUnpublished = EventRegistration::query()
                 ->where('event_id', $event->id)
-                ->whereIn('status', ['registered', 'checked_in'])
+                ->whereIn('status', ['registered', 'checked_in', 'no_show'])
                 ->whereNull('result_published_at')
                 ->exists();
             if (! $eventHasUnpublished) {

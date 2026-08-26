@@ -55,7 +55,7 @@ class MyEventController extends Controller
             ->where('event_id', $registration->event_id)
             ->where('event_group_id', $registration->event_group_id)
             ->whereIn('status', ['registered', 'checked_in'])
-            ->where(fn ($query) => $query->whereNull('result_status')->orWhere('result_status', '!=', 'dnf'))
+            ->where(fn ($query) => $query->whereNull('result_status')->orWhereNotIn('result_status', ['dnf', 'dns']))
             ->whereNotNull('result_published_at')
             ->with('scoreEntries')
             ->get()
@@ -68,7 +68,7 @@ class MyEventController extends Controller
             })
             ->values();
 
-        $rank = $registration->result_status === 'dnf' ? null : 1;
+        $rank = in_array($registration->result_status, ['dnf', 'dns'], true) ? null : 1;
         $previous = null;
         foreach ($ranking as $index => $row) {
             if ($rank === null) break;

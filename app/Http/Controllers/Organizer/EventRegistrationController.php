@@ -78,6 +78,13 @@ class EventRegistrationController extends Controller
             'status' => ['required', 'in:registered,checked_in,withdrawn,refunded,no_show'],
             'paid' => ['nullable', 'boolean'],
         ]);
+        abort_if(
+            $registration->status === 'no_show'
+            && $validated['status'] !== 'no_show'
+            && $event->scoringSessions()->exists(),
+            422,
+            '此選手已在排靶時標記為 DNS，不能從一般報名管理變更狀態。'
+        );
         $this->applyStatus($registration, $validated['status'], $request->user()->id);
         if (array_key_exists('paid', $validated)) {
             $this->setPayment($registration, $request->boolean('paid') ? 'paid' : 'pending', $request->user()->id);
@@ -93,6 +100,13 @@ class EventRegistrationController extends Controller
         $validated = $request->validate(['registration_ids' => ['required', 'array', 'min:1'], 'registration_ids.*' => ['integer'], 'status' => ['required', 'in:registered,checked_in,withdrawn,refunded,no_show']]);
         $registrations = $event->registrations()->whereIn('id', $validated['registration_ids'])->get();
         abort_if($registrations->count() !== count(array_unique($validated['registration_ids'])), 422, '包含無效報名。');
+        abort_if(
+            $validated['status'] !== 'no_show'
+            && $event->scoringSessions()->exists()
+            && $registrations->contains(fn (EventRegistration $registration) => $registration->status === 'no_show'),
+            422,
+            '選取名單包含排靶時已標記為 DNS 的選手，不能從一般報名管理變更狀態。'
+        );
         foreach ($registrations as $registration) {
             $this->applyStatus($registration, $validated['status'], $request->user()->id);
             $badges->awardAttendanceFor($registration->fresh());

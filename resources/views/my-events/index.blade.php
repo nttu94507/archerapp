@@ -20,7 +20,7 @@
             @foreach($events as $row)
                 @php
                     $event = $row['event']; $registration = $row['registration'];
-                    $statusLabel = ['registered'=>'已報名','checked_in'=>'已報到','withdrawn'=>'已取消','pending'=>'待處理'][$registration->status] ?? $registration->status;
+                    $statusLabel = ['registered'=>'已報名','checked_in'=>'已報到','no_show'=>'未報到（DNS）','withdrawn'=>'已取消','pending'=>'待處理'][$registration->status] ?? $registration->status;
                     $phaseLabel = ['upcoming'=>'即將舉行','ongoing'=>'進行中','finished'=>'已結束','cancelled'=>'已取消'][$row['phase']] ?? $row['phase'];
                     $isFree = (int) optional($registration->event_group)->fee === 0;
                     $paymentLabel = $isFree ? '免費' : (['pending'=>'待付款／確認','paid'=>'已付款','refunded'=>'已退款'][$registration->payment_status] ?? ($registration->paid ? '已付款' : '待付款'));

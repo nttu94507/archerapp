@@ -77,6 +77,7 @@
                                         'pending' => '待處理',
                                         'registered' => '已報名',
                                         'checked_in' => '已報到',
+                                        'no_show' => '未報到（DNS）',
                                         'withdrawn' => '已退出',
                                         default => $registration->status,
                                     };
@@ -92,6 +93,7 @@
                                                 'bg-yellow-100 text-yellow-700' => $registration->status === 'pending',
                                                 'bg-blue-100 text-blue-700' => $registration->status === 'registered',
                                             'bg-emerald-100 text-emerald-700' => $registration->status === 'checked_in',
+                                            'bg-amber-100 text-amber-700' => $registration->status === 'no_show',
                                             'bg-gray-200 text-gray-700' => $registration->status === 'withdrawn',
                                             ])">
                                             {{ __('報名狀態：') }}{{ $statusLabel }}

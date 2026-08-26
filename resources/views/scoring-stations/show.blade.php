@@ -8,6 +8,7 @@
     $totalEnds = $session->totalEnds();
     $isComplete = $target->status === 'completed';
     $isRoundBreak = $target->status === 'round_break';
+    $isDnsTarget = $target->status === 'dns';
     $usesTwoRounds = $session->total_arrows === 72 && $session->arrows_per_end === 6;
     $roundNumber = $usesTwoRounds && $endNumber > 6 ? 2 : 1;
     $endInRound = $usesTwoRounds && $endNumber > 6 ? $endNumber - 6 : $endNumber;
@@ -22,7 +23,7 @@
             </div>
             <div class="shrink-0 text-right">
                 <span class="inline-flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
-                    <span class="h-2 w-2 rounded-full {{ $isRoundBreak ? 'bg-amber-500' : 'bg-emerald-500' }}"></span>{{ $isComplete ? '計分完成' : ($isRoundBreak ? '上半局完成' : '計分中') }}
+                    <span class="h-2 w-2 rounded-full {{ $isRoundBreak || $isDnsTarget ? 'bg-amber-500' : 'bg-emerald-500' }}"></span>{{ $isComplete ? '計分完成' : ($isRoundBreak ? '上半局完成' : ($isDnsTarget ? '無需計分' : '計分中')) }}
                 </span>
             </div>
         </div>
@@ -46,7 +47,7 @@
                         <div class="pt-1 text-lg font-bold text-indigo-600">{{ $target->target_number.$assignment->position }}</div>
                         <div class="min-w-0">
                             <div>
-                                <h2 class="text-lg font-bold text-gray-900">{{ $assignment->registration->name }}</h2>
+                                <h2 class="text-lg font-bold text-gray-900">{{ $assignment->registration->name }} @if($assignment->registration->result_status === 'dns')<span class="ml-1 text-sm text-amber-700">DNS</span>@endif</h2>
                             </div>
 
                             <div class="mt-3 grid grid-cols-6 gap-x-1 gap-y-2">
@@ -70,7 +71,13 @@
         </section>
 
         <section id="scoring-panel" data-tab-panel="scoring" class="hidden h-full bg-gray-50 p-3 sm:p-4">
-            @if($isComplete)
+            @if($isDnsTarget)
+                <div class="rounded-2xl border border-amber-200 bg-white p-8 text-center shadow-sm">
+                    <p class="text-4xl text-amber-500">DNS</p>
+                    <h2 class="mt-3 text-xl font-bold">本靶選手均未報到</h2>
+                    <p class="mt-2 text-sm text-gray-500">已保留原靶位供名單核對，但本靶無法輸入分數。</p>
+                </div>
+            @elseif($isComplete)
                 <div class="rounded-2xl border bg-white p-8 text-center shadow-sm">
                     <p class="text-4xl text-emerald-500">✓</p>
                     <h2 class="mt-3 text-xl font-bold">本靶已完成全部計分</h2>
@@ -100,6 +107,7 @@
                     <div class="rounded-2xl border bg-white p-3 shadow-sm">
                         <div class="divide-y rounded-xl border">
                             @foreach($target->assignments as $assignment)
+                                @continue($assignment->registration?->result_status === 'dns' || $assignment->registration?->status !== 'checked_in')
                                 <div class="athlete-card grid grid-cols-[2rem_4.5rem_minmax(0,1fr)_2.5rem] items-center gap-1.5 px-2 py-1.5 sm:grid-cols-[3rem_8rem_minmax(0,1fr)_3.5rem] sm:gap-2" data-registration="{{ $assignment->registration->id }}">
                                     <span class="font-bold text-indigo-600">{{ $target->target_number.$assignment->position }}</span>
                                     <div class="min-w-0">

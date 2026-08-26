@@ -194,12 +194,13 @@ class EventManagementWorkflowTest extends TestCase
         $group->update(['name'=>'反曲公開組','arrow_count'=>12,'arrows_per_end'=>6]);
         $members = User::factory()->count(2)->create();
         $registrations = $members->map(fn ($member) => $this->registration($event,$group,$member));
+        $registrations->each->update(['status'=>'checked_in', 'checked_in_at'=>now(), 'checked_in_by'=>$owner->id]);
         $secondGroup = EventGroup::factory()->create(['event_id'=>$event->id, 'name'=>'複合弓公開組', 'arrow_count'=>12, 'arrows_per_end'=>6]);
         $secondRegistration = $this->registration($event, $secondGroup, User::factory()->create());
         $emptyGroup = EventGroup::factory()->create(['event_id'=>$event->id, 'name'=>'無選手組']);
 
         $this->actingAs($owner)->post(route('organizer.events.scoring.store',$event), [
-            'name'=>'上午資格賽', 'athletes_per_target'=>2,
+            'name'=>'上午資格賽', 'athletes_per_target'=>2, 'confirm_unreported'=>1,
         ])->assertSessionHas('success');
 
         $this->assertNotNull($event->fresh()->reg_end);
@@ -209,6 +210,8 @@ class EventManagementWorkflowTest extends TestCase
         $this->assertNotNull($emptyGroup->fresh()->reg_end);
         $this->assertSame(2, EventScoringSession::where('event_id', $event->id)->count());
         $this->assertDatabaseHas('event_scoring_assignments', ['event_registration_id'=>$secondRegistration->id]);
+        $this->assertDatabaseHas('event_registrations', ['id'=>$secondRegistration->id, 'status'=>'no_show', 'result_status'=>'dns']);
+        $this->assertSame('dns', $secondRegistration->scoringAssignment->target->status);
         $this->assertSame(0, EventScoringSession::where('event_group_id', $emptyGroup->id)->count());
 
         $this->actingAs($owner)->post(route('organizer.events.scoring.store',$event), [

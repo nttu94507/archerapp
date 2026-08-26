@@ -33,6 +33,7 @@ class EventJudgingController extends Controller
     {
         $this->authorize('manageJudging', $event);
         abort_unless($target->session()->where('event_id', $event->id)->exists(), 404);
+        abort_if($target->status === 'dns', 422, '全靶選手皆為 DNS，無需裁判核對。');
 
         $role = $this->role($request, $event);
         $canConfirm = $request->user()->isAdmin() || in_array($role, ['owner', 'manager', 'chief_judge'], true);

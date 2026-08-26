@@ -21,7 +21,7 @@
     </div>
 
     <section class="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <div class="rounded-2xl border bg-white p-4 shadow-sm"><p class="text-xs text-gray-500">組別名次</p><p class="mt-2 text-3xl font-bold {{ $registration->result_status === 'dnf' ? 'text-amber-700' : 'text-indigo-700' }}">{{ $registration->result_status === 'dnf' ? 'DNF' : '第 '.$rank.' 名' }}</p></div>
+        <div class="rounded-2xl border bg-white p-4 shadow-sm"><p class="text-xs text-gray-500">組別名次</p><p class="mt-2 text-3xl font-bold {{ in_array($registration->result_status, ['dnf','dns'], true) ? 'text-amber-700' : 'text-indigo-700' }}">{{ in_array($registration->result_status, ['dnf','dns'], true) ? strtoupper($registration->result_status) : '第 '.$rank.' 名' }}</p></div>
         <div class="rounded-2xl border bg-white p-4 shadow-sm"><p class="text-xs text-gray-500">總分</p><p class="mt-2 text-3xl font-bold">{{ $stats['total'] }}</p></div>
         <div class="rounded-2xl border bg-white p-4 shadow-sm"><p class="text-xs text-gray-500">10</p><p class="mt-2 text-3xl font-bold">{{ $stats['ten_count'] }}</p></div>
         <div class="rounded-2xl border bg-white p-4 shadow-sm"><p class="text-xs text-gray-500">X</p><p class="mt-2 text-3xl font-bold">{{ $stats['x_count'] }}</p></div>

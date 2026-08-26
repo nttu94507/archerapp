@@ -96,7 +96,7 @@
                             @foreach($selectedBoard['rows'] as $row)
                                 <details class="group">
                                     <summary class="flex cursor-pointer items-center gap-3 px-4 py-3 hover:bg-gray-50">
-                                        <div class="w-10 text-center text-sm font-semibold {{ $row['rank_position'] === 'DNF' ? 'text-amber-700' : 'text-gray-800' }}">{{ $row['rank_position'] === 'DNF' ? 'DNF' : '#'.$row['rank_position'] }}</div>
+                                        <div class="w-10 text-center text-sm font-semibold {{ in_array($row['rank_position'], ['DNF','DNS'], true) ? 'text-amber-700' : 'text-gray-800' }}">{{ in_array($row['rank_position'], ['DNF','DNS'], true) ? $row['rank_position'] : '#'.$row['rank_position'] }}</div>
                                         <div class="flex-1">
                                             <p class="text-sm font-semibold text-gray-900">{{ $row['registration']->name ?? '未命名選手' }}</p>
                                             <p class="text-xs text-gray-500">{{ $row['registration']->team_name ?? '未填隊伍' }}</p>

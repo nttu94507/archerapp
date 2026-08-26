@@ -114,7 +114,13 @@ class ScoringStationController extends Controller
             'scores'=>['nullable', 'array'],
         ]);
 
-        $assignments = $target->assignments;
+        $assignments = $target->assignments->filter(fn ($assignment) =>
+            $assignment->registration?->status === 'checked_in'
+            && $assignment->registration?->result_status !== 'dns'
+        )->values();
+        if ($assignments->isEmpty()) {
+            return back()->with('error', '此靶位沒有可輸入分數的已報到選手。');
+        }
         $normalizedScores = [];
         foreach ($assignments as $assignment) {
             $scores = $validated['scores'][$assignment->event_registration_id] ?? [];
@@ -159,7 +165,7 @@ class ScoringStationController extends Controller
                 foreach ($assignments as $assignment) {
                     $assignment->registration->update(['score_submitted_at'=>now()]);
                 }
-                if ($session->targets()->where('status', '!=', 'completed')->doesntExist()) {
+                if ($session->targets()->whereNotIn('status', ['completed', 'dns'])->doesntExist()) {
                     $session->update(['status'=>'completed', 'completed_at'=>now()]);
                 }
             }

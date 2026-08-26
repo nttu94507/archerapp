@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Event;
 use App\Models\EventAuditLog;
 use App\Models\EventGroup;
+use App\Models\EventRegistration;
 use App\Models\EventScoringSession;
 use App\Models\EventScoringTarget;
 use Illuminate\Http\RedirectResponse;
@@ -25,13 +26,21 @@ class EventScoringController extends Controller
         $this->authorize('manageScores', $event);
         $event->load(['groups' => fn ($query) => $query->withCount([
             'registrations as active_registrations_count' => fn ($registration) => $registration->whereIn('status', ['registered', 'checked_in']),
+            'registrations as checked_in_registrations_count' => fn ($registration) => $registration->where('status', 'checked_in')->whereNotNull('checked_in_at'),
+            'registrations as unreported_registrations_count' => fn ($registration) => $registration->where('status', 'registered')->whereNull('checked_in_at'),
         ])->withCount('scoringSessions')]);
         $sessions = $event->scoringSessions()
             ->with(['group', 'targets.assignments.registration'])
             ->latest()
             ->get();
+        $unreportedRegistrations = $event->registrations()
+            ->with('event_group')
+            ->where('status', 'registered')
+            ->whereNull('checked_in_at')
+            ->orderBy('name')
+            ->get();
 
-        return view('organizer.scoring.index', compact('event', 'sessions'));
+        return view('organizer.scoring.index', compact('event', 'sessions', 'unreportedRegistrations'));
     }
 
     public function store(Request $request, Event $event): RedirectResponse
@@ -40,6 +49,7 @@ class EventScoringController extends Controller
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:120'],
             'athletes_per_target' => ['required', 'integer', 'between:2,4'],
+            'confirm_unreported' => ['nullable', 'boolean'],
         ]);
         try {
             $summary = DB::transaction(function () use ($event, $validated, $request): array {
@@ -59,14 +69,25 @@ class EventScoringController extends Controller
                 }
 
                 $registrationsByGroup = $groups->mapWithKeys(fn (EventGroup $group) => [
-                    $group->id => $group->registrations()
+                    $group->id => EventRegistration::where('event_id', $event->id)
+                        ->where('event_group_id', $group->id)
                         ->whereIn('status', ['registered', 'checked_in'])
                         ->orderBy('name')
+                        ->lockForUpdate()
                         ->get(),
                 ]);
 
                 if ($registrationsByGroup->every(fn ($registrations) => $registrations->isEmpty())) {
                     abort(422, '目前所有組別都沒有可排靶的選手。');
+                }
+
+                $unreported = $registrationsByGroup->flatten(1)
+                    ->filter(fn (EventRegistration $registration) => $registration->status === 'registered' && $registration->checked_in_at === null);
+                if ($unreported->isNotEmpty() && ! ($validated['confirm_unreported'] ?? false)) {
+                    abort(422, '目前還有 '.$unreported->count().' 位選手尚未報到，請確認名單後再選擇繼續排靶。');
+                }
+                foreach ($unreported as $registration) {
+                    $registration->update(['status'=>'no_show', 'result_status'=>'dns']);
                 }
 
                 $registrationClosedAt = now();
@@ -95,11 +116,12 @@ class EventScoringController extends Controller
                     ]);
 
                     foreach ($registrations->chunk($validated['athletes_per_target']) as $targetIndex => $members) {
+                        $allDns = $members->every(fn (EventRegistration $registration) => $registration->status === 'no_show');
                         $target = $session->targets()->create([
                             'target_number'=>$targetIndex + 1,
                             'access_token'=>(string) Str::uuid(),
                             'device_pin'=>(string) random_int(100000, 999999),
-                            'status'=>'ready',
+                            'status'=>$allDns ? 'dns' : 'ready',
                         ]);
                         foreach ($members->values() as $position => $registration) {
                             $target->assignments()->create([
@@ -122,7 +144,8 @@ class EventScoringController extends Controller
                             'group_id'=>$group->id,
                             'targets'=>$targetCount,
                             'athletes'=>$registrations->count(),
-                            'registration_closed_at'=>$registrationClosedAt->toIso8601String(),
+                        'registration_closed_at'=>$registrationClosedAt->toIso8601String(),
+                        'dns_count'=>$registrations->where('status', 'no_show')->count(),
                         ],
                     ]);
                 }
@@ -132,6 +155,7 @@ class EventScoringController extends Controller
                     'targets'=>$createdTargets,
                     'athletes'=>$assignedAthletes,
                     'skipped_groups'=>$groups->count() - $createdGroups,
+                    'dns'=>$unreported->count(),
                 ];
             });
         } catch (\Symfony\Component\HttpKernel\Exception\HttpException $e) {
@@ -141,6 +165,9 @@ class EventScoringController extends Controller
         $message = "已完成 {$summary['groups']} 個組別、{$summary['targets']} 個靶位、{$summary['athletes']} 位選手的排靶，全部組別報名已截止。";
         if ($summary['skipped_groups'] > 0) {
             $message .= "另有 {$summary['skipped_groups']} 個無選手組別已略過。";
+        }
+        if ($summary['dns'] > 0) {
+            $message .= " {$summary['dns']} 位未報到選手已標記為 DNS，保留靶位但不能輸入分數。";
         }
 
         return back()->with('success', $message);

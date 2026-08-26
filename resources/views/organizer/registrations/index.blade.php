@@ -6,7 +6,7 @@
 @php
     $paymentLabels=['pending'=>'待繳費','paid'=>'已繳費','exempt'=>'免費／免繳','refunded'=>'已退款','issue'=>'對帳異常'];
     $paymentColors=['pending'=>'bg-amber-100 text-amber-800','paid'=>'bg-emerald-100 text-emerald-700','exempt'=>'bg-emerald-100 text-emerald-700','refunded'=>'bg-gray-200 text-gray-700','issue'=>'bg-red-100 text-red-700'];
-    $statusLabels=['registered'=>'已報名','checked_in'=>'已報到','withdrawn'=>'已退出','refunded'=>'已退款','no_show'=>'未到'];
+    $statusLabels=['registered'=>'已報名','checked_in'=>'已報到','withdrawn'=>'已退出','refunded'=>'已退款','no_show'=>'未報到（DNS）'];
 @endphp
 
 <div class="mx-auto max-w-6xl space-y-5 px-4 py-6 sm:px-6 sm:py-8">
