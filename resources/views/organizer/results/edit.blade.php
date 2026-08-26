@@ -65,6 +65,48 @@
         @endunless
     </form>
 
+    <section class="rounded-2xl border bg-white shadow-sm {{ $published ? '' : 'mb-72' }}">
+        <div class="border-b px-4 py-4 sm:px-5">
+            <h2 class="font-semibold text-gray-900">成績修正紀錄</h2>
+            <p class="mt-1 text-xs text-gray-500">每次修正的操作人、原因及逐趟前後差異都會永久保留。</p>
+        </div>
+        <div class="divide-y">
+            @forelse($correctionLogs as $log)
+                @php($metadata = $log->metadata ?? [])
+                <details class="group px-4 py-4 sm:px-5" @if($loop->first) open @endif>
+                    <summary class="flex cursor-pointer list-none flex-wrap items-center justify-between gap-3">
+                        <div>
+                            <p class="text-sm font-semibold text-gray-900">{{ $log->user?->display_name ?? '系統' }}・{{ $log->created_at->format('Y-m-d H:i:s') }}</p>
+                            <p class="mt-1 text-xs text-gray-500">原因：{{ $metadata['reason'] ?? '未記錄' }}</p>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span class="rounded-full bg-gray-100 px-3 py-1 text-xs font-medium">{{ $metadata['old_total'] ?? '—' }} → {{ $metadata['new_total'] ?? '—' }} 分</span>
+                            <span class="text-gray-400 transition group-open:rotate-180">⌄</span>
+                        </div>
+                    </summary>
+                    <div class="mt-4 space-y-2">
+                        @forelse($metadata['changes'] ?? [] as $change)
+                            @php
+                                $before = $change['before'] ?? null;
+                                $after = $change['after'] ?? null;
+                            @endphp
+                            <div class="grid gap-2 rounded-xl bg-gray-50 p-3 text-sm sm:grid-cols-[4rem_1fr_auto_1fr] sm:items-center">
+                                <p class="font-semibold text-gray-700">第 {{ $change['end_number'] }} 趟</p>
+                                <div><p class="text-[10px] text-gray-400">修改前</p><p class="font-mono font-semibold text-red-700">{{ $before ? implode(' / ', $before['scores'] ?? []).'（'.($before['end_total'] ?? 0).'）' : '無成績' }}</p></div>
+                                <span class="hidden text-gray-400 sm:block">→</span>
+                                <div><p class="text-[10px] text-gray-400">修改後</p><p class="font-mono font-semibold text-green-700">{{ $after ? implode(' / ', $after['scores'] ?? []).'（'.($after['end_total'] ?? 0).'）' : '已移除' }}</p></div>
+                            </div>
+                        @empty
+                            <p class="rounded-xl bg-gray-50 p-3 text-sm text-gray-500">此為舊版修正紀錄，僅保留修改前後總分。</p>
+                        @endforelse
+                    </div>
+                </details>
+            @empty
+                <p class="p-6 text-center text-sm text-gray-500">尚無成績修正紀錄。</p>
+            @endforelse
+        </div>
+    </section>
+
     @unless($published)
         <section class="fixed inset-x-0 bottom-0 z-30 mx-auto max-w-3xl border-t bg-white/95 p-3 pb-[max(.75rem,env(safe-area-inset-bottom))] shadow-[0_-6px_24px_rgba(15,23,42,.12)] backdrop-blur sm:bottom-3 sm:rounded-2xl sm:border">
             <p id="keypad-status" class="mb-2 text-center text-xs text-gray-500">請先點選要修正的箭值</p>

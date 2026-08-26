@@ -70,8 +70,16 @@ class EventResultController extends Controller
             'ten_count'=>$scores->filter(fn ($score) => (string) $score === '10')->count(),
             'x_count'=>$scores->filter(fn ($score) => strtoupper((string) $score) === 'X')->count(),
         ];
+        $correctionLogs = EventAuditLog::query()
+            ->with('user')
+            ->where('event_id', $event->id)
+            ->where('action', 'results.score_corrected')
+            ->where('subject_type', EventRegistration::class)
+            ->where('subject_id', $registration->id)
+            ->latest()
+            ->get();
 
-        return view('organizer.results.edit', compact('event', 'registration', 'arrowsPerEnd', 'requiredEnds', 'stats'));
+        return view('organizer.results.edit', compact('event', 'registration', 'arrowsPerEnd', 'requiredEnds', 'stats', 'correctionLogs'));
     }
 
     public function update(Request $request, Event $event, EventRegistration $registration): RedirectResponse
@@ -94,7 +102,13 @@ class EventResultController extends Controller
         $result = DB::transaction(function () use ($event, $registration, $validated, $request, $requiredEnds, $arrowsPerEnd): array {
             $locked = EventRegistration::whereKey($registration->id)->lockForUpdate()->firstOrFail();
             abort_if($locked->result_published_at !== null, 422, '正式成績已發布，不能直接修改。');
-            $oldTotal = $locked->scoreEntries()->sum('end_total');
+            $snapshot = fn () => $locked->scoreEntries()->orderBy('end_number')->get()
+                ->mapWithKeys(fn (EventScoreEntry $entry) => [(int) $entry->end_number => [
+                    'scores'=>array_values($entry->scores ?? []),
+                    'end_total'=>(int) $entry->end_total,
+                ]])->all();
+            $before = $snapshot();
+            $oldTotal = collect($before)->sum('end_total');
 
             for ($end = 1; $end <= $requiredEnds; $end++) {
                 $submitted = array_slice(array_values($validated['ends'][$end] ?? []), 0, $arrowsPerEnd);
@@ -116,7 +130,21 @@ class EventResultController extends Controller
                 );
             }
 
-            $entryCount = $locked->scoreEntries()->count();
+            $after = $snapshot();
+            $newTotal = collect($after)->sum('end_total');
+            $changes = collect(range(1, $requiredEnds))->map(function (int $end) use ($before, $after): ?array {
+                $old = $before[$end] ?? null;
+                $new = $after[$end] ?? null;
+                if ($old === $new) return null;
+
+                return ['end_number'=>$end, 'before'=>$old, 'after'=>$new];
+            })->filter()->values()->all();
+
+            if ($changes === []) {
+                return ['changed'=>false, 'old_total'=>$oldTotal, 'new_total'=>$newTotal];
+            }
+
+            $entryCount = count($after);
             $locked->update([
                 'score_submitted_at'=>$entryCount >= $requiredEnds ? now() : null,
                 'score_verified_at'=>null,
@@ -136,7 +164,6 @@ class EventResultController extends Controller
                 ]);
             }
 
-            $newTotal = $locked->scoreEntries()->sum('end_total');
             EventAuditLog::create([
                 'event_id'=>$event->id,
                 'user_id'=>$request->user()->id,
@@ -148,11 +175,18 @@ class EventResultController extends Controller
                     'old_total'=>$oldTotal,
                     'new_total'=>$newTotal,
                     'reason'=>$validated['correction_reason'],
+                    'before'=>$before,
+                    'after'=>$after,
+                    'changes'=>$changes,
                 ],
             ]);
 
-            return ['old_total'=>$oldTotal, 'new_total'=>$newTotal];
+            return ['changed'=>true, 'old_total'=>$oldTotal, 'new_total'=>$newTotal];
         });
+
+        if (! $result['changed']) {
+            return back()->with('success', '箭值沒有變更，未建立修正紀錄。');
+        }
 
         return redirect()->route('organizer.events.results.index', $event)
             ->with('success', $registration->name.'的成績已由 '.$result['old_total'].' 分修正為 '.$result['new_total'].' 分，請重新進行裁判及主辦確認。');
