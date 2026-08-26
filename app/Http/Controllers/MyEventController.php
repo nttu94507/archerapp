@@ -2,10 +2,8 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Event;
 use App\Models\EventRegistration;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\View\View;
 
@@ -21,15 +19,12 @@ class MyEventController extends Controller
             ->orderByDesc('created_at')
             ->get();
 
-        $now = Carbon::now();
-
-        $events = $registrations->map(function (EventRegistration $registration) use ($now) {
+        $events = $registrations->map(function (EventRegistration $registration) {
             $event = $registration->event;
 
             return [
                 'event' => $event,
                 'registration' => $registration,
-                'phase' => $this->eventPhase($event, $now),
             ];
         })->filter(fn ($row) => $row['event']);
 
@@ -94,16 +89,6 @@ class MyEventController extends Controller
             'ten_count'=>$scores->filter(fn ($score) => (string) $score === '10')->count(),
             'x_count'=>$scores->filter(fn ($score) => strtoupper((string) $score) === 'X')->count(),
         ];
-    }
-
-    private function eventPhase(Event $event, Carbon $now): string
-    {
-        if ($event->cancelled_at) return 'cancelled';
-        $start = $event->start_date ? Carbon::parse($event->start_date)->startOfDay() : null;
-        $end = $event->end_date ? Carbon::parse($event->end_date)->endOfDay() : $start?->copy()->endOfDay();
-        if ($start && $now->lt($start)) return 'upcoming';
-        if ($start && $end && $now->between($start, $end)) return 'ongoing';
-        return 'finished';
     }
 
 }

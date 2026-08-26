@@ -20,31 +20,15 @@
             @foreach($events as $row)
                 @php
                     $event = $row['event']; $registration = $row['registration'];
-                    $phaseLabel = ['upcoming'=>'即將舉行','ongoing'=>'進行中','finished'=>'已結束','cancelled'=>'已取消'][$row['phase']] ?? $row['phase'];
-                    $isFree = (int) optional($registration->event_group)->fee === 0;
-                    $paymentLabel = $isFree ? '免費' : (['pending'=>'待付款／確認','paid'=>'已付款','refunded'=>'已退款'][$registration->payment_status] ?? ($registration->paid ? '已付款' : '待付款'));
                 @endphp
                 <article class="rounded-2xl border bg-white p-4 shadow-sm sm:p-5">
                     <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                         <div class="min-w-0">
                             <div class="flex flex-wrap items-center gap-2">
                                 <h2 class="break-words text-lg font-semibold">{{ $event->name }}</h2>
-                                <span class="rounded-full bg-gray-100 px-2 py-1 text-xs text-gray-600">{{ $phaseLabel }}</span>
                             </div>
                             <p class="mt-1 text-sm text-gray-500">{{ $event->start_date->format('Y-m-d') }}～{{ $event->end_date->format('Y-m-d') }} · {{ $event->venue ?: '場地待公布' }}</p>
                             <p class="mt-2 text-sm font-medium">{{ $registration->event_group?->name ?: '未指定組別' }}</p>
-                            <div class="mt-3 flex flex-wrap gap-2 text-xs">
-                                <span class="rounded-full {{ $isFree || $registration->paid ? 'bg-emerald-50 text-emerald-700' : 'bg-orange-50 text-orange-700' }} px-3 py-1">{{ $paymentLabel }}</span>
-                                @if($registration->result_published_at)
-                                    <span class="rounded-full bg-emerald-50 px-3 py-1 text-emerald-700">正式成績已發布</span>
-                                @elseif($registration->score_submitted_at)
-                                    <span class="rounded-full bg-amber-50 px-3 py-1 text-amber-700">主辦方核對中</span>
-                                @elseif($row['phase'] === 'ongoing')
-                                    <span class="rounded-full bg-indigo-50 px-3 py-1 text-indigo-700">賽事進行中</span>
-                                @else
-                                    <span class="rounded-full bg-gray-100 px-3 py-1 text-gray-600">尚未發布成績</span>
-                                @endif
-                            </div>
                         </div>
                         <div class="flex shrink-0 flex-wrap gap-2">
                             <a href="{{ route('events.show', $event) }}" class="inline-flex min-h-11 items-center justify-center rounded-xl border px-4 text-sm font-medium">賽事資訊</a>
