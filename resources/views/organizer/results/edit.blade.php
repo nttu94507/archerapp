@@ -20,12 +20,12 @@
     @if($errors->any())<div class="rounded-xl bg-red-50 p-4 text-sm text-red-700">{{ $errors->first() }}</div>@endif
 
     <section class="grid grid-cols-3 gap-3">
-        <div class="rounded-2xl border bg-white p-4"><p class="text-xs text-gray-500">總分</p><p class="mt-1 text-3xl font-bold">{{ $stats['total'] }}</p></div>
-        <div class="rounded-2xl border bg-white p-4"><p class="text-xs text-gray-500">10</p><p class="mt-1 text-3xl font-bold">{{ $stats['ten_count'] }}</p></div>
-        <div class="rounded-2xl border bg-white p-4"><p class="text-xs text-gray-500">X</p><p class="mt-1 text-3xl font-bold">{{ $stats['x_count'] }}</p></div>
+        <div class="rounded-2xl border bg-white p-4"><p class="text-xs text-gray-500">總分</p><p id="score-total" class="mt-1 text-3xl font-bold">{{ $stats['total'] }}</p></div>
+        <div class="rounded-2xl border bg-white p-4"><p class="text-xs text-gray-500">10</p><p id="score-ten-count" class="mt-1 text-3xl font-bold">{{ $stats['ten_count'] }}</p></div>
+        <div class="rounded-2xl border bg-white p-4"><p class="text-xs text-gray-500">X</p><p id="score-x-count" class="mt-1 text-3xl font-bold">{{ $stats['x_count'] }}</p></div>
     </section>
 
-    <form method="POST" action="{{ route('organizer.events.results.registrations.update', [$event, $registration]) }}" class="space-y-5" onsubmit="return confirm('儲存後會撤銷既有成績確認與裁判簽核，確定修正？')">
+    <form id="score-correction-form" method="POST" action="{{ route('organizer.events.results.registrations.update', [$event, $registration]) }}" class="space-y-5 {{ $published ? '' : 'pb-72' }}" onsubmit="return confirm('儲存後會撤銷既有成績確認與裁判簽核，確定修正？')">
         @csrf @method('PATCH')
         @foreach(range(1, $requiredEnds) as $end)
             @if($twoRounds && in_array($end, [1, 7], true))
@@ -37,17 +37,16 @@
                 <div class="mt-3 grid gap-2" style="grid-template-columns: repeat({{ $arrowsPerEnd }}, minmax(0, 1fr));">
                     @for($arrow = 0; $arrow < $arrowsPerEnd; $arrow++)
                         @php($value = old('ends.'.$end.'.'.$arrow, $entry?->scores[$arrow] ?? ''))
-                        <select name="ends[{{ $end }}][]" @disabled($published) class="score-value min-h-11 min-w-0 rounded-xl border-gray-300 px-1 text-center text-sm font-semibold">
-                            <option value="">—</option>
-                            @foreach(['X','10','9','8','7','6','5','4','3','2','1','M'] as $score)<option value="{{ $score }}" @selected((string) $value === $score)>{{ $score }}</option>@endforeach
-                        </select>
+                        <input name="ends[{{ $end }}][]" value="{{ $value }}" readonly inputmode="none" @disabled($published)
+                               placeholder="＿" aria-label="第 {{ $end }} 趟第 {{ $arrow + 1 }} 箭"
+                               class="score-value min-h-11 min-w-0 touch-manipulation cursor-pointer select-none rounded-xl border-gray-300 px-1 text-center text-sm font-bold placeholder:text-gray-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500">
                     @endfor
                 </div>
             </section>
         @endforeach
 
         @unless($published)
-            <section class="rounded-2xl border bg-white p-4 shadow-sm">
+            <section id="correction-reason" class="rounded-2xl border bg-white p-4 shadow-sm">
                 <label class="text-sm font-medium">修正原因 *</label>
                 <textarea name="correction_reason" required maxlength="500" rows="3" class="mt-2 w-full rounded-xl border-gray-300" placeholder="例如：第 4 趟紙本記分卡核對為 10、9、9、8、8、7">{{ old('correction_reason') }}</textarea>
                 <p class="mt-2 text-xs text-amber-700">儲存後會撤銷主辦確認及該靶位裁判簽核，必須重新核對後才能發布。</p>
@@ -55,14 +54,79 @@
             </section>
         @endunless
     </form>
+
+    @unless($published)
+        <section class="fixed inset-x-0 bottom-0 z-30 mx-auto max-w-3xl border-t bg-white/95 p-3 pb-[max(.75rem,env(safe-area-inset-bottom))] shadow-[0_-6px_24px_rgba(15,23,42,.12)] backdrop-blur sm:bottom-3 sm:rounded-2xl sm:border">
+            <p id="keypad-status" class="mb-2 text-center text-xs text-gray-500">請先點選要修正的箭值</p>
+            <div class="grid grid-cols-4 gap-2">
+                @foreach([
+                    ['X','X','border-yellow-200 bg-yellow-50 text-yellow-900'],
+                    ['10','10','border-yellow-200 bg-yellow-50 text-yellow-900'],
+                    ['9','9','border-yellow-200 bg-yellow-50 text-yellow-900'],
+                    ['BKSP','⌫','border-gray-300 bg-white text-gray-900'],
+                    ['8','8','border-red-200 bg-red-50 text-red-900'],
+                    ['7','7','border-red-200 bg-red-50 text-red-900'],
+                    ['6','6','border-blue-200 bg-blue-50 text-blue-900'],
+                    ['5','5','border-blue-200 bg-blue-50 text-blue-900'],
+                    ['4','4','border-gray-300 bg-gray-100 text-gray-900'],
+                    ['3','3','border-gray-300 bg-gray-100 text-gray-900'],
+                    ['2','2','border-gray-300 bg-white text-gray-900'],
+                    ['1','1','border-gray-300 bg-white text-gray-900'],
+                ] as [$key, $label, $color])
+                    <button type="button" data-score-key="{{ $key }}" class="min-h-12 touch-manipulation rounded-xl border text-lg font-bold active:brightness-95 {{ $color }}">{{ $label }}</button>
+                @endforeach
+                <button type="button" data-score-key="M" class="col-span-2 min-h-12 rounded-xl border border-green-200 bg-green-50 text-lg font-bold text-green-800">M</button>
+                <button type="button" data-score-key="DONE" class="col-span-2 min-h-12 rounded-xl bg-indigo-600 text-sm font-semibold text-white">完成輸入</button>
+            </div>
+        </section>
+    @endunless
 </div>
 <script>
-document.querySelectorAll('.score-end').forEach(end => {
+(() => {
+    const inputs = Array.from(document.querySelectorAll('.score-value:not(:disabled)'));
+    if (!inputs.length) return;
+    const keypadStatus = document.getElementById('keypad-status');
+    let activeIndex = null;
+    const scoreNumber = value => value === 'X' ? 10 : (value === 'M' || !value ? 0 : Number(value));
     const recalculate = () => {
-        const total = Array.from(end.querySelectorAll('.score-value')).reduce((sum, select) => sum + (select.value === 'X' ? 10 : (select.value === 'M' || !select.value ? 0 : Number(select.value))), 0);
-        end.querySelector('.end-total').textContent = total + ' 分';
+        document.querySelectorAll('.score-end').forEach(end => {
+            const total = Array.from(end.querySelectorAll('.score-value')).reduce((sum, input) => sum + scoreNumber(input.value), 0);
+            end.querySelector('.end-total').textContent = total + ' 分';
+        });
+        document.getElementById('score-total').textContent = inputs.reduce((sum, input) => sum + scoreNumber(input.value), 0);
+        document.getElementById('score-ten-count').textContent = inputs.filter(input => input.value === '10').length;
+        document.getElementById('score-x-count').textContent = inputs.filter(input => input.value.toUpperCase() === 'X').length;
     };
-    end.querySelectorAll('.score-value').forEach(select => select.addEventListener('change', recalculate));
-});
+    const selectInput = index => {
+        activeIndex = Math.max(0, Math.min(inputs.length - 1, index));
+        inputs.forEach(input => input.classList.remove('ring-2', 'ring-indigo-500', 'bg-indigo-50'));
+        const input = inputs[activeIndex];
+        input.classList.add('ring-2', 'ring-indigo-500', 'bg-indigo-50');
+        keypadStatus.textContent = input.getAttribute('aria-label');
+    };
+    inputs.forEach((input, index) => {
+        input.addEventListener('pointerdown', event => { event.preventDefault(); selectInput(index); });
+        input.addEventListener('click', event => event.preventDefault());
+    });
+    document.querySelectorAll('[data-score-key]').forEach(key => key.addEventListener('click', () => {
+        const action = key.dataset.scoreKey;
+        if (action === 'DONE') {
+            document.getElementById('correction-reason').scrollIntoView({behavior: 'smooth', block: 'center'});
+            document.querySelector('[name="correction_reason"]').focus();
+            return;
+        }
+        if (activeIndex === null) return;
+        if (action === 'BKSP') {
+            const indexToClear = inputs[activeIndex].value ? activeIndex : Math.max(0, activeIndex - 1);
+            inputs[indexToClear].value = '';
+            selectInput(indexToClear);
+        } else {
+            inputs[activeIndex].value = action;
+            if (activeIndex < inputs.length - 1) selectInput(activeIndex + 1);
+        }
+        recalculate();
+    }));
+    recalculate();
+})();
 </script>
 @endsection
