@@ -19,7 +19,7 @@ class EventResultController extends Controller
 {
     public function index(Event $event): View
     {
-        $this->authorize('manageScores', $event);
+        $this->authorize('viewResults', $event);
         $registrations = $event->registrations()->with(['event_group', 'scoreEntries', 'scoringAssignment.target'])->whereIn('status', ['registered','checked_in'])->get()->map(function ($registration) {
             $registration->calculated_total = $registration->scoreEntries->sum('end_total');
             $scores = $registration->scoreEntries->flatMap(fn ($entry) => $entry->scores ?? []);
@@ -51,12 +51,15 @@ class EventResultController extends Controller
             ]];
         });
 
-        return view('organizer.results.index', compact('event', 'registrations', 'groupStates'));
+        $canManageResults = request()->user()->can('manageScores', $event);
+        $canCorrectScores = request()->user()->can('manageScoreCorrections', $event);
+
+        return view('organizer.results.index', compact('event', 'registrations', 'groupStates', 'canManageResults', 'canCorrectScores'));
     }
 
     public function edit(Event $event, EventRegistration $registration): View
     {
-        $this->authorize('manageScores', $event);
+        $this->authorize('viewResults', $event);
         abort_unless($registration->event_id === $event->id, 404);
 
         $registration->load(['event_group', 'scoreEntries' => fn ($query) => $query->orderBy('end_number'), 'scoringAssignment.target']);
@@ -78,13 +81,15 @@ class EventResultController extends Controller
             ->where('subject_id', $registration->id)
             ->latest()
             ->get();
+        $canCorrect = request()->user()->can('manageScoreCorrections', $event)
+            && $registration->result_published_at === null;
 
-        return view('organizer.results.edit', compact('event', 'registration', 'arrowsPerEnd', 'requiredEnds', 'stats', 'correctionLogs'));
+        return view('organizer.results.edit', compact('event', 'registration', 'arrowsPerEnd', 'requiredEnds', 'stats', 'correctionLogs', 'canCorrect'));
     }
 
     public function update(Request $request, Event $event, EventRegistration $registration): RedirectResponse
     {
-        $this->authorize('manageScores', $event);
+        $this->authorize('manageScoreCorrections', $event);
         abort_unless($registration->event_id === $event->id, 404);
         abort_if($registration->result_published_at !== null, 422, '正式成績已發布，不能直接修改。');
 

@@ -14,7 +14,7 @@
     @if(session('error'))<div class="rounded-xl bg-red-50 p-4 text-sm text-red-700">{{ session('error') }}</div>@endif
     @if($errors->any())<div class="rounded-xl bg-red-50 p-4 text-sm text-red-700">{{ $errors->first() }}</div>@endif
 
-    <form id="verify-form" method="POST" action="{{ route('organizer.events.results.verify', $event) }}" class="hidden">@csrf</form>
+    @if($canManageResults)<form id="verify-form" method="POST" action="{{ route('organizer.events.results.verify', $event) }}" class="hidden">@csrf</form>@endif
 
     <div class="space-y-5">
         @foreach($event->groups as $group)
@@ -59,7 +59,7 @@
                         @endif
                     </div>
 
-                    @if(!$state['published'])
+                    @if(!$state['published'] && $canManageResults)
                         <div class="flex flex-wrap gap-2 sm:justify-end">
                             <form method="POST" action="{{ route('organizer.events.results.groups.verify', [$event, $group]) }}" onsubmit="return confirm('確定一次確認「{{ $group->name }}」所有完整成績？')">
                                 @csrf
@@ -85,14 +85,14 @@
                     <div class="overflow-x-auto">
                         <table class="min-w-full text-sm">
                             <thead class="bg-white text-left text-xs text-gray-500"><tr>
-                                <th class="p-3"><input type="checkbox" aria-label="選取本組待確認成績" onclick="document.querySelectorAll('.{{ $checkClass }}').forEach(el=>el.checked=this.checked)"></th>
+                                <th class="p-3">@if($canManageResults)<input type="checkbox" aria-label="選取本組待確認成績" onclick="document.querySelectorAll('.{{ $checkClass }}').forEach(el=>el.checked=this.checked)">@endif</th>
                                 <th class="p-3">選手</th><th class="p-3">總分</th><th class="p-3">10</th><th class="p-3">X</th><th class="p-3">成績完整</th><th class="p-3">主辦確認</th><th class="p-3">發布狀態</th><th class="p-3">操作</th>
                             </tr></thead>
                             <tbody class="divide-y">
                             @foreach($items->sortByDesc('calculated_total') as $registration)
                                 @php($complete = $registration->score_submitted_at && $registration->scoreEntries->count() >= $state['required_ends'])
                                 <tr>
-                                    <td class="p-3">@if(!$registration->score_verified_at)<input form="verify-form" class="{{ $checkClass }} rounded" type="checkbox" name="registration_ids[]" value="{{ $registration->id }}">@endif</td>
+                                    <td class="p-3">@if($canManageResults && !$registration->score_verified_at)<input form="verify-form" class="{{ $checkClass }} rounded" type="checkbox" name="registration_ids[]" value="{{ $registration->id }}">@endif</td>
                                     <td class="p-3 font-medium">{{ $registration->name }}</td>
                                     <td class="p-3 font-semibold">{{ $registration->calculated_total }}</td>
                                     <td class="p-3 font-semibold">{{ $registration->calculated_ten_count }}</td>
@@ -100,13 +100,13 @@
                                     <td class="p-3 {{ $registration->result_status === 'dnf' ? 'text-amber-700' : ($complete ? 'text-green-700' : 'text-indigo-700') }}">{{ $registration->result_status === 'dnf' ? '未報到（DNF）' : ($complete ? '完整' : ($registration->score_verified_at ? '以現有分數結算' : '部分成績待審核')) }}</td>
                                     <td class="p-3">{{ $registration->score_verified_at ? '已確認' : '待確認' }}</td>
                                     <td class="p-3">{{ $registration->result_published_at ? '已發布' : '—' }}</td>
-                                    <td class="p-3"><a href="{{ route('organizer.events.results.registrations.edit', [$event, $registration]) }}" class="whitespace-nowrap font-medium text-indigo-600 hover:underline">{{ $registration->result_published_at ? '查看明細' : '查看／修正' }}</a></td>
+                                    <td class="p-3"><a href="{{ route('organizer.events.results.registrations.edit', [$event, $registration]) }}" class="whitespace-nowrap font-medium text-indigo-600 hover:underline">{{ $registration->result_published_at || !$canCorrectScores ? '查看明細' : '查看／修正' }}</a></td>
                                 </tr>
                             @endforeach
                             </tbody>
                         </table>
                     </div>
-                    @if($items->contains(fn ($item) => !$item->score_verified_at))
+                    @if($canManageResults && $items->contains(fn ($item) => !$item->score_verified_at))
                         <div class="flex justify-end border-t p-4">
                             <button form="verify-form" onclick="return confirm('確定審核選取成績？已報到的未完賽選手將以現有分數結算；未報到選手才會標記為 DNF。')" class="rounded-xl bg-indigo-600 px-4 py-2 text-sm font-medium text-white">確認選取成績</button>
                         </div>

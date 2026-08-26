@@ -6,6 +6,7 @@
 @php
     $entries = $registration->scoreEntries->keyBy('end_number');
     $published = $registration->result_published_at !== null;
+    $editable = $canCorrect;
     $twoRounds = $requiredEnds === 12 && $arrowsPerEnd === 6;
 @endphp
 <div class="mx-auto max-w-6xl space-y-5 px-4 py-6 sm:px-6 sm:py-8">
@@ -13,7 +14,7 @@
         <a href="{{ route('organizer.events.results.index', $event) }}" class="inline-flex min-h-11 items-center text-sm font-medium text-indigo-600">← 返回成績核對</a>
         <div class="flex flex-wrap items-start justify-between gap-3">
             <div><h1 class="text-2xl font-bold">{{ $registration->name }}・完整成績</h1><p class="mt-1 text-sm text-gray-500">{{ $registration->event_group?->name }}{{ $registration->scoringAssignment?->target ? ' / 靶位 '.$registration->scoringAssignment->target->target_number.$registration->scoringAssignment->position : '' }}</p></div>
-            @if($published)<span class="rounded-full bg-green-100 px-3 py-1 text-xs font-medium text-green-700">正式成績已發布・唯讀</span>@endif
+            @if($published)<span class="rounded-full bg-green-100 px-3 py-1 text-xs font-medium text-green-700">正式成績已發布・唯讀</span>@elseif(!$editable)<span class="rounded-full bg-gray-100 px-3 py-1 text-xs font-medium text-gray-600">僅供查看</span>@endif
         </div>
     </div>
 
@@ -25,7 +26,7 @@
         <div class="rounded-2xl border bg-white p-4"><p class="text-xs text-gray-500">X</p><p id="score-x-count" class="mt-1 text-3xl font-bold">{{ $stats['x_count'] }}</p></div>
     </section>
 
-    <form id="score-correction-form" method="POST" action="{{ route('organizer.events.results.registrations.update', [$event, $registration]) }}" class="space-y-5 {{ $published ? '' : 'pb-72' }}" onsubmit="return confirm('儲存後會撤銷既有成績確認與裁判簽核，確定修正？')">
+    <form id="score-correction-form" method="POST" action="{{ route('organizer.events.results.registrations.update', [$event, $registration]) }}" class="space-y-5 {{ $editable ? 'pb-72' : '' }}" onsubmit="return confirm('儲存後會撤銷既有成績確認與裁判簽核，確定修正？')">
         @csrf @method('PATCH')
         <div class="grid items-start gap-5 {{ $twoRounds ? 'lg:grid-cols-2' : '' }}">
             @foreach($twoRounds ? [['上半局', 1, 6], ['下半局', 7, 12]] : [['成績明細', 1, $requiredEnds]] as [$roundLabel, $fromEnd, $toEnd])
@@ -46,7 +47,7 @@
                                         @php
                                             $value = old('ends.'.$end.'.'.$arrow, $entry?->scores[$arrow] ?? '');
                                         @endphp
-                                        <input name="ends[{{ $end }}][]" value="{{ $value }}" readonly inputmode="none" @disabled($published)
+                                        <input name="ends[{{ $end }}][]" value="{{ $value }}" readonly inputmode="none" @disabled(!$editable)
                                                placeholder="＿" aria-label="{{ $roundLabel }}第 {{ $twoRounds ? ($end > 6 ? $end - 6 : $end) : $end }} 趟第 {{ $arrow + 1 }} 箭"
                                                class="score-value h-10 min-w-0 touch-manipulation cursor-pointer select-none rounded-lg border-gray-300 p-0 text-center text-sm font-bold placeholder:text-gray-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500">
                                     @endfor
@@ -59,17 +60,17 @@
             @endforeach
         </div>
 
-        @unless($published)
+        @if($editable)
             <section id="correction-reason" class="rounded-2xl border bg-white p-4 shadow-sm">
                 <label class="text-sm font-medium">修正原因 *</label>
                 <textarea name="correction_reason" required maxlength="500" rows="3" class="mt-2 w-full rounded-xl border-gray-300" placeholder="例如：第 4 趟紙本記分卡核對為 10、9、9、8、8、7">{{ old('correction_reason') }}</textarea>
                 <p class="mt-2 text-xs text-amber-700">儲存後會撤銷主辦確認及該靶位裁判簽核，必須重新核對後才能發布。</p>
                 <button class="mt-4 min-h-12 w-full rounded-xl bg-indigo-600 px-5 text-sm font-semibold text-white">儲存成績修正</button>
             </section>
-        @endunless
+        @endif
     </form>
 
-    <section class="rounded-2xl border bg-white shadow-sm {{ $published ? '' : 'mb-72' }}">
+    <section class="rounded-2xl border bg-white shadow-sm {{ $editable ? 'mb-72' : '' }}">
         <div class="border-b px-4 py-4 sm:px-5">
             <h2 class="font-semibold text-gray-900">成績修正紀錄</h2>
             <p class="mt-1 text-xs text-gray-500">每次修正的操作人、原因及逐趟前後差異都會永久保留。</p>
@@ -114,7 +115,7 @@
         </div>
     </section>
 
-    @unless($published)
+    @if($editable)
         <section class="fixed inset-x-0 bottom-0 z-30 mx-auto max-w-3xl border-t bg-white/95 p-3 pb-[max(.75rem,env(safe-area-inset-bottom))] shadow-[0_-6px_24px_rgba(15,23,42,.12)] backdrop-blur sm:bottom-3 sm:rounded-2xl sm:border">
             <p id="keypad-status" class="mb-2 text-center text-xs text-gray-500">請先點選要修正的箭值</p>
             <div class="grid grid-cols-4 gap-2">
@@ -138,7 +139,7 @@
                 <button type="button" data-score-key="DONE" class="col-span-2 min-h-12 rounded-xl bg-indigo-600 text-sm font-semibold text-white">完成輸入</button>
             </div>
         </section>
-    @endunless
+    @endif
 </div>
 <script>
 (() => {

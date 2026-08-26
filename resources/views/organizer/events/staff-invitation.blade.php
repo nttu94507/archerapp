@@ -1,7 +1,7 @@
 @extends('layouts.app')
 @section('title', '加入賽事工作團隊')
 @section('content')
-@php($roleLabel = ['manager'=>'管理者','staff'=>'工作人員','judge'=>'裁判','chief_judge'=>'主裁判','volunteer'=>'志工','viewer'=>'只讀人員'][$role])
+@php($roleLabel = ['manager'=>'管理者','staff'=>'工作人員','score_manager'=>'成績管理員','judge'=>'裁判','chief_judge'=>'主裁判','volunteer'=>'志工','viewer'=>'只讀人員'][$role])
 <div class="mx-auto max-w-lg px-4 py-8 sm:px-6">
     <section class="rounded-2xl border bg-white p-5 text-center shadow-sm sm:p-7">
         <p class="text-xs font-semibold uppercase tracking-widest text-indigo-600">Staff Invitation</p>
