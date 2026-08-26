@@ -22,7 +22,7 @@
     )
     <section>
         <div class="mb-3"><h2 class="text-lg font-semibold">賽事管理</h2><p class="mt-1 text-xs text-gray-500">依照賽事流程選擇要處理的工作</p></div>
-        <div class="grid gap-4 lg:grid-cols-3">
+        <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
             @if(auth()->user()->can('manageGroups', $event) || auth()->user()->can('manageRegistrations', $event))
             <div class="overflow-hidden rounded-2xl border border-indigo-100 bg-white shadow-sm">
                 <div class="flex items-center gap-3 bg-indigo-50 px-4 py-3 sm:px-5"><span class="flex h-8 w-8 items-center justify-center rounded-full bg-indigo-600 text-sm font-bold text-white">1</span><div><h3 class="font-semibold text-indigo-950">賽前準備</h3><p class="text-xs text-indigo-600">建立組別並處理選手報名</p></div></div>
@@ -45,7 +45,7 @@
             @endif
 
             @if(auth()->user()->can('viewResults', $event) || auth()->user()->isAdmin() || auth()->user()->can('manageStaff', $event))
-            <div class="overflow-hidden rounded-2xl border border-violet-100 bg-white shadow-sm">
+            <div class="overflow-hidden rounded-2xl border border-violet-100 bg-white shadow-sm md:col-span-2 xl:col-span-1">
                 <div class="flex items-center gap-3 bg-violet-50 px-4 py-3 sm:px-5"><span class="flex h-8 w-8 items-center justify-center rounded-full bg-violet-600 text-sm font-bold text-white">3</span><div><h3 class="font-semibold text-violet-950">成績與成果</h3><p class="text-xs text-violet-600">核准、發布成績並發放成果</p></div></div>
                 <div class="divide-y px-4 sm:px-5">
                     @can('viewResults',$event)<a href="{{ route('organizer.events.results.index',$event) }}" class="group flex min-h-20 items-center justify-between gap-3 py-3"><div class="min-w-0"><p class="font-semibold group-hover:text-violet-700">成績核對與發布</p><p class="mt-0.5 text-xs text-gray-500">查看、修正、核准與分組發布</p></div><div class="flex shrink-0 items-center gap-3"><span class="text-right"><strong class="block text-lg text-violet-700">{{ $event->verified_results_count }}</strong><small class="text-gray-400">已核准</small></span><span class="text-gray-300 group-hover:text-violet-500">›</span></div></a>@endcan
@@ -60,20 +60,23 @@
     @can('manageStaff',$event)
     <section class="rounded-2xl border bg-white p-4 sm:p-5" x-data="{ inviteRole: 'staff' }">
         <h2 class="font-semibold">工作人員</h2>
-        <div class="mt-4 rounded-2xl bg-indigo-50 p-4 sm:p-5">
-            <div class="mx-auto max-w-md">
-                <div class="text-center"><h3 class="font-semibold text-indigo-950">掃描 QR Code 加入</h3><p class="mt-1 text-sm text-indigo-700">選擇身分後，讓成員掃描並登入確認。邀請 24 小時後失效。</p></div>
-                <label class="mt-4 block text-sm font-medium text-indigo-950">加入身分<select x-model="inviteRole" class="mt-1 min-h-11 w-full rounded-xl border-indigo-200 bg-white"><option value="manager">管理者</option><option value="staff">工作人員</option><option value="score_manager">成績管理員</option><option value="judge">裁判</option><option value="chief_judge">主裁判</option><option value="volunteer">志工</option><option value="viewer">只讀</option></select></label>
-                <div class="mt-3 flex justify-center rounded-xl bg-white p-3">@foreach($staffInviteQrs as $role => $qr)<img x-show="inviteRole === '{{ $role }}'" src="{{ $qr }}" alt="{{ $role }} 工作團隊邀請 QR Code" class="h-52 w-52 max-w-full">@endforeach</div>
+        <div class="mt-4 grid gap-5 md:grid-cols-[minmax(18rem,.85fr)_minmax(0,1.15fr)] md:items-start">
+            <div>
+                <div class="rounded-2xl bg-indigo-50 p-4 sm:p-5">
+                    <div class="mx-auto max-w-md">
+                        <div class="text-center"><h3 class="font-semibold text-indigo-950">掃描 QR Code 加入</h3><p class="mt-1 text-sm text-indigo-700">選擇身分後，讓成員掃描並登入確認。邀請 24 小時後失效。</p></div>
+                        <label class="mt-4 block text-sm font-medium text-indigo-950">加入身分<select x-model="inviteRole" class="mt-1 min-h-12 w-full rounded-xl border-indigo-200 bg-white text-base"><option value="manager">管理者</option><option value="staff">工作人員</option><option value="score_manager">成績管理員</option><option value="judge">裁判</option><option value="chief_judge">主裁判</option><option value="volunteer">志工</option><option value="viewer">只讀</option></select></label>
+                        <div class="mt-3 flex justify-center rounded-xl bg-white p-3">@foreach($staffInviteQrs as $role => $qr)<img x-show="inviteRole === '{{ $role }}'" src="{{ $qr }}" alt="{{ $role }} 工作團隊邀請 QR Code" class="h-52 w-52 max-w-full md:h-56 md:w-56">@endforeach</div>
+                    </div>
+                </div>
+
+                <details class="group mt-4 rounded-xl border bg-gray-50 px-4 py-2">
+                    <summary class="flex min-h-12 cursor-pointer list-none items-center justify-between gap-3 text-sm font-medium"><span>手動輸入 Email 加入</span><span class="text-gray-400 transition group-open:rotate-180">⌄</span></summary>
+                    <form method="POST" action="{{ route('organizer.events.staff.store',$event) }}" class="grid gap-3 border-t py-4">@csrf<input type="email" name="email" required class="min-h-12 min-w-0 w-full rounded-xl border-gray-300 text-base" placeholder="已註冊會員 Email"><select name="role" class="min-h-12 w-full rounded-xl border-gray-300 text-base"><option value="manager">管理者</option><option value="staff">工作人員</option><option value="score_manager">成績管理員</option><option value="judge">裁判</option><option value="chief_judge">主裁判</option><option value="volunteer">志工</option><option value="viewer">只讀</option></select><button class="min-h-12 rounded-xl bg-gray-900 px-4 text-sm text-white">加入</button></form>
+                </details>
             </div>
+            <div class="rounded-2xl border p-4 sm:p-5"><div class="flex items-center justify-between gap-3"><h3 class="font-semibold">目前工作團隊</h3><span class="text-xs text-gray-500">{{ $event->staff->where('status', 'active')->count() }} 人</span></div><div class="mt-3 divide-y">@foreach($event->staff as $staff)<div class="flex min-h-16 items-center justify-between gap-3 py-3 text-sm"><div class="min-w-0"><p class="break-words font-medium">{{ $staff->user?->display_name }}</p><p class="text-xs text-gray-500">{{ ['owner'=>'擁有者','manager'=>'管理者','staff'=>'工作人員','score_manager'=>'成績管理員','judge'=>'裁判','chief_judge'=>'主裁判','volunteer'=>'志工','viewer'=>'只讀'][$staff->role] ?? $staff->role }}・{{ $staff->status }}</p></div>@if($staff->role!=='owner' && $staff->status==='active')<form method="POST" action="{{ route('organizer.events.staff.revoke',[$event,$staff]) }}">@csrf @method('PATCH')<button class="min-h-11 rounded-xl px-3 text-xs text-red-600">撤銷</button></form>@endif</div>@endforeach</div></div>
         </div>
-
-        <details class="group mt-4 rounded-xl border bg-gray-50 px-4 py-2">
-            <summary class="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 text-sm font-medium"><span>手動輸入 Email 加入</span><span class="text-gray-400 transition group-open:rotate-180">⌄</span></summary>
-            <form method="POST" action="{{ route('organizer.events.staff.store',$event) }}" class="grid gap-3 border-t py-4 sm:grid-cols-[minmax(0,1fr)_9rem_auto]">@csrf<input type="email" name="email" required class="min-h-11 min-w-0 w-full rounded-xl border-gray-300 text-base sm:text-sm" placeholder="已註冊會員 Email"><select name="role" class="min-h-11 w-full rounded-xl border-gray-300 text-base sm:text-sm"><option value="manager">管理者</option><option value="staff">工作人員</option><option value="score_manager">成績管理員</option><option value="judge">裁判</option><option value="chief_judge">主裁判</option><option value="volunteer">志工</option><option value="viewer">只讀</option></select><button class="min-h-11 rounded-xl bg-gray-900 px-4 text-sm text-white">加入</button></form>
-        </details>
-
-        <div class="mt-5 divide-y">@foreach($event->staff as $staff)<div class="flex items-center justify-between gap-3 py-3 text-sm"><div class="min-w-0"><p class="break-words font-medium">{{ $staff->user?->display_name }}</p><p class="text-xs text-gray-500">{{ ['owner'=>'擁有者','manager'=>'管理者','staff'=>'工作人員','score_manager'=>'成績管理員','judge'=>'裁判','chief_judge'=>'主裁判','volunteer'=>'志工','viewer'=>'只讀'][$staff->role] ?? $staff->role }}・{{ $staff->status }}</p></div>@if($staff->role!=='owner' && $staff->status==='active')<form method="POST" action="{{ route('organizer.events.staff.revoke',[$event,$staff]) }}">@csrf @method('PATCH')<button class="min-h-11 rounded-xl px-3 text-xs text-red-600">撤銷</button></form>@endif</div>@endforeach</div>
     </section>
     @endcan
 
