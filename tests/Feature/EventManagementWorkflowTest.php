@@ -190,6 +190,7 @@ class EventManagementWorkflowTest extends TestCase
         $this->actingAs($owner)->post(route('organizer.events.results.verify',$event),['registration_ids'=>[$registration->id]])->assertForbidden();
         $this->actingAs($scoreManager)->post(route('organizer.events.results.verify',$event),['registration_ids'=>[$registration->id]])->assertSessionHas('success');
         $this->assertNotNull($registration->fresh()->score_verified_at);
+        $this->createScoringTarget($event, $group, $owner);
         $this->actingAs($owner)->post(route('organizer.events.results.publish',[$event,$group]))->assertSessionHas('success');
         $this->assertNotNull($registration->fresh()->result_published_at);
         $this->assertNotNull($event->fresh()->completed_at);
@@ -257,7 +258,7 @@ class EventManagementWorkflowTest extends TestCase
             ->assertSee('靶號')
             ->assertSee('總覽')
             ->assertSee('計分')
-            ->assertSee('核對並送出本趟')
+            ->assertSee('送出')
             ->assertSee($members[0]->name)
             ->assertSee($members[1]->name);
 
@@ -299,5 +300,25 @@ class EventManagementWorkflowTest extends TestCase
     private function registration(Event $event, EventGroup $group, User $member): EventRegistration
     {
         return EventRegistration::create(['event_id'=>$event->id,'event_group_id'=>$group->id,'user_id'=>$member->id,'name'=>$member->name,'email'=>$member->email,'status'=>'registered']);
+    }
+
+    private function createScoringTarget(Event $event, EventGroup $group, User $owner): void
+    {
+        $session = EventScoringSession::create([
+            'event_id'=>$event->id,
+            'event_group_id'=>$group->id,
+            'name'=>$group->name.' 資格賽',
+            'total_arrows'=>$group->arrow_count ?: 36,
+            'arrows_per_end'=>$group->arrows_per_end ?: 6,
+            'athletes_per_target'=>4,
+            'status'=>'completed',
+            'created_by'=>$owner->id,
+        ]);
+        $session->targets()->create([
+            'target_number'=>1,
+            'access_token'=>(string) \Illuminate\Support\Str::uuid(),
+            'device_pin'=>'123456',
+            'status'=>'completed',
+        ]);
     }
 }

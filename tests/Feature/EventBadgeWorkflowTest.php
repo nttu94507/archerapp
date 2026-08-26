@@ -8,6 +8,7 @@ use App\Models\EventBadgeClaim;
 use App\Models\EventGroup;
 use App\Models\EventRegistration;
 use App\Models\EventScoreEntry;
+use App\Models\EventScoringSession;
 use App\Models\EventStaff;
 use App\Models\OrganizerProfile;
 use App\Models\User;
@@ -305,6 +306,7 @@ class EventBadgeWorkflowTest extends TestCase
     {
         [$owner,$event]=$this->eventWithOwner(); $group=EventGroup::factory()->create(['event_id'=>$event->id]); $members=User::factory()->count(2)->create();
         $registrations=[]; foreach([50,40] as $i=>$score){$registrations[$i]=EventRegistration::create(['event_id'=>$event->id,'event_group_id'=>$group->id,'user_id'=>$members[$i]->id,'name'=>$members[$i]->name,'email'=>$members[$i]->email,'status'=>'checked_in','score_submitted_at'=>now(),'score_verified_at'=>now()]); EventScoreEntry::create(['event_id'=>$event->id,'event_registration_id'=>$registrations[$i]->id,'user_id'=>$members[$i]->id,'end_number'=>1,'scores'=>[$score],'end_total'=>$score]);}
+        $this->createScoringTarget($event, $group, $owner);
         $badge=EventBadge::create(['event_id'=>$event->id,'event_group_id'=>$group->id,'created_by'=>$owner->id,'name'=>'金牌修正','type'=>'special','eligibility'=>'scored','award_rule'=>'placement','placement'=>1]);
         $this->actingAs($owner)->post(route('organizer.events.results.publish',[$event,$group]));
         EventScoreEntry::where('event_registration_id',$registrations[1]->id)->update(['end_total'=>60,'scores'=>[60]]);
@@ -382,6 +384,7 @@ class EventBadgeWorkflowTest extends TestCase
             $registration = EventRegistration::create(['event_id'=>$event->id,'event_group_id'=>$group->id,'user_id'=>$members[$index]->id,'name'=>$members[$index]->name,'email'=>$members[$index]->email,'status'=>'checked_in','score_submitted_at'=>now(),'score_verified_at'=>now()]);
             EventScoreEntry::create(['event_id'=>$event->id,'event_registration_id'=>$registration->id,'user_id'=>$members[$index]->id,'end_number'=>1,'scores'=>[$score],'end_total'=>$score]);
         }
+        $this->createScoringTarget($event, $group, $owner);
         $badge = EventBadge::create(['event_id'=>$event->id,'event_group_id'=>$group->id,'created_by'=>$owner->id,'name'=>'金牌','type'=>'special','eligibility'=>'scored','award_rule'=>'placement','placement'=>1]);
 
         $this->actingAs($owner)->post(route('organizer.events.results.publish',[$event,$group]))->assertSessionHas('success');
@@ -621,6 +624,26 @@ class EventBadgeWorkflowTest extends TestCase
             'name' => $user->name,
             'email' => $user->email,
             'status' => $status,
+        ]);
+    }
+
+    private function createScoringTarget(Event $event, EventGroup $group, User $owner): void
+    {
+        $session = EventScoringSession::create([
+            'event_id'=>$event->id,
+            'event_group_id'=>$group->id,
+            'name'=>$group->name.' 資格賽',
+            'total_arrows'=>$group->arrow_count ?: 36,
+            'arrows_per_end'=>$group->arrows_per_end ?: 6,
+            'athletes_per_target'=>4,
+            'status'=>'completed',
+            'created_by'=>$owner->id,
+        ]);
+        $session->targets()->create([
+            'target_number'=>1,
+            'access_token'=>(string) \Illuminate\Support\Str::uuid(),
+            'device_pin'=>'123456',
+            'status'=>'completed',
         ]);
     }
 }

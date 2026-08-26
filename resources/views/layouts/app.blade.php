@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <title>@yield('title', 'Archery Leaderboard')</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         // 可選：自訂主題/色票/斷點
@@ -18,8 +18,23 @@
     </script>
     <script src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
     <style>
+        html {
+            overflow-x: hidden;
+            -webkit-text-size-adjust: 100%;
+        }
+
+        body {
+            min-width: 0;
+            overflow-x: hidden;
+            -webkit-font-smoothing: antialiased;
+        }
+
         /* iPad 直向與橫向：保留精簡 Header，完整導覽改用可收合側邊欄。 */
         @media (min-width: 768px) and (max-width: 1366px) and (any-pointer: coarse) {
+            body {
+                min-height: 100dvh;
+            }
+
             #primary-navigation,
             #desktop-account-navigation {
                 display: none !important;
@@ -35,8 +50,89 @@
             }
 
             #header-inner {
+                max-width: none;
+                padding-left: max(1.25rem, env(safe-area-inset-left));
+                padding-right: max(1.25rem, env(safe-area-inset-right));
                 padding-top: 0.625rem;
                 padding-bottom: 0.625rem;
+            }
+
+            #mobile-drawer {
+                padding-left: env(safe-area-inset-left);
+            }
+
+            main {
+                width: 100%;
+                min-width: 0;
+            }
+
+            main :where(input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]), select, textarea, button, summary) {
+                min-height: 44px !important;
+            }
+
+            main :where(input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]), select, textarea) {
+                font-size: 16px !important;
+            }
+
+            main :where(.overflow-x-auto, .overflow-auto) {
+                max-width: 100%;
+                overscroll-behavior-inline: contain;
+                -webkit-overflow-scrolling: touch;
+            }
+
+            main table {
+                white-space: nowrap;
+            }
+
+            main :where(th, td) {
+                padding-top: 0.75rem;
+                padding-bottom: 0.75rem;
+            }
+
+            main :where(.max-w-3xl, .max-w-4xl, .max-w-5xl, .max-w-6xl, .max-w-7xl) {
+                width: 100%;
+            }
+
+            footer {
+                padding-bottom: max(1.5rem, env(safe-area-inset-bottom));
+            }
+        }
+
+        /* iPad 直向：避免桌機型多欄表單與資訊卡被壓得太窄。 */
+        @media (min-width: 768px) and (max-width: 1023px) and (any-pointer: coarse) {
+            main .md\:grid-cols-3,
+            main .md\:grid-cols-4,
+            main .md\:grid-cols-5,
+            main .md\:grid-cols-7 {
+                grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+            }
+
+            main .md\:grid-cols-6 {
+                grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+            }
+
+            main .md\:col-span-3,
+            main .md\:col-span-4,
+            main .md\:col-span-5,
+            main .md\:col-span-6,
+            main .md\:col-span-7 {
+                grid-column: 1 / -1 !important;
+            }
+        }
+
+        /* iPad 橫向：桌機四欄以上的區塊維持可閱讀的兩至三欄。 */
+        @media (min-width: 1024px) and (max-width: 1180px) and (any-pointer: coarse) {
+            main .lg\:grid-cols-3,
+            main .lg\:grid-cols-4,
+            main .lg\:grid-cols-5,
+            main .lg\:grid-cols-6 {
+                grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+            }
+
+            main .xl\:grid-cols-4,
+            main .xl\:grid-cols-5,
+            main .xl\:grid-cols-6 {
+                grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
             }
         }
     </style>
