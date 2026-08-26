@@ -64,7 +64,7 @@
             <section id="correction-reason" class="rounded-2xl border bg-white p-4 shadow-sm">
                 <label class="text-sm font-medium">修正原因 *</label>
                 <textarea name="correction_reason" required maxlength="500" rows="3" class="mt-2 w-full rounded-xl border-gray-300" placeholder="例如：第 4 趟紙本記分卡核對為 10、9、9、8、8、7">{{ old('correction_reason') }}</textarea>
-                <p class="mt-2 text-xs text-amber-700">儲存後會撤銷主辦確認及該靶位裁判簽核，必須重新核對後才能發布。</p>
+                <p class="mt-2 text-xs text-amber-700">儲存後會撤銷成績核准及該靶位裁判簽核，必須重新核對後才能發布。</p>
                 <button class="mt-4 min-h-12 w-full rounded-xl bg-indigo-600 px-5 text-sm font-semibold text-white">儲存成績修正</button>
             </section>
         @endif

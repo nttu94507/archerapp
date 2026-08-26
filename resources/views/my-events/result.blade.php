@@ -12,7 +12,7 @@
         <a href="{{ route('my-events.index') }}" class="inline-flex min-h-11 items-center text-sm font-medium text-indigo-600">← 返回我的賽事</a>
         <div class="mt-2 flex flex-wrap items-start justify-between gap-3">
             <div>
-                <span class="inline-flex rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">主辦方已確認・正式成績</span>
+                <span class="inline-flex rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">成績已核准・正式成績</span>
                 <h1 class="mt-3 text-2xl font-bold text-gray-900">{{ $registration->event->name }}</h1>
                 <p class="mt-1 text-sm text-gray-500">{{ $registration->event_group?->name }}{{ $targetPosition ? ' / 靶位 '.$targetPosition : '' }}</p>
             </div>

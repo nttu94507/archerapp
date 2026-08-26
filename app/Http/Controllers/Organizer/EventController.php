@@ -81,6 +81,12 @@ class EventController extends Controller
         $event->load(['groups' => fn ($query) => $query->withCount('registrations'), 'staff.user'])
             ->loadCount([
                 'registrations', 'badges',
+                'registrations as active_registrations_count' => fn ($query) => $query
+                    ->whereIn('status', ['registered', 'checked_in']),
+                'registrations as pending_payments_count' => fn ($query) => $query
+                    ->whereIn('status', ['registered', 'checked_in'])
+                    ->whereHas('event_group', fn ($group) => $group->where('fee', '>', 0))
+                    ->where('payment_status', 'pending'),
                 'registrations as verified_results_count' => fn ($query) => $query->whereNotNull('score_verified_at'),
             ]);
         $statusCounts = $event->registrations()->selectRaw('status, count(*) as total')->groupBy('status')->pluck('total', 'status');

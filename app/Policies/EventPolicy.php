@@ -47,6 +47,11 @@ class EventPolicy
         return $this->canOperate($user) && $this->hasRole($user, $event, ['owner', 'manager', 'score_manager', 'chief_judge']);
     }
 
+    public function approveResults(User $user, Event $event): bool
+    {
+        return $this->canOperate($user) && $this->hasRole($user, $event, ['score_manager', 'chief_judge']);
+    }
+
     public function manageStaff(User $user, Event $event): bool
     {
         return $this->canOperate($user) && $this->hasRole($user, $event, ['owner', 'manager']);

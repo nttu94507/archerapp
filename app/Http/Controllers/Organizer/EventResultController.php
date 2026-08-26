@@ -53,9 +53,10 @@ class EventResultController extends Controller
         });
 
         $canManageResults = request()->user()->can('manageScores', $event);
+        $canApproveResults = request()->user()->can('approveResults', $event);
         $canCorrectScores = request()->user()->can('manageScoreCorrections', $event);
 
-        return view('organizer.results.index', compact('event', 'registrations', 'groupStates', 'canManageResults', 'canCorrectScores'));
+        return view('organizer.results.index', compact('event', 'registrations', 'groupStates', 'canManageResults', 'canApproveResults', 'canCorrectScores'));
     }
 
     public function edit(Event $event, EventRegistration $registration): View
@@ -198,12 +199,12 @@ class EventResultController extends Controller
         }
 
         return redirect()->route('organizer.events.results.index', $event)
-            ->with('success', $registration->name.'的成績已由 '.$result['old_total'].' 分修正為 '.$result['new_total'].' 分，請重新進行裁判及主辦確認。');
+            ->with('success', $registration->name.'的成績已由 '.$result['old_total'].' 分修正為 '.$result['new_total'].' 分，請重新進行裁判簽核與成績核准。');
     }
 
     public function verify(Request $request, Event $event): RedirectResponse
     {
-        $this->authorize('manageScores', $event);
+        $this->authorize('approveResults', $event);
         $validated = $request->validate(['registration_ids'=>['required','array','min:1'],'registration_ids.*'=>['integer']]);
         $items = $event->registrations()->with(['event_group','scoreEntries'])->whereIn('id',$validated['registration_ids'])->get();
         $dnsCount = 0;
@@ -217,12 +218,12 @@ class EventResultController extends Controller
             ]);
         }
         EventAuditLog::create(['event_id'=>$event->id,'user_id'=>$request->user()->id,'action'=>'results.verified','metadata'=>['count'=>$items->count(),'dns_count'=>$dnsCount]]);
-        return back()->with('success','已確認 '.$items->count().' 筆成績'.($dnsCount ? '，其中 '.$dnsCount.' 位標記為未出賽（DNS）' : '').'。');
+        return back()->with('success','已核准 '.$items->count().' 筆成績'.($dnsCount ? '，其中 '.$dnsCount.' 位標記為未出賽（DNS）' : '').'。');
     }
 
     public function verifyGroup(Request $request, Event $event, EventGroup $group): RedirectResponse
     {
-        $this->authorize('manageScores', $event);
+        $this->authorize('approveResults', $event);
         abort_unless($group->event_id === $event->id, 404);
 
         $result = DB::transaction(function () use ($request, $event, $group): array {
@@ -236,7 +237,7 @@ class EventResultController extends Controller
                 ->get();
 
             if ($registrations->isEmpty()) {
-                return ['error'=>'此組別沒有可確認的選手。'];
+                return ['error'=>'此組別沒有可核准的選手。'];
             }
 
             $sessions = EventScoringSession::query()
@@ -275,7 +276,7 @@ class EventResultController extends Controller
             return back()->with('error', $result['error']);
         }
 
-        return back()->with('success', $group->name.'已確認 '.$result['count'].' 筆成績，可以進行正式發布。');
+        return back()->with('success', $group->name.'已核准 '.$result['count'].' 筆成績，可以進行正式發布。');
     }
 
     public function publish(Request $request, Event $event, EventGroup $group, EventBadgeAwardService $badges): RedirectResponse
@@ -309,7 +310,7 @@ class EventResultController extends Controller
                 abort_if($unconfirmedTargets > 0, 422, '此組別還有 '.$unconfirmedTargets.' 個靶位尚未經主裁判簽核。');
             }
             $unverified = $registrations->whereNull('score_verified_at')->count();
-            abort_if($unverified > 0, 422, '此組別還有 '.$unverified.' 位選手尚未經主辦方確認。');
+            abort_if($unverified > 0, 422, '此組別還有 '.$unverified.' 位選手尚未經成績管理員或主裁判核准。');
 
             $now = now();
             $unpublished = $registrations->whereNull('result_published_at');

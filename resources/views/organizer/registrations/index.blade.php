@@ -146,10 +146,6 @@
         </form>
     @endif
 
-    <section class="flex flex-col gap-4 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
-        <div><h2 class="font-semibold text-emerald-950">比賽當天現場報到</h2><p class="mt-1 text-sm text-emerald-700">使用獨立報到模式連續掃描，不需要每位選手重新載入頁面。</p></div>
-        <a href="{{ route('organizer.events.check-in.index', $event) }}" class="inline-flex min-h-11 shrink-0 items-center justify-center rounded-xl bg-emerald-600 px-5 text-sm font-medium text-white">開啟快速報到</a>
-    </section>
 </div>
 
 <script>

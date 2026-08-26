@@ -81,6 +81,6 @@ class EventBadgeClaimController extends Controller
         }
 
         $hasScore = (clone $activeRegistrations)->whereNotNull('score_verified_at')->exists();
-        return [$hasScore, $hasScore ? '已有主辦方確認成績' : '尚無主辦方確認成績'];
+        return [$hasScore, $hasScore ? '已有正式核准成績' : '尚無正式核准成績'];
     }
 }

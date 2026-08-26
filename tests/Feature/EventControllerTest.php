@@ -12,6 +12,21 @@ class EventControllerTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_event_routes_use_random_uuid_instead_of_incrementing_id(): void
+    {
+        $event = Event::factory()->create();
+
+        $this->assertNotNull($event->uuid);
+        $this->assertMatchesRegularExpression(
+            '/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i',
+            $event->uuid
+        );
+        $this->assertSame(url('/events/'.$event->uuid), route('events.show', $event));
+
+        $this->get(route('events.show', $event))->assertOk();
+        $this->get('/events/'.$event->id)->assertNotFound();
+    }
+
     public function test_index_supports_keyword_mode_and_verified_filters(): void
     {
         $user = User::factory()->create(['profile_completed_at' => now()]);

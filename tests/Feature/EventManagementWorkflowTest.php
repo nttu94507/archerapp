@@ -181,7 +181,11 @@ class EventManagementWorkflowTest extends TestCase
         $registration->update(['score_submitted_at'=>now()]);
         EventScoreEntry::create(['event_id'=>$event->id,'event_registration_id'=>$registration->id,'user_id'=>$member->id,'end_number'=>1,'scores'=>[10,10,9,9,8,8],'end_total'=>54]);
 
-        $this->actingAs($owner)->post(route('organizer.events.results.verify',$event),['registration_ids'=>[$registration->id]])->assertSessionHas('success');
+        $scoreManager = User::factory()->create();
+        EventStaff::create(['event_id'=>$event->id,'user_id'=>$scoreManager->id,'role'=>'score_manager','status'=>'active','invited_by'=>$owner->id]);
+
+        $this->actingAs($owner)->post(route('organizer.events.results.verify',$event),['registration_ids'=>[$registration->id]])->assertForbidden();
+        $this->actingAs($scoreManager)->post(route('organizer.events.results.verify',$event),['registration_ids'=>[$registration->id]])->assertSessionHas('success');
         $this->assertNotNull($registration->fresh()->score_verified_at);
         $this->actingAs($owner)->post(route('organizer.events.results.publish',[$event,$group]))->assertSessionHas('success');
         $this->assertNotNull($registration->fresh()->result_published_at);
