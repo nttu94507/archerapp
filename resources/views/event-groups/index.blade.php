@@ -4,6 +4,11 @@
 
 @section('content')
     <div class="mx-auto max-w-6xl px-4 py-8">
+        <a href="{{ route('organizer.events.show', $event) }}"
+           class="mb-3 inline-flex min-h-11 items-center text-sm font-medium text-indigo-600 hover:text-indigo-500">
+            ← 返回賽事管理
+        </a>
+
         <div class="mb-4 flex items-start justify-between">
             <div>
                 <h1 class="text-2xl font-bold">組別管理 — {{ $event->name }}</h1>
