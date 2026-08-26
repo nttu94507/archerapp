@@ -12,15 +12,50 @@
 
     <section class="rounded-2xl border bg-white p-4 shadow-sm"><div class="flex items-center justify-between gap-3"><div class="min-w-0"><p class="text-xs text-gray-500">賽事狀態</p><p class="font-semibold">{{ ['draft'=>'草稿（尚未公開）','pending'=>'舊審核資料（可直接發布）','approved'=>'已發布','rejected'=>'已下架','archived'=>'已封存'][$event->status] ?? $event->status }}</p>@if($event->review_note)<p class="mt-1 text-xs text-red-600">平台介入備註：{{ $event->review_note }}</p>@endif</div>@can('update',$event)<div class="grid shrink-0 grid-cols-2 gap-2">@if(!$event->isPublished() && !$event->cancelled_at)<form method="POST" action="{{ route('organizer.events.submit',$event) }}" onsubmit="return confirm('發布後所有會員都能查看此賽事，確定發布？')">@csrf<button class="min-h-10 w-full rounded-xl bg-indigo-600 px-3 text-xs font-medium text-white sm:px-4 sm:text-sm">發布</button></form>@elseif($event->isPublished())<form method="POST" action="{{ route('organizer.events.unpublish',$event) }}" onsubmit="return confirm('下架後會員將無法查看與報名，確定下架？')">@csrf<button class="min-h-10 w-full rounded-xl border border-amber-300 px-3 text-xs font-medium text-amber-700 sm:px-4 sm:text-sm">下架</button></form>@endif @if(!$event->cancelled_at)<form method="POST" action="{{ route('organizer.events.cancel',$event) }}" onsubmit="return confirm('取消賽事後將停止公開報名，確定取消？')">@csrf<button class="min-h-10 w-full rounded-xl border border-red-200 px-3 text-xs text-red-600 sm:px-4 sm:text-sm">取消</button></form>@endif</div>@endcan</div></section>
 
-    <section><h2 class="mb-3 text-lg font-semibold">賽事管理</h2><div class="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
-        @can('manageGroups',$event)<a href="{{ route('events.groups.index',$event) }}" class="flex min-h-28 flex-col justify-between rounded-2xl border bg-white p-4 hover:border-indigo-300 sm:p-5"><div><p class="text-2xl font-semibold">{{ $event->groups->count() }}</p><h3 class="mt-1 font-semibold">組別</h3></div><p class="mt-3 text-xs text-gray-500">設定組別與規則</p></a>@endcan
-        @can('manageRegistrations',$event)<a href="{{ route('organizer.events.registrations.index',$event) }}" class="flex min-h-28 flex-col justify-between rounded-2xl border bg-white p-4 hover:border-indigo-300 sm:p-5"><div class="flex items-end gap-3"><div><p class="text-2xl font-semibold">{{ $event->active_registrations_count }}</p><p class="text-xs text-gray-500">有效報名</p></div><div><p class="text-lg font-semibold text-amber-700">{{ $event->pending_payments_count }}</p><p class="text-xs text-gray-500">待繳費</p></div></div><h3 class="mt-3 font-semibold">報名與繳費</h3></a>@endcan
-        @can('manageRegistrations',$event)<a href="{{ route('organizer.events.check-in.index',$event) }}" class="flex min-h-28 flex-col justify-between rounded-2xl border border-emerald-200 bg-emerald-50 p-4 hover:border-emerald-400 sm:p-5"><div><p class="text-2xl font-semibold text-emerald-700">{{ $statusCounts['checked_in'] ?? 0 }}</p><h3 class="mt-1 font-semibold text-emerald-950">現場報到</h3></div><p class="mt-3 text-xs text-emerald-700">掃碼或搜尋選手完成報到</p></a>@endcan
-        @can('manageScores',$event)<a href="{{ route('organizer.events.scoring.index',$event) }}" class="flex min-h-28 flex-col justify-between rounded-2xl border bg-white p-4 hover:border-indigo-300 sm:p-5"><div><p class="text-2xl font-semibold">{{ $event->verified_results_count }}</p><h3 class="mt-1 font-semibold">靶位計分</h3></div><p class="mt-3 text-xs text-gray-500">排靶、設備與計分進度</p></a>@endcan
-        @can('viewResults',$event)<a href="{{ route('organizer.events.results.index',$event) }}" class="flex min-h-28 flex-col justify-between rounded-2xl border bg-white p-4 hover:border-indigo-300 sm:p-5"><div><p class="text-2xl font-semibold">{{ $event->verified_results_count }}</p><h3 class="mt-1 font-semibold">成績核對</h3></div><p class="mt-3 text-xs text-gray-500">查看、修正與發布成績</p></a>@endcan
-        @can('manageJudging',$event)<a href="{{ route('organizer.events.judging.index',$event) }}" class="flex min-h-28 flex-col justify-between rounded-2xl border bg-white p-4 hover:border-indigo-300 sm:p-5"><div><p class="text-2xl font-semibold">⚖</p><h3 class="mt-1 font-semibold">裁判工作台</h3></div><p class="mt-3 text-xs text-gray-500">核對靶位、標記爭議與簽核</p></a>@endcan
-        @if(auth()->user()->isAdmin() || auth()->user()->can('manageStaff',$event))<a href="{{ route('organizer.events.badges.index',$event) }}" class="flex min-h-28 flex-col justify-between rounded-2xl border bg-white p-4 hover:border-indigo-300 sm:p-5"><div><p class="text-2xl font-semibold">{{ $event->badges_count }}</p><h3 class="mt-1 font-semibold">Badge 管理</h3></div><p class="mt-3 text-xs text-gray-500">設定與發放</p></a>@endif
-    </div></section>
+    @if(
+        auth()->user()->can('manageGroups', $event)
+        || auth()->user()->can('manageRegistrations', $event)
+        || auth()->user()->can('manageScores', $event)
+        || auth()->user()->can('manageJudging', $event)
+        || auth()->user()->can('viewResults', $event)
+        || auth()->user()->can('manageStaff', $event)
+    )
+    <section>
+        <div class="mb-3"><h2 class="text-lg font-semibold">賽事管理</h2><p class="mt-1 text-xs text-gray-500">依照賽事流程選擇要處理的工作</p></div>
+        <div class="grid gap-4 lg:grid-cols-3">
+            @if(auth()->user()->can('manageGroups', $event) || auth()->user()->can('manageRegistrations', $event))
+            <div class="overflow-hidden rounded-2xl border border-indigo-100 bg-white shadow-sm">
+                <div class="flex items-center gap-3 bg-indigo-50 px-4 py-3 sm:px-5"><span class="flex h-8 w-8 items-center justify-center rounded-full bg-indigo-600 text-sm font-bold text-white">1</span><div><h3 class="font-semibold text-indigo-950">賽前準備</h3><p class="text-xs text-indigo-600">建立組別並處理選手報名</p></div></div>
+                <div class="divide-y px-4 sm:px-5">
+                    @can('manageGroups',$event)<a href="{{ route('events.groups.index',$event) }}" class="group flex min-h-20 items-center justify-between gap-3 py-3"><div class="min-w-0"><p class="font-semibold group-hover:text-indigo-700">組別管理</p><p class="mt-0.5 text-xs text-gray-500">設定組別、距離與箭數</p></div><div class="flex shrink-0 items-center gap-3"><span class="text-right"><strong class="block text-lg">{{ $event->groups->count() }}</strong><small class="text-gray-400">組</small></span><span class="text-gray-300 group-hover:text-indigo-500">›</span></div></a>@endcan
+                    @can('manageRegistrations',$event)<a href="{{ route('organizer.events.registrations.index',$event) }}" class="group flex min-h-20 items-center justify-between gap-3 py-3"><div class="min-w-0"><p class="font-semibold group-hover:text-indigo-700">報名與繳費</p><p class="mt-0.5 text-xs text-gray-500">名單、繳費與批次對帳</p></div><div class="flex shrink-0 items-center gap-3 text-right"><span><strong class="block text-lg">{{ $event->active_registrations_count }}</strong><small class="text-gray-400">有效報名</small></span>@if($event->pending_payments_count > 0)<span class="rounded-full bg-amber-100 px-2 py-1 text-xs font-medium text-amber-700">待繳 {{ $event->pending_payments_count }}</span>@endif<span class="text-gray-300 group-hover:text-indigo-500">›</span></div></a>@endcan
+                </div>
+            </div>
+            @endif
+
+            @if(auth()->user()->can('manageRegistrations', $event) || auth()->user()->can('manageScores', $event) || auth()->user()->can('manageJudging', $event))
+            <div class="overflow-hidden rounded-2xl border border-emerald-100 bg-white shadow-sm">
+                <div class="flex items-center gap-3 bg-emerald-50 px-4 py-3 sm:px-5"><span class="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-600 text-sm font-bold text-white">2</span><div><h3 class="font-semibold text-emerald-950">現場執行</h3><p class="text-xs text-emerald-600">報到、排靶、計分與裁判核對</p></div></div>
+                <div class="divide-y px-4 sm:px-5">
+                    @can('manageRegistrations',$event)<a href="{{ route('organizer.events.check-in.index',$event) }}" class="group flex min-h-20 items-center justify-between gap-3 py-3"><div class="min-w-0"><p class="font-semibold group-hover:text-emerald-700">現場報到</p><p class="mt-0.5 text-xs text-gray-500">掃描 QR Code 或搜尋選手</p></div><div class="flex shrink-0 items-center gap-3"><span class="text-right"><strong class="block text-lg text-emerald-700">{{ $statusCounts['checked_in'] ?? 0 }}</strong><small class="text-gray-400">已報到</small></span><span class="text-gray-300 group-hover:text-emerald-500">›</span></div></a>@endcan
+                    @can('manageScores',$event)<a href="{{ route('organizer.events.scoring.index',$event) }}" class="group flex min-h-20 items-center justify-between gap-3 py-3"><div class="min-w-0"><p class="font-semibold group-hover:text-emerald-700">靶位與計分</p><p class="mt-0.5 text-xs text-gray-500">排靶、設備綁定與計分進度</p></div><span class="shrink-0 text-gray-300 group-hover:text-emerald-500">›</span></a>@endcan
+                    @can('manageJudging',$event)<a href="{{ route('organizer.events.judging.index',$event) }}" class="group flex min-h-20 items-center justify-between gap-3 py-3"><div class="min-w-0"><p class="font-semibold group-hover:text-emerald-700">裁判工作台</p><p class="mt-0.5 text-xs text-gray-500">核對靶位、爭議與簽核</p></div><span class="shrink-0 text-gray-300 group-hover:text-emerald-500">›</span></a>@endcan
+                </div>
+            </div>
+            @endif
+
+            @if(auth()->user()->can('viewResults', $event) || auth()->user()->isAdmin() || auth()->user()->can('manageStaff', $event))
+            <div class="overflow-hidden rounded-2xl border border-violet-100 bg-white shadow-sm">
+                <div class="flex items-center gap-3 bg-violet-50 px-4 py-3 sm:px-5"><span class="flex h-8 w-8 items-center justify-center rounded-full bg-violet-600 text-sm font-bold text-white">3</span><div><h3 class="font-semibold text-violet-950">成績與成果</h3><p class="text-xs text-violet-600">核准、發布成績並發放成果</p></div></div>
+                <div class="divide-y px-4 sm:px-5">
+                    @can('viewResults',$event)<a href="{{ route('organizer.events.results.index',$event) }}" class="group flex min-h-20 items-center justify-between gap-3 py-3"><div class="min-w-0"><p class="font-semibold group-hover:text-violet-700">成績核對與發布</p><p class="mt-0.5 text-xs text-gray-500">查看、修正、核准與分組發布</p></div><div class="flex shrink-0 items-center gap-3"><span class="text-right"><strong class="block text-lg text-violet-700">{{ $event->verified_results_count }}</strong><small class="text-gray-400">已核准</small></span><span class="text-gray-300 group-hover:text-violet-500">›</span></div></a>@endcan
+                    @if(auth()->user()->isAdmin() || auth()->user()->can('manageStaff',$event))<a href="{{ route('organizer.events.badges.index',$event) }}" class="group flex min-h-20 items-center justify-between gap-3 py-3"><div class="min-w-0"><p class="font-semibold group-hover:text-violet-700">Badge 管理</p><p class="mt-0.5 text-xs text-gray-500">設定條件並發放賽事 Badge</p></div><div class="flex shrink-0 items-center gap-3"><span class="text-right"><strong class="block text-lg">{{ $event->badges_count }}</strong><small class="text-gray-400">個</small></span><span class="text-gray-300 group-hover:text-violet-500">›</span></div></a>@endif
+                </div>
+            </div>
+            @endif
+        </div>
+    </section>
+    @endif
 
     @can('manageStaff',$event)
     <section class="rounded-2xl border bg-white p-4 sm:p-5" x-data="{ inviteRole: 'staff' }">
