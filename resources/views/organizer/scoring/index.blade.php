@@ -8,10 +8,9 @@
         <div>
             <a href="{{ route('organizer.events.show',$event) }}" class="inline-flex min-h-11 items-center text-sm font-medium text-indigo-600">← 返回賽事工作台</a>
             <p class="text-xs font-semibold uppercase tracking-widest text-indigo-600">Target scoring</p>
-            <h1 class="mt-1 text-2xl font-bold">靶位共用設備計分</h1>
+            <h1 class="mt-1 text-2xl font-bold">靶位列表</h1>
             <p class="mt-1 text-sm text-gray-500">依組別自動排靶，每台設備負責同靶 2～4 位選手。</p>
         </div>
-        <a href="{{ route('organizer.events.results.index',$event) }}" class="inline-flex min-h-11 items-center justify-center rounded-xl border px-5 text-sm font-medium">前往成績核對與發布</a>
     </div>
 
     @if(session('success'))<div class="rounded-xl bg-green-50 p-4 text-sm text-green-700">{{ session('success') }}</div>@endif
@@ -25,8 +24,16 @@
     @endif
 
     <section class="rounded-2xl border bg-white p-4 shadow-sm sm:p-6">
-        <h2 class="font-semibold">全部組別排靶</h2>
-        <p class="mt-1 text-sm text-gray-500">系統會一次處理所有組別，依姓名將已報名或已報到選手排入 1A、1B…。無選手組別會略過；成功後所有組別立即截止報名，且整場只能執行一次。</p>
+        <div class="flex items-start justify-between gap-3">
+            <h2 class="font-semibold">全部組別排靶位</h2>
+            <details class="group relative shrink-0">
+                <summary class="flex h-11 w-11 cursor-pointer list-none items-center justify-center rounded-full border bg-gray-50 text-sm font-bold text-gray-500 hover:bg-gray-100" aria-label="查看全部組別排靶說明">i</summary>
+                <div class="absolute right-0 z-20 mt-2 w-72 max-w-[calc(100vw-3rem)] rounded-xl border bg-white p-4 text-sm leading-6 text-gray-600 shadow-xl">
+                    <p class="font-semibold text-gray-900">排靶說明</p>
+                    <p class="mt-1">系統會一次處理所有組別，依姓名將已報名或已報到選手排入 1A、1B…。無選手組別會略過；成功後所有組別立即截止報名，且整場只能執行一次。</p>
+                </div>
+            </details>
+        </div>
         <div class="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
             @foreach($event->groups as $group)
                 <div class="flex items-center justify-between rounded-xl bg-gray-50 px-4 py-3 text-sm">
