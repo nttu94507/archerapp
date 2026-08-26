@@ -27,23 +27,33 @@
 
     <form id="score-correction-form" method="POST" action="{{ route('organizer.events.results.registrations.update', [$event, $registration]) }}" class="space-y-5 {{ $published ? '' : 'pb-72' }}" onsubmit="return confirm('儲存後會撤銷既有成績確認與裁判簽核，確定修正？')">
         @csrf @method('PATCH')
-        @foreach(range(1, $requiredEnds) as $end)
-            @if($twoRounds && in_array($end, [1, 7], true))
-                <h2 class="pt-2 text-lg font-semibold text-gray-900">{{ $end === 1 ? '上半局・第 1～6 趟' : '下半局・第 7～12 趟' }}</h2>
-            @endif
-            @php($entry = $entries->get($end))
-            <section class="score-end rounded-2xl border bg-white p-4 shadow-sm" data-end="{{ $end }}">
-                <div class="flex items-center justify-between"><h3 class="font-semibold">第 {{ $end }} 趟</h3><p class="end-total text-lg font-bold">{{ $entry?->end_total ?? 0 }} 分</p></div>
-                <div class="mt-3 grid gap-2" style="grid-template-columns: repeat({{ $arrowsPerEnd }}, minmax(0, 1fr));">
-                    @for($arrow = 0; $arrow < $arrowsPerEnd; $arrow++)
-                        @php($value = old('ends.'.$end.'.'.$arrow, $entry?->scores[$arrow] ?? ''))
-                        <input name="ends[{{ $end }}][]" value="{{ $value }}" readonly inputmode="none" @disabled($published)
-                               placeholder="＿" aria-label="第 {{ $end }} 趟第 {{ $arrow + 1 }} 箭"
-                               class="score-value min-h-11 min-w-0 touch-manipulation cursor-pointer select-none rounded-xl border-gray-300 px-1 text-center text-sm font-bold placeholder:text-gray-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500">
-                    @endfor
-                </div>
-            </section>
-        @endforeach
+        <div class="grid items-start gap-5 {{ $twoRounds ? 'lg:grid-cols-2' : '' }}">
+            @foreach($twoRounds ? [['上半局', 1, 6], ['下半局', 7, 12]] : [['成績明細', 1, $requiredEnds]] as [$roundLabel, $fromEnd, $toEnd])
+                <section class="overflow-hidden rounded-2xl border bg-white shadow-sm">
+                    <div class="flex items-center justify-between border-b bg-gray-50 px-4 py-3">
+                        <h2 class="font-semibold text-gray-900">{{ $roundLabel }}</h2>
+                        <span class="text-xs text-gray-500">{{ $toEnd - $fromEnd + 1 }} 趟・每趟 {{ $arrowsPerEnd }} 箭</span>
+                    </div>
+                    <div class="divide-y">
+                        @foreach(range($fromEnd, $toEnd) as $end)
+                            @php($entry = $entries->get($end))
+                            <div class="score-end grid grid-cols-[2.5rem_minmax(0,1fr)_3.5rem] items-center gap-2 px-3 py-3 sm:grid-cols-[3.5rem_minmax(0,1fr)_4rem] sm:px-4" data-end="{{ $end }}">
+                                <div class="text-center"><p class="text-[10px] text-gray-400">趟次</p><p class="font-bold text-gray-700">{{ $twoRounds ? ($end > 6 ? $end - 6 : $end) : $end }}</p></div>
+                                <div class="grid gap-1.5" style="grid-template-columns: repeat({{ $arrowsPerEnd }}, minmax(0, 1fr));">
+                                    @for($arrow = 0; $arrow < $arrowsPerEnd; $arrow++)
+                                        @php($value = old('ends.'.$end.'.'.$arrow, $entry?->scores[$arrow] ?? ''))
+                                        <input name="ends[{{ $end }}][]" value="{{ $value }}" readonly inputmode="none" @disabled($published)
+                                               placeholder="＿" aria-label="{{ $roundLabel }}第 {{ $twoRounds ? ($end > 6 ? $end - 6 : $end) : $end }} 趟第 {{ $arrow + 1 }} 箭"
+                                               class="score-value h-10 min-w-0 touch-manipulation cursor-pointer select-none rounded-lg border-gray-300 p-0 text-center text-sm font-bold placeholder:text-gray-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500">
+                                    @endfor
+                                </div>
+                                <div class="text-right"><p class="text-[10px] text-gray-400">小計</p><p class="end-total text-lg font-bold tabular-nums">{{ $entry?->end_total ?? 0 }}</p></div>
+                            </div>
+                        @endforeach
+                    </div>
+                </section>
+            @endforeach
+        </div>
 
         @unless($published)
             <section id="correction-reason" class="rounded-2xl border bg-white p-4 shadow-sm">
@@ -91,7 +101,7 @@
     const recalculate = () => {
         document.querySelectorAll('.score-end').forEach(end => {
             const total = Array.from(end.querySelectorAll('.score-value')).reduce((sum, input) => sum + scoreNumber(input.value), 0);
-            end.querySelector('.end-total').textContent = total + ' 分';
+            end.querySelector('.end-total').textContent = total;
         });
         document.getElementById('score-total').textContent = inputs.reduce((sum, input) => sum + scoreNumber(input.value), 0);
         document.getElementById('score-ten-count').textContent = inputs.filter(input => input.value === '10').length;

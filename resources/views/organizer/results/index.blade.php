@@ -82,66 +82,29 @@
                 @if($items->isEmpty())
                     <p class="p-6 text-center text-sm text-gray-500">此組別沒有有效選手。</p>
                 @else
-                    <div class="border-b bg-white px-4 py-3">
-                        <label class="inline-flex min-h-11 cursor-pointer items-center gap-2 text-sm font-medium text-gray-600">
-                            <input type="checkbox" class="h-5 w-5 rounded" aria-label="選取本組待確認成績" onclick="document.querySelectorAll('.{{ $checkClass }}').forEach(el=>el.checked=this.checked)">
-                            選取本組所有待確認選手
-                        </label>
-                    </div>
-                    <div class="grid gap-3 bg-gray-50 p-3 sm:p-4 lg:grid-cols-2">
-                        @foreach($items->sortByDesc('calculated_total') as $registration)
-                            @php
-                                $complete = $registration->score_submitted_at && $registration->scoreEntries->count() >= $state['required_ends'];
-                                $entriesByEnd = $registration->scoreEntries->keyBy('end_number');
-                                $assignment = $registration->scoringAssignment;
-                                $targetPosition = $assignment?->target ? $assignment->target->target_number.$assignment->position : '未排靶';
-                                $twoRounds = $state['required_ends'] === 12;
-                            @endphp
-                            <article class="rounded-2xl border bg-white p-4 shadow-sm">
-                                <div class="flex items-start gap-3">
-                                    <div class="pt-1">
-                                        @if(!$registration->score_verified_at)
-                                            <input form="verify-form" class="{{ $checkClass }} h-5 w-5 rounded" type="checkbox" name="registration_ids[]" value="{{ $registration->id }}" aria-label="選取 {{ $registration->name }}">
-                                        @else
-                                            <span class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-green-100 text-xs text-green-700">✓</span>
-                                        @endif
-                                    </div>
-                                    <div class="min-w-0 flex-1">
-                                        <div class="flex flex-wrap items-start justify-between gap-2">
-                                            <div><p class="text-xs font-semibold text-indigo-600">{{ $targetPosition }}</p><h3 class="truncate text-lg font-bold text-gray-900">{{ $registration->name }}</h3></div>
-                                            <div class="text-right"><p class="text-3xl font-bold tabular-nums text-gray-900">{{ $registration->calculated_total }}</p><p class="text-xs text-gray-400">總分</p></div>
-                                        </div>
-
-                                        <div class="mt-4 space-y-3">
-                                            @foreach($twoRounds ? [['上半局', 1, 6], ['下半局', 7, 12]] : [['各趟成績', 1, $state['required_ends']]] as [$roundLabel, $fromEnd, $toEnd])
-                                                <div>
-                                                    <p class="mb-1 text-[11px] font-medium text-gray-500">{{ $roundLabel }}</p>
-                                                    <div class="grid grid-cols-6 gap-1.5">
-                                                        @foreach(range($fromEnd, $toEnd) as $end)
-                                                            @php($entry = $entriesByEnd->get($end))
-                                                            <div class="rounded-lg border {{ $entry ? 'border-gray-200 bg-gray-50 text-gray-900' : 'border-dashed border-gray-200 text-gray-300' }} px-1 py-2 text-center">
-                                                                <p class="text-[10px] font-medium">{{ $twoRounds ? ($end > 6 ? $end - 6 : $end) : $end }}</p>
-                                                                <p class="mt-0.5 font-mono text-sm font-bold">{{ $entry?->end_total ?? '__' }}</p>
-                                                            </div>
-                                                        @endforeach
-                                                    </div>
-                                                </div>
-                                            @endforeach
-                                        </div>
-
-                                        <div class="mt-4 flex flex-wrap items-center justify-between gap-3 border-t pt-3">
-                                            <div class="flex flex-wrap gap-2 text-xs">
-                                                <span class="rounded-full bg-gray-100 px-2.5 py-1 font-medium">10：{{ $registration->calculated_ten_count }}</span>
-                                                <span class="rounded-full bg-gray-100 px-2.5 py-1 font-medium">X：{{ $registration->calculated_x_count }}</span>
-                                                <span class="rounded-full px-2.5 py-1 font-medium {{ $registration->result_status === 'dnf' ? 'bg-amber-100 text-amber-700' : ($complete ? 'bg-green-100 text-green-700' : 'bg-indigo-100 text-indigo-700') }}">{{ $registration->result_status === 'dnf' ? '未報到 DNF' : ($complete ? '成績完整' : ($registration->score_verified_at ? '現有分數結算' : '部分成績待審核')) }}</span>
-                                                <span class="rounded-full px-2.5 py-1 font-medium {{ $registration->score_verified_at ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700' }}">{{ $registration->score_verified_at ? '主辦已確認' : '待確認' }}</span>
-                                            </div>
-                                            <a href="{{ route('organizer.events.results.registrations.edit', [$event, $registration]) }}" class="inline-flex min-h-10 items-center rounded-xl border border-indigo-200 px-3 text-sm font-medium text-indigo-700">{{ $registration->result_published_at ? '查看完整成績' : '查看／修正' }}</a>
-                                        </div>
-                                    </div>
-                                </div>
-                            </article>
-                        @endforeach
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full text-sm">
+                            <thead class="bg-white text-left text-xs text-gray-500"><tr>
+                                <th class="p-3"><input type="checkbox" aria-label="選取本組待確認成績" onclick="document.querySelectorAll('.{{ $checkClass }}').forEach(el=>el.checked=this.checked)"></th>
+                                <th class="p-3">選手</th><th class="p-3">總分</th><th class="p-3">10</th><th class="p-3">X</th><th class="p-3">成績完整</th><th class="p-3">主辦確認</th><th class="p-3">發布狀態</th><th class="p-3">操作</th>
+                            </tr></thead>
+                            <tbody class="divide-y">
+                            @foreach($items->sortByDesc('calculated_total') as $registration)
+                                @php($complete = $registration->score_submitted_at && $registration->scoreEntries->count() >= $state['required_ends'])
+                                <tr>
+                                    <td class="p-3">@if(!$registration->score_verified_at)<input form="verify-form" class="{{ $checkClass }} rounded" type="checkbox" name="registration_ids[]" value="{{ $registration->id }}">@endif</td>
+                                    <td class="p-3 font-medium">{{ $registration->name }}</td>
+                                    <td class="p-3 font-semibold">{{ $registration->calculated_total }}</td>
+                                    <td class="p-3 font-semibold">{{ $registration->calculated_ten_count }}</td>
+                                    <td class="p-3 font-semibold">{{ $registration->calculated_x_count }}</td>
+                                    <td class="p-3 {{ $registration->result_status === 'dnf' ? 'text-amber-700' : ($complete ? 'text-green-700' : 'text-indigo-700') }}">{{ $registration->result_status === 'dnf' ? '未報到（DNF）' : ($complete ? '完整' : ($registration->score_verified_at ? '以現有分數結算' : '部分成績待審核')) }}</td>
+                                    <td class="p-3">{{ $registration->score_verified_at ? '已確認' : '待確認' }}</td>
+                                    <td class="p-3">{{ $registration->result_published_at ? '已發布' : '—' }}</td>
+                                    <td class="p-3"><a href="{{ route('organizer.events.results.registrations.edit', [$event, $registration]) }}" class="whitespace-nowrap font-medium text-indigo-600 hover:underline">{{ $registration->result_published_at ? '查看明細' : '查看／修正' }}</a></td>
+                                </tr>
+                            @endforeach
+                            </tbody>
+                        </table>
                     </div>
                     @if($items->contains(fn ($item) => !$item->score_verified_at))
                         <div class="flex justify-end border-t p-4">
