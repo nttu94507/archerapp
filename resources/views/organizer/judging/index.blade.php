@@ -32,12 +32,48 @@
                             <div><h3 class="font-semibold">靶號 {{ $target->target_number }}</h3><p class="mt-1 text-xs text-gray-500">計分 {{ $target->last_completed_end }} / {{ $session->totalEnds() }} 趟</p></div>
                             <span class="rounded-full px-2.5 py-1 text-xs font-medium {{ $target->status === 'dns' ? 'bg-amber-100 text-amber-700' : ($target->judge_status === 'confirmed' ? 'bg-green-100 text-green-700' : ($target->judge_status === 'disputed' ? 'bg-red-100 text-red-700' : ($target->judge_status === 'reviewed' ? 'bg-indigo-100 text-indigo-700' : 'bg-gray-100 text-gray-600'))) }}">{{ $target->status === 'dns' ? '全靶 DNS・無需核對' : (['pending'=>'待核對','reviewed'=>'裁判已核對','confirmed'=>'主裁判已簽核','disputed'=>'成績爭議'][$target->judge_status] ?? $target->judge_status) }}</span>
                         </div>
-                        <div class="mt-3 overflow-x-auto">
-                            <table class="min-w-full text-sm"><thead class="text-left text-xs text-gray-500"><tr><th class="py-2">選手</th><th class="py-2">波數</th><th class="py-2 text-right">總分</th></tr></thead><tbody class="divide-y">
+                        @php($twoRounds = (int) $session->total_arrows === 72 && (int) $session->arrows_per_end === 6)
+                        <div class="mt-3 divide-y rounded-xl border bg-gray-50 px-3 sm:px-4">
                             @foreach($target->assignments as $assignment)
-                                <tr><td class="py-2 font-medium">{{ $target->target_number.$assignment->position }} {{ $assignment->registration?->name }}</td><td class="py-2">{{ $assignment->registration?->scoreEntries->count() ?? 0 }}</td><td class="py-2 text-right font-semibold">{{ $assignment->registration?->scoreEntries->sum('end_total') ?? 0 }}</td></tr>
+                                @php
+                                    $entries = $assignment->registration?->scoreEntries ?? collect();
+                                    $scoreStats = function ($scoreEntries): array {
+                                        $scores = $scoreEntries->flatMap(fn ($entry) => $entry->scores ?? []);
+                                        return [
+                                            'total' => (int) $scoreEntries->sum('end_total'),
+                                            'ten' => $scores->filter(fn ($score) => (string) $score === '10')->count(),
+                                            'x' => $scores->filter(fn ($score) => strtoupper((string) $score) === 'X')->count(),
+                                        ];
+                                    };
+                                    $totalStats = $scoreStats($entries);
+                                    $firstRoundStats = $twoRounds ? $scoreStats($entries->where('end_number', '<=', 6)) : null;
+                                    $secondRoundStats = $twoRounds ? $scoreStats($entries->where('end_number', '>', 6)) : null;
+                                @endphp
+                                <div class="py-4">
+                                    <div class="flex items-center justify-between gap-3">
+                                        <p class="font-semibold">{{ $target->target_number.$assignment->position }} {{ $assignment->registration?->name }}</p>
+                                        <span class="shrink-0 text-xs text-gray-500">{{ $entries->count() }} / {{ $session->totalEnds() }} 趟</span>
+                                    </div>
+
+                                    @if($twoRounds)
+                                        <div class="mt-3 grid grid-cols-3 gap-2">
+                                            @foreach([['上半局', $firstRoundStats], ['下半局', $secondRoundStats], ['全場', $totalStats]] as [$label, $stats])
+                                                <div class="rounded-xl {{ $label === '全場' ? 'bg-indigo-50 ring-1 ring-indigo-100' : 'bg-white' }} p-3 text-center">
+                                                    <p class="text-xs {{ $label === '全場' ? 'font-medium text-indigo-600' : 'text-gray-500' }}">{{ $label }}</p>
+                                                    <p class="mt-1 text-xl font-bold tabular-nums {{ $label === '全場' ? 'text-indigo-900' : 'text-gray-900' }}">{{ $stats['total'] }}</p>
+                                                    <p class="mt-1 whitespace-nowrap text-xs text-gray-500">10：{{ $stats['ten'] }}・X：{{ $stats['x'] }}</p>
+                                                </div>
+                                            @endforeach
+                                        </div>
+                                    @else
+                                        <div class="mt-3 grid grid-cols-3 gap-2 text-center">
+                                            <div class="rounded-xl bg-white p-3"><p class="text-xs text-gray-500">總分</p><p class="mt-1 text-xl font-bold tabular-nums">{{ $totalStats['total'] }}</p></div>
+                                            <div class="rounded-xl bg-white p-3"><p class="text-xs text-gray-500">10</p><p class="mt-1 text-xl font-bold tabular-nums">{{ $totalStats['ten'] }}</p></div>
+                                            <div class="rounded-xl bg-white p-3"><p class="text-xs text-gray-500">X</p><p class="mt-1 text-xl font-bold tabular-nums">{{ $totalStats['x'] }}</p></div>
+                                        </div>
+                                    @endif
+                                </div>
                             @endforeach
-                            </tbody></table>
                         </div>
                         @if($target->judge_note)<p class="mt-3 rounded-lg bg-amber-50 p-3 text-xs text-amber-800">裁判備註：{{ $target->judge_note }}</p>@endif
                         @if($target->status !== 'dns')<form method="POST" action="{{ route('organizer.events.judging.targets.update', [$event, $target]) }}" class="mt-4 space-y-2">

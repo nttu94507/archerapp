@@ -30,8 +30,7 @@ class EventController extends Controller
             ])
             ->orderByDesc('start_date')->paginate(15);
 
-        $organizerProfile = $request->user()->organizerProfile;
-        return view('organizer.events.index', compact('events','organizerProfile'));
+        return view('organizer.events.index', compact('events'));
     }
 
     public function create(): View
