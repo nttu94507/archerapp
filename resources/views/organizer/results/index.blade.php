@@ -89,9 +89,12 @@
                                 <th class="p-3"><input type="checkbox" aria-label="選取本組待確認成績" onclick="document.querySelectorAll('.{{ $checkClass }}').forEach(el=>el.checked=this.checked)"></th>
                                 <th class="p-3">選手</th>
                                 <th class="p-3">總分</th>
+                                <th class="p-3">10</th>
+                                <th class="p-3">X</th>
                                 <th class="p-3">成績完整</th>
                                 <th class="p-3">主辦確認</th>
                                 <th class="p-3">發布狀態</th>
+                                <th class="p-3">操作</th>
                             </tr>
                             </thead>
                             <tbody class="divide-y">
@@ -105,9 +108,12 @@
                                     </td>
                                     <td class="p-3 font-medium">{{ $registration->name }}</td>
                                     <td class="p-3 font-semibold">{{ $registration->calculated_total }}</td>
+                                    <td class="p-3 font-semibold">{{ $registration->calculated_ten_count }}</td>
+                                    <td class="p-3 font-semibold">{{ $registration->calculated_x_count }}</td>
                                     <td class="p-3 {{ $registration->result_status === 'dnf' ? 'text-amber-700' : ($complete ? 'text-green-700' : 'text-indigo-700') }}">{{ $registration->result_status === 'dnf' ? '未報到（DNF）' : ($complete ? '完整' : ($registration->score_verified_at ? '以現有分數結算' : '部分成績待審核')) }}</td>
                                     <td class="p-3">{{ $registration->score_verified_at ? '已確認' : '待確認' }}</td>
                                     <td class="p-3">{{ $registration->result_published_at ? '已發布' : '—' }}</td>
+                                    <td class="p-3"><a href="{{ route('organizer.events.results.registrations.edit', [$event, $registration]) }}" class="whitespace-nowrap font-medium text-indigo-600 hover:underline">{{ $registration->result_published_at ? '查看明細' : '查看／修正' }}</a></td>
                                 </tr>
                             @endforeach
                             </tbody>

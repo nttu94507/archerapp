@@ -7,6 +7,7 @@ use App\Models\Event;
 use App\Models\EventAuditLog;
 use App\Models\EventGroup;
 use App\Models\EventRegistration;
+use App\Models\EventScoreEntry;
 use App\Models\EventScoringSession;
 use App\Services\EventBadgeAwardService;
 use Illuminate\Http\RedirectResponse;
@@ -21,6 +22,9 @@ class EventResultController extends Controller
         $this->authorize('manageScores', $event);
         $registrations = $event->registrations()->with(['event_group', 'scoreEntries'])->whereIn('status', ['registered','checked_in'])->get()->map(function ($registration) {
             $registration->calculated_total = $registration->scoreEntries->sum('end_total');
+            $scores = $registration->scoreEntries->flatMap(fn ($entry) => $entry->scores ?? []);
+            $registration->calculated_ten_count = $scores->filter(fn ($score) => (string) $score === '10')->count();
+            $registration->calculated_x_count = $scores->filter(fn ($score) => strtoupper((string) $score) === 'X')->count();
             return $registration;
         })->sortByDesc('calculated_total');
 
@@ -48,6 +52,110 @@ class EventResultController extends Controller
         });
 
         return view('organizer.results.index', compact('event', 'registrations', 'groupStates'));
+    }
+
+    public function edit(Event $event, EventRegistration $registration): View
+    {
+        $this->authorize('manageScores', $event);
+        abort_unless($registration->event_id === $event->id, 404);
+
+        $registration->load(['event_group', 'scoreEntries' => fn ($query) => $query->orderBy('end_number'), 'scoringAssignment.target']);
+        $group = $registration->event_group;
+        $totalArrows = $group?->arrow_count ?: ($event->mode === 'indoor' ? 30 : 36);
+        $arrowsPerEnd = $group?->arrows_per_end ?: 6;
+        $requiredEnds = (int) ceil($totalArrows / max(1, $arrowsPerEnd));
+        $scores = $registration->scoreEntries->flatMap(fn ($entry) => $entry->scores ?? []);
+        $stats = [
+            'total'=>$registration->scoreEntries->sum('end_total'),
+            'ten_count'=>$scores->filter(fn ($score) => (string) $score === '10')->count(),
+            'x_count'=>$scores->filter(fn ($score) => strtoupper((string) $score) === 'X')->count(),
+        ];
+
+        return view('organizer.results.edit', compact('event', 'registration', 'arrowsPerEnd', 'requiredEnds', 'stats'));
+    }
+
+    public function update(Request $request, Event $event, EventRegistration $registration): RedirectResponse
+    {
+        $this->authorize('manageScores', $event);
+        abort_unless($registration->event_id === $event->id, 404);
+        abort_if($registration->result_published_at !== null, 422, '正式成績已發布，不能直接修改。');
+
+        $group = $registration->event_group;
+        $totalArrows = $group?->arrow_count ?: ($event->mode === 'indoor' ? 30 : 36);
+        $arrowsPerEnd = $group?->arrows_per_end ?: 6;
+        $requiredEnds = (int) ceil($totalArrows / max(1, $arrowsPerEnd));
+        $validated = $request->validate([
+            'ends'=>['nullable', 'array'],
+            'ends.*'=>['nullable', 'array', 'max:'.$arrowsPerEnd],
+            'ends.*.*'=>['nullable', 'string', 'regex:/^(X|10|[1-9]|M)$/i'],
+            'correction_reason'=>['required', 'string', 'max:500'],
+        ]);
+
+        $result = DB::transaction(function () use ($event, $registration, $validated, $request, $requiredEnds, $arrowsPerEnd): array {
+            $locked = EventRegistration::whereKey($registration->id)->lockForUpdate()->firstOrFail();
+            abort_if($locked->result_published_at !== null, 422, '正式成績已發布，不能直接修改。');
+            $oldTotal = $locked->scoreEntries()->sum('end_total');
+
+            for ($end = 1; $end <= $requiredEnds; $end++) {
+                $submitted = array_slice(array_values($validated['ends'][$end] ?? []), 0, $arrowsPerEnd);
+                $hasScore = collect($submitted)->contains(fn ($score) => trim((string) $score) !== '');
+                if (! $hasScore) {
+                    $locked->scoreEntries()->where('end_number', $end)->delete();
+                    continue;
+                }
+
+                $scores = collect(array_pad($submitted, $arrowsPerEnd, 'M'))
+                    ->map(fn ($score) => trim((string) $score) === '' ? 'M' : strtoupper(trim((string) $score)))
+                    ->sortByDesc(fn ($score) => $score === 'X' ? 11 : ($score === 'M' ? 0 : (int) $score))
+                    ->values()
+                    ->all();
+                $total = collect($scores)->sum(fn ($score) => $score === 'X' ? 10 : ($score === 'M' ? 0 : (int) $score));
+                EventScoreEntry::updateOrCreate(
+                    ['event_registration_id'=>$locked->id, 'end_number'=>$end],
+                    ['event_id'=>$event->id, 'user_id'=>$locked->user_id, 'scores'=>$scores, 'end_total'=>$total]
+                );
+            }
+
+            $entryCount = $locked->scoreEntries()->count();
+            $locked->update([
+                'score_submitted_at'=>$entryCount >= $requiredEnds ? now() : null,
+                'score_verified_at'=>null,
+                'score_verified_by'=>null,
+                'result_status'=>null,
+            ]);
+
+            $target = $locked->scoringAssignment?->target;
+            if ($target) {
+                $target->update([
+                    'judge_status'=>'pending',
+                    'judge_note'=>null,
+                    'reviewed_by'=>null,
+                    'reviewed_at'=>null,
+                    'confirmed_by'=>null,
+                    'confirmed_at'=>null,
+                ]);
+            }
+
+            $newTotal = $locked->scoreEntries()->sum('end_total');
+            EventAuditLog::create([
+                'event_id'=>$event->id,
+                'user_id'=>$request->user()->id,
+                'action'=>'results.score_corrected',
+                'subject_type'=>EventRegistration::class,
+                'subject_id'=>$locked->id,
+                'metadata'=>[
+                    'athlete'=>$locked->name,
+                    'old_total'=>$oldTotal,
+                    'new_total'=>$newTotal,
+                    'reason'=>$validated['correction_reason'],
+                ],
+            ]);
+
+            return ['old_total'=>$oldTotal, 'new_total'=>$newTotal];
+        });
+
+        return redirect()->route('organizer.events.results.index', $event)
+            ->with('success', $registration->name.'的成績已由 '.$result['old_total'].' 分修正為 '.$result['new_total'].' 分，請重新進行裁判及主辦確認。');
     }
 
     public function verify(Request $request, Event $event): RedirectResponse

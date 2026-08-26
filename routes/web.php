@@ -134,6 +134,8 @@ Route::prefix('organizer')->middleware('auth')->name('organizer.')->group(functi
     Route::post('events/{event}/registrations/check-in', [OrganizerRegistrationController::class, 'checkIn'])->name('events.registrations.check-in');
     Route::patch('events/{event}/registrations/{registration}', [OrganizerRegistrationController::class, 'update'])->name('events.registrations.update');
     Route::get('events/{event}/results', [OrganizerResultController::class, 'index'])->name('events.results.index');
+    Route::get('events/{event}/results/registrations/{registration}/edit', [OrganizerResultController::class, 'edit'])->name('events.results.registrations.edit');
+    Route::patch('events/{event}/results/registrations/{registration}', [OrganizerResultController::class, 'update'])->name('events.results.registrations.update');
     Route::post('events/{event}/results/verify', [OrganizerResultController::class, 'verify'])->name('events.results.verify');
     Route::post('events/{event}/results/groups/{group}/verify', [OrganizerResultController::class, 'verifyGroup'])->name('events.results.groups.verify');
     Route::post('events/{event}/results/groups/{group}/publish', [OrganizerResultController::class, 'publish'])->name('events.results.publish');
