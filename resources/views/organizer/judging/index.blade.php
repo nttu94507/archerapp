@@ -66,7 +66,7 @@
                                                 <p class="text-xs text-gray-500">上半局</p>
                                                 <p class="mt-1 text-xl font-bold tabular-nums text-gray-900">{{ $firstRoundStats['total'] }}<span class="ml-0.5 text-xs font-medium text-gray-400">分</span></p>
                                                 <div class="mt-2 flex justify-center gap-1.5">
-                                                    <span class="rounded-lg bg-amber-100 px-2 py-1 text-xs font-medium text-amber-900">10+X <strong class="ml-0.5 tabular-nums">{{ $firstRoundStats['ten'] + $firstRoundStats['x'] }}</strong></span>
+                                                    <span class="rounded-lg bg-amber-100 px-2 py-1 text-xs font-medium text-amber-900">10 <strong class="ml-0.5 tabular-nums">{{ $firstRoundStats['ten'] }}</strong></span>
                                                     <span class="rounded-lg bg-orange-100 px-2 py-1 text-xs font-medium text-orange-900">X <strong class="ml-0.5 tabular-nums">{{ $firstRoundStats['x'] }}</strong></span>
                                                 </div>
                                             </div>
@@ -74,7 +74,7 @@
                                                 <p class="text-xs text-gray-500">下半局</p>
                                                 <p class="mt-1 text-xl font-bold tabular-nums text-gray-900">{{ $secondRoundStats['total'] }}<span class="ml-0.5 text-xs font-medium text-gray-400">分</span></p>
                                                 <div class="mt-2 flex justify-center gap-1.5">
-                                                    <span class="rounded-lg bg-amber-100 px-2 py-1 text-xs font-medium text-amber-900">10+X <strong class="ml-0.5 tabular-nums">{{ $secondRoundStats['ten'] + $secondRoundStats['x'] }}</strong></span>
+                                                    <span class="rounded-lg bg-amber-100 px-2 py-1 text-xs font-medium text-amber-900">10 <strong class="ml-0.5 tabular-nums">{{ $secondRoundStats['ten'] }}</strong></span>
                                                     <span class="rounded-lg bg-orange-100 px-2 py-1 text-xs font-medium text-orange-900">X <strong class="ml-0.5 tabular-nums">{{ $secondRoundStats['x'] }}</strong></span>
                                                 </div>
                                             </div>
@@ -82,7 +82,7 @@
                                                 <p class="text-xs font-medium text-indigo-600">全場</p>
                                                 <p class="mt-1 text-xl font-bold tabular-nums text-indigo-900">{{ $totalStats['total'] }}<span class="ml-0.5 text-xs font-medium text-indigo-400">分</span></p>
                                                 <div class="mt-2 flex justify-center gap-1.5">
-                                                    <span class="rounded-lg bg-amber-100 px-2 py-1 text-xs font-medium text-amber-900">10+X <strong class="ml-0.5 tabular-nums">{{ $totalStats['ten'] + $totalStats['x'] }}</strong></span>
+                                                    <span class="rounded-lg bg-amber-100 px-2 py-1 text-xs font-medium text-amber-900">10 <strong class="ml-0.5 tabular-nums">{{ $totalStats['ten'] }}</strong></span>
                                                     <span class="rounded-lg bg-orange-100 px-2 py-1 text-xs font-medium text-orange-900">X <strong class="ml-0.5 tabular-nums">{{ $totalStats['x'] }}</strong></span>
                                                 </div>
                                             </div>
@@ -92,7 +92,7 @@
                                             <p class="text-xs text-gray-500">總分</p>
                                             <p class="mt-1 text-2xl font-bold tabular-nums text-gray-900">{{ $totalStats['total'] }}<span class="ml-0.5 text-xs font-medium text-gray-400">分</span></p>
                                             <div class="mt-2 flex justify-center gap-2">
-                                                <span class="rounded-lg bg-amber-100 px-3 py-1 text-xs font-medium text-amber-900">10+X <strong class="ml-1 tabular-nums">{{ $totalStats['ten'] + $totalStats['x'] }}</strong></span>
+                                                <span class="rounded-lg bg-amber-100 px-3 py-1 text-xs font-medium text-amber-900">10 <strong class="ml-1 tabular-nums">{{ $totalStats['ten'] }}</strong></span>
                                                 <span class="rounded-lg bg-orange-100 px-3 py-1 text-xs font-medium text-orange-900">X <strong class="ml-1 tabular-nums">{{ $totalStats['x'] }}</strong></span>
                                             </div>
                                         </div>
