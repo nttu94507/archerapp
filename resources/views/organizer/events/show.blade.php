@@ -12,19 +12,6 @@
 
     <section class="rounded-2xl border bg-white p-4 shadow-sm"><div class="flex items-center justify-between gap-3"><div class="min-w-0"><p class="text-xs text-gray-500">賽事狀態</p><p class="font-semibold">{{ ['draft'=>'草稿（尚未公開）','pending'=>'舊審核資料（可直接發布）','approved'=>'已發布','rejected'=>'已下架','archived'=>'已封存'][$event->status] ?? $event->status }}</p>@if($event->review_note)<p class="mt-1 text-xs text-red-600">平台介入備註：{{ $event->review_note }}</p>@endif</div>@can('update',$event)<div class="grid shrink-0 grid-cols-2 gap-2">@if(!$event->isPublished() && !$event->cancelled_at)<form method="POST" action="{{ route('organizer.events.submit',$event) }}" onsubmit="return confirm('發布後所有會員都能查看此賽事，確定發布？')">@csrf<button class="min-h-10 w-full rounded-xl bg-indigo-600 px-3 text-xs font-medium text-white sm:px-4 sm:text-sm">發布</button></form>@elseif($event->isPublished())<form method="POST" action="{{ route('organizer.events.unpublish',$event) }}" onsubmit="return confirm('下架後會員將無法查看與報名，確定下架？')">@csrf<button class="min-h-10 w-full rounded-xl border border-amber-300 px-3 text-xs font-medium text-amber-700 sm:px-4 sm:text-sm">下架</button></form>@endif @if(!$event->cancelled_at)<form method="POST" action="{{ route('organizer.events.cancel',$event) }}" onsubmit="return confirm('取消賽事後將停止公開報名，確定取消？')">@csrf<button class="min-h-10 w-full rounded-xl border border-red-200 px-3 text-xs text-red-600 sm:px-4 sm:text-sm">取消</button></form>@endif</div>@endcan</div></section>
 
-    @if($event->isPublished())
-    <section class="rounded-2xl border border-indigo-200 bg-indigo-50 p-4 sm:p-5" x-data="{ copied: false }">
-        <p class="text-xs font-semibold uppercase tracking-widest text-indigo-600">開始收件</p>
-        <h2 class="mt-1 font-semibold text-indigo-950">分享賽事給選手</h2>
-        <p class="mt-1 text-sm text-indigo-700">選手開啟公開頁後即可選擇組別並完成報名。</p>
-        <div class="mt-4 flex flex-col gap-2 sm:flex-row">
-            <input id="public-event-url" readonly value="{{ route('events.show', $event) }}" class="min-h-11 min-w-0 flex-1 rounded-xl border-indigo-200 bg-white text-sm">
-            <button type="button" @click="navigator.clipboard.writeText(document.getElementById('public-event-url').value); copied = true; setTimeout(() => copied = false, 1600)" class="min-h-11 rounded-xl bg-indigo-600 px-5 text-sm font-medium text-white"><span x-show="!copied">複製連結</span><span x-show="copied">已複製</span></button>
-            <a href="{{ route('events.show', $event) }}" class="inline-flex min-h-11 items-center justify-center rounded-xl border border-indigo-200 bg-white px-5 text-sm font-medium text-indigo-700">查看公開頁</a>
-        </div>
-    </section>
-    @endif
-
     <section><h2 class="mb-3 text-lg font-semibold">賽事管理</h2><div class="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
         @can('manageGroups',$event)<a href="{{ route('events.groups.index',$event) }}" class="flex min-h-28 flex-col justify-between rounded-2xl border bg-white p-4 hover:border-indigo-300 sm:p-5"><div><p class="text-2xl font-semibold">{{ $event->groups->count() }}</p><h3 class="mt-1 font-semibold">組別</h3></div><p class="mt-3 text-xs text-gray-500">設定組別與規則</p></a>@endcan
         @can('manageRegistrations',$event)<a href="{{ route('organizer.events.registrations.index',$event) }}" class="flex min-h-28 flex-col justify-between rounded-2xl border bg-white p-4 hover:border-indigo-300 sm:p-5"><div class="flex items-end gap-3"><div><p class="text-2xl font-semibold">{{ $event->registrations_count }}</p><p class="text-xs text-gray-500">報名</p></div><div><p class="text-lg font-semibold text-green-700">{{ $statusCounts['checked_in'] ?? 0 }}</p><p class="text-xs text-gray-500">報到</p></div></div><h3 class="mt-3 font-semibold">報名／報到</h3></a>@endcan
@@ -46,6 +33,24 @@
     </section>
     @endcan
 
-    <section class="rounded-2xl border bg-white p-4 sm:p-5"><h2 class="font-semibold">最近操作紀錄</h2><div class="mt-3 divide-y">@forelse($auditLogs as $log)<div class="flex items-center justify-between gap-4 py-3 text-sm"><div><p class="font-medium">{{ $log->action }}</p><p class="text-xs text-gray-500">{{ $log->user?->display_name ?? '系統' }}</p></div><time class="shrink-0 text-xs text-gray-500">{{ $log->created_at->format('Y-m-d H:i') }}</time></div>@empty<p class="text-sm text-gray-500">尚無操作紀錄。</p>@endforelse</div></section>
+    @if($event->isPublished())
+    <section class="flex flex-col gap-3 rounded-2xl border border-indigo-200 bg-indigo-50 p-4 sm:flex-row sm:items-center sm:justify-between"
+             x-data="{ copied: false, url: @js(route('events.show', $event)), title: @js($event->name) }">
+        <div class="min-w-0"><h2 class="font-semibold text-indigo-950">分享賽事</h2><p class="mt-0.5 truncate text-xs text-indigo-700">讓選手開啟連結並選擇組別報名</p></div>
+        <div class="grid shrink-0 grid-cols-3 gap-2">
+            <button type="button" @click="navigator.clipboard.writeText(url); copied = true; setTimeout(() => copied = false, 1600)" class="min-h-10 rounded-xl bg-indigo-600 px-3 text-xs font-medium text-white sm:px-4"><span x-show="!copied">一鍵複製</span><span x-show="copied">已複製</span></button>
+            <button type="button" @click="navigator.share ? navigator.share({ title, text: '查看賽事並完成報名', url }) : navigator.clipboard.writeText(url)" class="min-h-10 rounded-xl border border-indigo-200 bg-white px-3 text-xs font-medium text-indigo-700 sm:px-4">社群分享</button>
+            <a href="{{ route('events.show', $event) }}" class="inline-flex min-h-10 items-center justify-center rounded-xl border border-indigo-200 bg-white px-3 text-xs font-medium text-indigo-700 sm:px-4">預覽</a>
+        </div>
+    </section>
+    @endif
+
+    <details class="group rounded-2xl border bg-white p-4 sm:p-5">
+        <summary class="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 font-semibold">
+            <span>最近操作紀錄</span>
+            <span class="flex items-center gap-2 text-xs font-normal text-gray-500"><span>{{ $auditLogs->count() }} 筆</span><span class="transition group-open:rotate-180">⌄</span></span>
+        </summary>
+        <div class="mt-3 divide-y border-t pt-1">@forelse($auditLogs as $log)<div class="flex items-center justify-between gap-4 py-3 text-sm"><div><p class="font-medium">{{ $log->action }}</p><p class="text-xs text-gray-500">{{ $log->user?->display_name ?? '系統' }}</p></div><time class="shrink-0 text-xs text-gray-500">{{ $log->created_at->format('Y-m-d H:i') }}</time></div>@empty<p class="py-3 text-sm text-gray-500">尚無操作紀錄。</p>@endforelse</div>
+    </details>
 </div>
 @endsection
