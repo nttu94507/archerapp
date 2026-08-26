@@ -78,6 +78,9 @@ class EventManagementWorkflowTest extends TestCase
         $this->actingAs($owner)->get(route('organizer.events.edit',$event))->assertOk();
         $this->actingAs($staffUser)->get(route('organizer.events.registrations.index',$event))->assertOk();
         $this->actingAs($viewer)->get(route('organizer.events.registrations.index',$event))->assertForbidden();
+        $this->actingAs($owner)->get(route('organizer.events.show',$event))->assertOk()->assertSee('最近操作紀錄');
+        $this->actingAs($staffUser)->get(route('organizer.events.show',$event))->assertOk()->assertDontSee('最近操作紀錄');
+        $this->actingAs($viewer)->get(route('organizer.events.show',$event))->assertOk()->assertDontSee('最近操作紀錄');
         $this->actingAs($outsider)->get(route('organizer.events.show',$event))->assertForbidden();
     }
 

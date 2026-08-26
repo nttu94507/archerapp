@@ -57,6 +57,11 @@ class EventPolicy
         return $this->canOperate($user) && $this->hasRole($user, $event, ['owner', 'manager']);
     }
 
+    public function viewAuditLogs(User $user, Event $event): bool
+    {
+        return $this->canOperate($user) && $this->hasRole($user, $event, ['owner', 'manager']);
+    }
+
     public function manageJudging(User $user, Event $event): bool
     {
         return $this->canOperate($user) && $this->hasRole($user, $event, ['owner', 'manager', 'judge', 'chief_judge']);

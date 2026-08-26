@@ -92,6 +92,7 @@
     </section>
     @endif
 
+    @can('viewAuditLogs', $event)
     <details class="group rounded-2xl border bg-white p-4 sm:p-5">
         <summary class="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 font-semibold">
             <span>最近操作紀錄</span>
@@ -99,5 +100,6 @@
         </summary>
         <div class="mt-3 divide-y border-t pt-1">@forelse($auditLogs as $log)<div class="flex items-center justify-between gap-4 py-3 text-sm"><div><p class="font-medium">{{ $log->action }}</p><p class="text-xs text-gray-500">{{ $log->user?->display_name ?? '系統' }}</p></div><time class="shrink-0 text-xs text-gray-500">{{ $log->created_at->format('Y-m-d H:i') }}</time></div>@empty<p class="py-3 text-sm text-gray-500">尚無操作紀錄。</p>@endforelse</div>
     </details>
+    @endcan
 </div>
 @endsection

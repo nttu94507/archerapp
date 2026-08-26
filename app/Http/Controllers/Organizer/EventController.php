@@ -90,7 +90,9 @@ class EventController extends Controller
                 'registrations as verified_results_count' => fn ($query) => $query->whereNotNull('score_verified_at'),
             ]);
         $statusCounts = $event->registrations()->selectRaw('status, count(*) as total')->groupBy('status')->pluck('total', 'status');
-        $auditLogs = $event->auditLogs()->with('user')->limit(20)->get();
+        $auditLogs = $request->user()->can('viewAuditLogs', $event)
+            ? $event->auditLogs()->with('user')->limit(20)->get()
+            : collect();
         $staffInviteQrs = [];
         if ($request->user()->can('manageStaff', $event)) {
             $writer = new Writer(new ImageRenderer(new RendererStyle(280, 2), new SvgImageBackEnd));

@@ -17,6 +17,29 @@
         }
     </script>
     <script src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+    <style>
+        /* iPad 直向與橫向：保留精簡 Header，完整導覽改用可收合側邊欄。 */
+        @media (min-width: 768px) and (max-width: 1366px) and (any-pointer: coarse) {
+            #primary-navigation,
+            #desktop-account-navigation {
+                display: none !important;
+            }
+
+            #mobile-menu-button {
+                display: inline-flex !important;
+            }
+
+            #mobile-drawer {
+                display: block !important;
+                width: min(22rem, 82vw);
+            }
+
+            #header-inner {
+                padding-top: 0.625rem;
+                padding-bottom: 0.625rem;
+            }
+        }
+    </style>
     {{-- @vite(['resources/css/app.css', 'resources/js/app.js']) --}}
 </head>
 <body class="bg-gray-100 text-gray-900">
@@ -24,7 +47,7 @@
 <div id="modal-root"></div>
 
 <header class="bg-white border-b sticky top-0 z-40">
-    <div class="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between gap-4">
+    <div id="header-inner" class="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between gap-4">
 
         {{-- 左邊 Logo （點擊回首頁）--}}
         <a href="{{ url('/') }}"
@@ -33,7 +56,7 @@
         </a>
 
         {{-- 中間主選單（桌機顯示） --}}
-        <nav class="hidden md:flex items-center gap-6 text-sm font-medium">
+        <nav id="primary-navigation" class="hidden md:flex items-center gap-6 text-sm font-medium">
             <a href="{{ route('events.index') }}" class="px-2 py-1 rounded-lg hover:bg-gray-100 {{ request()->routeIs('events.*') ? 'text-gray-900' : 'text-gray-600' }}">賽事</a>
             <a href="{{ route('scores.index') }}"
                class="px-2 py-1 rounded-lg hover:bg-gray-100 {{ request()->routeIs('scores.*') ? 'text-gray-900' : 'text-gray-600' }}">
@@ -88,7 +111,7 @@
             </button>
 
             {{-- 右邊導覽區（桌機使用者） --}}
-            <nav class="hidden md:flex items-center gap-2">
+            <nav id="desktop-account-navigation" class="hidden md:flex items-center gap-2">
                 @auth
                     <div class="relative">
                         <button id="user-menu-button"
@@ -276,6 +299,9 @@
         openBtn?.addEventListener('click', openDrawer);
         closeBtn?.addEventListener('click', closeDrawer);
         backdrop?.addEventListener('click', closeDrawer);
+        window.addEventListener('resize', () => {
+            if (drawer && getComputedStyle(drawer).display === 'none') closeDrawer();
+        });
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape') closeDrawer();
         });
