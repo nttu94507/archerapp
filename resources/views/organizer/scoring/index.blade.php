@@ -9,19 +9,12 @@
             <a href="{{ route('organizer.events.show',$event) }}" class="inline-flex min-h-11 items-center text-sm font-medium text-indigo-600">← 返回賽事工作台</a>
             <p class="text-xs font-semibold uppercase tracking-widest text-indigo-600">Target scoring</p>
             <h1 class="mt-1 text-2xl font-bold">靶位列表</h1>
-            <p class="mt-1 text-sm text-gray-500">依組別自動排靶，每台設備負責同靶 2～4 位選手。</p>
         </div>
     </div>
 
     @if(session('success'))<div class="rounded-xl bg-green-50 p-4 text-sm text-green-700">{{ session('success') }}</div>@endif
     @if(session('error'))<div class="rounded-xl bg-red-50 p-4 text-sm text-red-700">{{ session('error') }}</div>@endif
     @if($errors->any())<div class="rounded-xl bg-red-50 p-4 text-sm text-red-700">{{ $errors->first() }}</div>@endif
-
-    @if($sessions->isNotEmpty())
-        <div class="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
-            賽事已完成全部組別排靶，所有組別報名均已停止，不能再次執行排靶。
-        </div>
-    @endif
 
     <section class="rounded-2xl border bg-white p-4 shadow-sm sm:p-6">
         <div class="flex items-start justify-between gap-3">
