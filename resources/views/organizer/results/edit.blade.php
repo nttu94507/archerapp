@@ -72,7 +72,10 @@
         </div>
         <div class="divide-y">
             @forelse($correctionLogs as $log)
-                @php($metadata = $log->metadata ?? [])
+                @php
+                    $metadata = $log->metadata ?? [];
+                    $scoreChanges = is_array($metadata['changes'] ?? null) ? $metadata['changes'] : [];
+                @endphp
                 <details class="group px-4 py-4 sm:px-5" @if($loop->first) open @endif>
                     <summary class="flex cursor-pointer list-none flex-wrap items-center justify-between gap-3">
                         <div>
@@ -85,13 +88,13 @@
                         </div>
                     </summary>
                     <div class="mt-4 space-y-2">
-                        @forelse($metadata['changes'] ?? [] as $change)
+                        @forelse($scoreChanges as $scoreChange)
                             @php
-                                $before = $change['before'] ?? null;
-                                $after = $change['after'] ?? null;
+                                $before = $scoreChange['before'] ?? null;
+                                $after = $scoreChange['after'] ?? null;
                             @endphp
                             <div class="grid gap-2 rounded-xl bg-gray-50 p-3 text-sm sm:grid-cols-[4rem_1fr_auto_1fr] sm:items-center">
-                                <p class="font-semibold text-gray-700">第 {{ $change['end_number'] }} 趟</p>
+                                <p class="font-semibold text-gray-700">第 {{ $scoreChange['end_number'] ?? '—' }} 趟</p>
                                 <div><p class="text-[10px] text-gray-400">修改前</p><p class="font-mono font-semibold text-red-700">{{ $before ? implode(' / ', $before['scores'] ?? []).'（'.($before['end_total'] ?? 0).'）' : '無成績' }}</p></div>
                                 <span class="hidden text-gray-400 sm:block">→</span>
                                 <div><p class="text-[10px] text-gray-400">修改後</p><p class="font-mono font-semibold text-green-700">{{ $after ? implode(' / ', $after['scores'] ?? []).'（'.($after['end_total'] ?? 0).'）' : '已移除' }}</p></div>
