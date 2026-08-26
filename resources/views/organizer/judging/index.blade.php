@@ -64,25 +64,37 @@
                                         <div class="mt-3 grid grid-cols-3 gap-2">
                                             <div class="rounded-xl bg-white p-3 text-center">
                                                 <p class="text-xs text-gray-500">上半局</p>
-                                                <p class="mt-1 text-xl font-bold tabular-nums text-gray-900">{{ $firstRoundStats['total'] }}</p>
-                                                <p class="mt-1 whitespace-nowrap text-xs text-gray-500">10：{{ $firstRoundStats['ten'] }}・X：{{ $firstRoundStats['x'] }}</p>
+                                                <p class="mt-1 text-xl font-bold tabular-nums text-gray-900">{{ $firstRoundStats['total'] }}<span class="ml-0.5 text-xs font-medium text-gray-400">分</span></p>
+                                                <div class="mt-2 flex justify-center gap-1.5">
+                                                    <span class="rounded-lg bg-amber-100 px-2 py-1 text-xs font-medium text-amber-900">10+X <strong class="ml-0.5 tabular-nums">{{ $firstRoundStats['ten'] + $firstRoundStats['x'] }}</strong></span>
+                                                    <span class="rounded-lg bg-orange-100 px-2 py-1 text-xs font-medium text-orange-900">X <strong class="ml-0.5 tabular-nums">{{ $firstRoundStats['x'] }}</strong></span>
+                                                </div>
                                             </div>
                                             <div class="rounded-xl bg-white p-3 text-center">
                                                 <p class="text-xs text-gray-500">下半局</p>
-                                                <p class="mt-1 text-xl font-bold tabular-nums text-gray-900">{{ $secondRoundStats['total'] }}</p>
-                                                <p class="mt-1 whitespace-nowrap text-xs text-gray-500">10：{{ $secondRoundStats['ten'] }}・X：{{ $secondRoundStats['x'] }}</p>
+                                                <p class="mt-1 text-xl font-bold tabular-nums text-gray-900">{{ $secondRoundStats['total'] }}<span class="ml-0.5 text-xs font-medium text-gray-400">分</span></p>
+                                                <div class="mt-2 flex justify-center gap-1.5">
+                                                    <span class="rounded-lg bg-amber-100 px-2 py-1 text-xs font-medium text-amber-900">10+X <strong class="ml-0.5 tabular-nums">{{ $secondRoundStats['ten'] + $secondRoundStats['x'] }}</strong></span>
+                                                    <span class="rounded-lg bg-orange-100 px-2 py-1 text-xs font-medium text-orange-900">X <strong class="ml-0.5 tabular-nums">{{ $secondRoundStats['x'] }}</strong></span>
+                                                </div>
                                             </div>
                                             <div class="rounded-xl bg-indigo-50 p-3 text-center ring-1 ring-indigo-100">
                                                 <p class="text-xs font-medium text-indigo-600">全場</p>
-                                                <p class="mt-1 text-xl font-bold tabular-nums text-indigo-900">{{ $totalStats['total'] }}</p>
-                                                <p class="mt-1 whitespace-nowrap text-xs text-gray-500">10：{{ $totalStats['ten'] }}・X：{{ $totalStats['x'] }}</p>
+                                                <p class="mt-1 text-xl font-bold tabular-nums text-indigo-900">{{ $totalStats['total'] }}<span class="ml-0.5 text-xs font-medium text-indigo-400">分</span></p>
+                                                <div class="mt-2 flex justify-center gap-1.5">
+                                                    <span class="rounded-lg bg-amber-100 px-2 py-1 text-xs font-medium text-amber-900">10+X <strong class="ml-0.5 tabular-nums">{{ $totalStats['ten'] + $totalStats['x'] }}</strong></span>
+                                                    <span class="rounded-lg bg-orange-100 px-2 py-1 text-xs font-medium text-orange-900">X <strong class="ml-0.5 tabular-nums">{{ $totalStats['x'] }}</strong></span>
+                                                </div>
                                             </div>
                                         </div>
                                     @else
-                                        <div class="mt-3 grid grid-cols-3 gap-2 text-center">
-                                            <div class="rounded-xl bg-white p-3"><p class="text-xs text-gray-500">總分</p><p class="mt-1 text-xl font-bold tabular-nums">{{ $totalStats['total'] }}</p></div>
-                                            <div class="rounded-xl bg-white p-3"><p class="text-xs text-gray-500">10</p><p class="mt-1 text-xl font-bold tabular-nums">{{ $totalStats['ten'] }}</p></div>
-                                            <div class="rounded-xl bg-white p-3"><p class="text-xs text-gray-500">X</p><p class="mt-1 text-xl font-bold tabular-nums">{{ $totalStats['x'] }}</p></div>
+                                        <div class="mt-3 rounded-xl bg-white p-3 text-center">
+                                            <p class="text-xs text-gray-500">總分</p>
+                                            <p class="mt-1 text-2xl font-bold tabular-nums text-gray-900">{{ $totalStats['total'] }}<span class="ml-0.5 text-xs font-medium text-gray-400">分</span></p>
+                                            <div class="mt-2 flex justify-center gap-2">
+                                                <span class="rounded-lg bg-amber-100 px-3 py-1 text-xs font-medium text-amber-900">10+X <strong class="ml-1 tabular-nums">{{ $totalStats['ten'] + $totalStats['x'] }}</strong></span>
+                                                <span class="rounded-lg bg-orange-100 px-3 py-1 text-xs font-medium text-orange-900">X <strong class="ml-1 tabular-nums">{{ $totalStats['x'] }}</strong></span>
+                                            </div>
                                         </div>
                                     @endif
                                 </div>
