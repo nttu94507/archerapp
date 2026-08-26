@@ -36,12 +36,16 @@
                     </div>
                     <div class="divide-y">
                         @foreach(range($fromEnd, $toEnd) as $end)
-                            @php($entry = $entries->get($end))
+                            @php
+                                $entry = $entries->get($end);
+                            @endphp
                             <div class="score-end grid grid-cols-[2.5rem_minmax(0,1fr)_3.5rem] items-center gap-2 px-3 py-3 sm:grid-cols-[3.5rem_minmax(0,1fr)_4rem] sm:px-4" data-end="{{ $end }}">
                                 <div class="text-center"><p class="text-[10px] text-gray-400">趟次</p><p class="font-bold text-gray-700">{{ $twoRounds ? ($end > 6 ? $end - 6 : $end) : $end }}</p></div>
                                 <div class="grid gap-1.5" style="grid-template-columns: repeat({{ $arrowsPerEnd }}, minmax(0, 1fr));">
                                     @for($arrow = 0; $arrow < $arrowsPerEnd; $arrow++)
-                                        @php($value = old('ends.'.$end.'.'.$arrow, $entry?->scores[$arrow] ?? ''))
+                                        @php
+                                            $value = old('ends.'.$end.'.'.$arrow, $entry?->scores[$arrow] ?? '');
+                                        @endphp
                                         <input name="ends[{{ $end }}][]" value="{{ $value }}" readonly inputmode="none" @disabled($published)
                                                placeholder="＿" aria-label="{{ $roundLabel }}第 {{ $twoRounds ? ($end > 6 ? $end - 6 : $end) : $end }} 趟第 {{ $arrow + 1 }} 箭"
                                                class="score-value h-10 min-w-0 touch-manipulation cursor-pointer select-none rounded-lg border-gray-300 p-0 text-center text-sm font-bold placeholder:text-gray-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500">
