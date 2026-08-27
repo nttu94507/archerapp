@@ -451,10 +451,10 @@ class EventController extends Controller
         ]);
     }
 
-    public function elimination(Event $event)
+    public function elimination(Request $request, Event $event)
     {
         abort_unless($event->isPublished() && $event->hasPlanFeature('public_visibility'), 404);
-        $brackets = $event->eliminationBrackets()
+        $allBrackets = $event->eliminationBrackets()
             ->where('visibility', 'public')
             ->whereNotNull('published_at')
             ->with([
@@ -462,9 +462,39 @@ class EventController extends Controller
                 'matches.participantOneEntry', 'matches.participantTwoEntry',
                 'matches.sets', 'matches.ends', 'matches.shootOffs',
             ])->get();
-        abort_if($brackets->isEmpty(), 404);
+        abort_if($allBrackets->isEmpty(), 404);
 
-        return view('events.elimination', compact('event', 'brackets'));
+        $bracketStats = $allBrackets->mapWithKeys(function ($bracket): array {
+            $mainMatches = $bracket->matches->where('match_type', 'main');
+            $final = $mainMatches->sortByDesc('round_number')->first();
+            $bronze = $bracket->matches->firstWhere('match_type', 'bronze');
+            $completed = (bool) $final?->winner_registration_id
+                && (! $bronze || (bool) $bronze->winner_registration_id);
+            $active = $bracket->matches->whereIn('status', [
+                'ready', 'in_progress', 'awaiting_shoot_off', 'awaiting_judge',
+            ])->count();
+            $waitingJudge = $bracket->matches->where('status', 'awaiting_judge')->count();
+
+            return [$bracket->id=>compact('completed', 'active', 'waitingJudge')];
+        });
+
+        $selectedGroup = $request->string('group')->toString();
+        if ($selectedGroup !== '' && ! $allBrackets->contains('uuid', $selectedGroup)) {
+            $selectedGroup = '';
+        }
+        $selectedStatus = in_array($request->string('status')->toString(), ['live', 'completed'], true)
+            ? $request->string('status')->toString()
+            : 'all';
+
+        $brackets = $allBrackets
+            ->when($selectedGroup !== '', fn ($items) => $items->where('uuid', $selectedGroup))
+            ->when($selectedStatus === 'live', fn ($items) => $items->reject(fn ($bracket) => $bracketStats[$bracket->id]['completed']))
+            ->when($selectedStatus === 'completed', fn ($items) => $items->filter(fn ($bracket) => $bracketStats[$bracket->id]['completed']))
+            ->values();
+
+        return view('events.elimination', compact(
+            'event', 'brackets', 'allBrackets', 'bracketStats', 'selectedGroup', 'selectedStatus'
+        ));
     }
 
     private function resolveGroupArrowSettings(Event $event, ?EventGroup $group): array

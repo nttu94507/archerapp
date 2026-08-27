@@ -325,7 +325,22 @@ class EventEliminationBracketTest extends TestCase
         $this->get(route('events.elimination', $event))
             ->assertOk()
             ->assertSee('個人對抗賽即時戰況')
+            ->assertSee('全部組別')
+            ->assertSee('全部狀態')
+            ->assertSee('進行中')
+            ->assertSee($group->name)
             ->assertSee($bracket->matches->first()->participantOneEntry->athlete_name);
+
+        $this->get(route('events.elimination', [
+            'event'=>$event,
+            'group'=>$bracket->uuid,
+            'status'=>'live',
+        ]))->assertOk()->assertSee($group->name);
+
+        $this->get(route('events.elimination', [
+            'event'=>$event,
+            'status'=>'completed',
+        ]))->assertOk()->assertSee('目前沒有符合條件的組別');
     }
 
     public function test_public_bracket_remains_hidden_when_event_itself_is_unpublished(): void
