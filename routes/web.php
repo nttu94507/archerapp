@@ -14,6 +14,7 @@ use App\Http\Controllers\ProfileCompletionController;
 use App\Http\Controllers\ScoreController;
 use App\Http\Controllers\TeamPostController;
 use App\Http\Controllers\SecondHandItemController;
+use App\Http\Controllers\StoreController;
 use App\Http\Controllers\EventBadgeClaimController;
 use App\Http\Controllers\Organizer\EventBadgeController as OrganizerEventBadgeController;
 use App\Http\Controllers\Organizer\BadgeController as OrganizerBadgeController;
@@ -61,6 +62,10 @@ Route::get('/tool', function () {
 Route::get('/payment', function () {
     return view('tool.paymentfinish');
 })->name('tool.paymentfinish');
+
+Route::middleware('auth')->group(function () {
+    Route::get('/store', [StoreController::class, 'index'])->name('store.index');
+});
 
 Route::get('/second-hand', [SecondHandItemController::class, 'index'])->name('second-hand.index');
 Route::middleware('auth')->group(function () {

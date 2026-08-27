@@ -162,6 +162,9 @@
                class="px-2 py-1 rounded-lg hover:bg-gray-100 {{ request()->routeIs('second-hand.*') ? 'text-gray-900' : 'text-gray-600' }}">
                 二手市集
             </a>
+            @auth
+                <a href="{{ route('store.index') }}" class="px-2 py-1 rounded-lg hover:bg-gray-100 {{ request()->routeIs('store.*') ? 'text-gray-900' : 'text-gray-600' }}">商店</a>
+            @endauth
 {{--            <a href="{{ route('events.index') }}"--}}
 {{--               class="px-2 py-1 rounded-lg hover:bg-gray-100 {{ request()->routeIs('events.*') ? 'text-gray-900' : 'text-gray-600' }}">--}}
 {{--                賽事情報--}}
@@ -295,6 +298,7 @@
             <div class="mt-3 border-t px-3 pb-1 pt-4 text-xs font-medium text-gray-400">探索</div>
             <a href="{{ route('events.index') }}" class="flex min-h-11 items-center rounded-lg px-3 hover:bg-gray-50 {{ request()->routeIs('events.index') || request()->routeIs('events.show') ? 'bg-gray-50 font-semibold text-gray-900' : 'text-gray-700' }}">賽事</a>
             <a href="{{ route('second-hand.index') }}" class="flex min-h-11 items-center rounded-lg px-3 hover:bg-gray-50 {{ request()->routeIs('second-hand.*') ? 'bg-gray-50 font-semibold text-gray-900' : 'text-gray-700' }}">二手市集</a>
+            @auth<a href="{{ route('store.index') }}" class="flex min-h-11 items-center rounded-lg px-3 hover:bg-gray-50 {{ request()->routeIs('store.*') ? 'bg-gray-50 font-semibold text-gray-900' : 'text-gray-700' }}">商店</a>@endauth
 
             @auth
                 <div class="mt-3 border-t px-3 pb-1 pt-4 text-xs font-medium text-gray-400">主辦方工具</div>
