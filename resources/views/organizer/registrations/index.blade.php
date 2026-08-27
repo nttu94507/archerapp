@@ -74,17 +74,7 @@
             $pending=$fee === 0 ? 0 : (int)$selectedGroup->pending_payment_count;
         @endphp
 
-        <section class="rounded-2xl border bg-white p-4 shadow-sm sm:p-5">
-            <div class="grid grid-cols-2 gap-3 sm:grid-cols-5">
-                <div><p class="text-xs text-gray-500">名額</p><p class="mt-1 text-xl font-semibold">{{ $active }}{{ $selectedGroup->quota ? ' / '.$selectedGroup->quota : ' 人' }}</p></div>
-                <div><p class="text-xs text-gray-500">報名費</p><p class="mt-1 text-xl font-semibold">{{ $fee > 0 ? 'NT$ '.number_format($fee) : '免費' }}</p></div>
-                <div><p class="text-xs text-gray-500">已處理</p><p class="mt-1 text-xl font-semibold text-emerald-700">{{ $settled }}</p></div>
-                <div><p class="text-xs text-gray-500">待繳費</p><p class="mt-1 text-xl font-semibold text-amber-700">{{ $pending }}</p></div>
-                <div><p class="text-xs text-gray-500">對帳異常</p><p class="mt-1 text-xl font-semibold text-red-700">{{ $selectedGroup->payment_issue_count }}</p></div>
-            </div>
-        </section>
-
-        <form method="GET" class="rounded-2xl border bg-white p-4 shadow-sm">
+        <form method="GET" class="rounded-2xl border border-indigo-100 bg-white p-4 shadow-sm">
             <input type="hidden" name="event_group_id" value="{{ $selectedGroup->id }}">
             <label for="registration-search" class="text-sm font-semibold">搜尋此組選手</label>
             <div class="mt-2 flex flex-col gap-2 sm:flex-row">
@@ -94,6 +84,16 @@
                 @if(request()->filled('q') || request()->filled('payment_status'))<a href="{{ route('organizer.events.registrations.index',[$event,'event_group_id'=>$selectedGroup->id]) }}" class="inline-flex min-h-12 items-center justify-center rounded-xl border px-4 text-sm">清除</a>@endif
             </div>
         </form>
+
+        <section class="rounded-2xl border bg-white p-4 shadow-sm sm:p-5">
+            <div class="grid grid-cols-2 gap-3 sm:grid-cols-5">
+                <div><p class="text-xs text-gray-500">名額</p><p class="mt-1 text-xl font-semibold">{{ $active }}{{ $selectedGroup->quota ? ' / '.$selectedGroup->quota : ' 人' }}</p></div>
+                <div><p class="text-xs text-gray-500">報名費</p><p class="mt-1 text-xl font-semibold">{{ $fee > 0 ? 'NT$ '.number_format($fee) : '免費' }}</p></div>
+                <div><p class="text-xs text-gray-500">已處理</p><p class="mt-1 text-xl font-semibold text-emerald-700">{{ $settled }}</p></div>
+                <div><p class="text-xs text-gray-500">待繳費</p><p class="mt-1 text-xl font-semibold text-amber-700">{{ $pending }}</p></div>
+                <div><p class="text-xs text-gray-500">對帳異常</p><p class="mt-1 text-xl font-semibold text-red-700">{{ $selectedGroup->payment_issue_count }}</p></div>
+            </div>
+        </section>
 
         <div class="grid gap-3 md:grid-cols-2">
             @forelse($registrations as $registration)

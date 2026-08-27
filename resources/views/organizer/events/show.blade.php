@@ -10,18 +10,38 @@
     @if(session('success'))<div class="rounded-xl border border-green-200 bg-green-50 p-4 text-sm text-green-700">{{ session('success') }}</div>@endif
     @if($errors->any())<div class="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">{{ $errors->first() }}</div>@endif
 
-    <section class="rounded-2xl border bg-white p-4 shadow-sm"><div class="flex items-center justify-between gap-3"><div class="min-w-0"><p class="text-xs text-gray-500">賽事狀態</p><p class="font-semibold">{{ $officiallyCompleted ? '已正式完成' : (['draft'=>'草稿（尚未公開）','pending'=>'舊審核資料（可直接發布）','approved'=>'已發布','rejected'=>'已下架','archived'=>'已封存'][$event->status] ?? $event->status) }}</p>@if($event->review_note)<p class="mt-1 text-xs text-red-600">平台介入備註：{{ $event->review_note }}</p>@endif</div>@can('update',$event)<div class="grid shrink-0 grid-cols-2 gap-2">@if(!$event->isPublished() && !$event->cancelled_at)<form method="POST" action="{{ route('organizer.events.submit',$event) }}" onsubmit="return confirm('發布後所有會員都能查看此賽事，確定發布？')">@csrf<button class="min-h-10 w-full rounded-xl bg-indigo-600 px-3 text-xs font-medium text-white sm:px-4 sm:text-sm">發布</button></form>@elseif($event->isPublished())<form method="POST" action="{{ route('organizer.events.unpublish',$event) }}" onsubmit="return confirm('下架後會員將無法查看與報名，確定下架？')">@csrf<button class="min-h-10 w-full rounded-xl border border-amber-300 px-3 text-xs font-medium text-amber-700 sm:px-4 sm:text-sm">下架</button></form>@endif @if(!$event->cancelled_at)<form method="POST" action="{{ route('organizer.events.cancel',$event) }}" onsubmit="return confirm('取消賽事後將停止公開報名，確定取消？')">@csrf<button class="min-h-10 w-full rounded-xl border border-red-200 px-3 text-xs text-red-600 sm:px-4 sm:text-sm">取消</button></form>@endif</div>@endcan</div></section>
+    <section class="overflow-hidden rounded-2xl border {{ $officiallyCompleted ? 'border-emerald-200' : 'bg-white' }} shadow-sm">
+        <div class="flex flex-wrap items-start justify-between gap-4 p-4 sm:p-5">
+            <div class="min-w-0">
+                <p class="text-xs text-gray-500">賽事狀態</p>
+                <div class="mt-1 flex flex-wrap items-center gap-2">
+                    <p class="font-bold {{ $officiallyCompleted ? 'text-emerald-800' : 'text-gray-900' }}">{{ $officiallyCompleted ? '已正式完成' : (['draft'=>'草稿（尚未公開）','pending'=>'舊審核資料（可直接發布）','approved'=>'已發布','rejected'=>'已下架','archived'=>'已封存'][$event->status] ?? $event->status) }}</p>
+                    @if(!$officiallyCompleted && $event->isPublished())<span class="rounded-full px-2.5 py-1 text-xs font-medium {{ $completionCheck['ready'] ? 'bg-indigo-100 text-indigo-700' : 'bg-amber-100 text-amber-700' }}">{{ $completionCheck['ready'] ? '可結案' : '尚有未完成項目' }}</span>@endif
+                </div>
+                @if($officiallyCompleted)<p class="mt-1 text-sm text-emerald-700">完成時間：{{ $event->completed_at?->format('Y-m-d H:i') }}・計分裝置已停用，正式成績仍可查詢。</p>@elseif($event->isPublished())<p class="mt-1 text-sm text-gray-500">{{ $completionCheck['ready'] ? '所有排名與對抗賽條件皆已完成。' : '完成所有排名與對抗賽流程後，即可正式結案。' }}</p>@endif
+                @if($event->review_note)<p class="mt-1 text-xs text-red-600">平台介入備註：{{ $event->review_note }}</p>@endif
+            </div>
 
-    @if($officiallyCompleted || auth()->user()->can('update', $event))
-        <section class="rounded-2xl border {{ $officiallyCompleted ? 'border-emerald-200 bg-emerald-50' : ($completionCheck['ready'] ? 'border-indigo-200 bg-indigo-50' : 'border-amber-200 bg-amber-50') }} p-4 shadow-sm sm:p-5">
-            @if($officiallyCompleted)
-                <h2 class="font-bold text-emerald-950">賽事已正式完成</h2><p class="mt-1 text-sm text-emerald-800">完成時間：{{ $event->completed_at?->format('Y-m-d H:i') }}。所有現場計分裝置已停用，正式成績仍可查詢。</p>
-            @else
-                <div class="flex flex-wrap items-start justify-between gap-4"><div><h2 class="font-bold {{ $completionCheck['ready'] ? 'text-indigo-950' : 'text-amber-950' }}">完成整場賽事</h2><p class="mt-1 text-sm {{ $completionCheck['ready'] ? 'text-indigo-800' : 'text-amber-800' }}">{{ $completionCheck['ready'] ? '所有排名與對抗賽條件皆已完成，可以正式結案。' : '請先處理以下項目，完成後才能正式結案。' }}</p></div>@if($completionCheck['ready'])<form method="POST" action="{{ route('organizer.events.complete', $event) }}" onsubmit="return confirm('結案後所有計分 QR Code、PIN 與已綁定設備都會停用；正式成績仍會保留。確定完成整場賽事？')">@csrf<button class="min-h-12 rounded-xl bg-indigo-600 px-5 text-sm font-semibold text-white">完成整場賽事</button></form>@endif</div>
-                @if(!$completionCheck['ready'])<ul class="mt-4 space-y-2">@foreach($completionCheck['blockers'] as $blocker)<li class="rounded-xl bg-white/80 px-3 py-2 text-sm text-amber-900">• {{ $blocker }}</li>@endforeach</ul>@endif
-            @endif
-        </section>
-    @endif
+            @can('update', $event)
+                <div class="flex w-full flex-wrap gap-2 sm:w-auto sm:justify-end">
+                    @if(!$event->isPublished() && !$event->cancelled_at)
+                        <form method="POST" action="{{ route('organizer.events.submit',$event) }}" onsubmit="return confirm('發布後所有會員都能查看此賽事，確定發布？')">@csrf<button class="min-h-11 rounded-xl bg-indigo-600 px-4 text-sm font-medium text-white">發布</button></form>
+                    @elseif($event->isPublished())
+                        <form method="POST" action="{{ route('organizer.events.unpublish',$event) }}" onsubmit="return confirm('下架後會員將無法查看與報名，確定下架？')">@csrf<button class="min-h-11 rounded-xl border border-amber-300 px-4 text-sm font-medium text-amber-700">下架</button></form>
+                    @endif
+                    @if(!$event->cancelled_at)<form method="POST" action="{{ route('organizer.events.cancel',$event) }}" onsubmit="return confirm('取消賽事後將停止公開報名，確定取消？')">@csrf<button class="min-h-11 rounded-xl border border-red-200 px-4 text-sm text-red-600">取消</button></form>@endif
+                    @if($event->isPublished() && $completionCheck['ready'])<form method="POST" action="{{ route('organizer.events.complete', $event) }}" onsubmit="return confirm('結案後所有計分 QR Code、PIN 與已綁定設備都會停用；正式成績仍會保留。確定完成整場賽事？')">@csrf<button class="min-h-11 rounded-xl bg-gray-900 px-5 text-sm font-semibold text-white">完成整場賽事</button></form>@endif
+                </div>
+            @endcan
+        </div>
+
+        @if(!$officiallyCompleted && $event->isPublished() && !$completionCheck['ready'] && auth()->user()->can('update', $event))
+            <details class="border-t border-amber-200 bg-amber-50 px-4 py-3 sm:px-5">
+                <summary class="cursor-pointer text-sm font-semibold text-amber-900">查看 {{ count($completionCheck['blockers']) }} 個結案前待處理項目</summary>
+                <ul class="mt-3 space-y-2">@foreach($completionCheck['blockers'] as $blocker)<li class="rounded-xl bg-white/80 px-3 py-2 text-sm text-amber-900">• {{ $blocker }}</li>@endforeach</ul>
+            </details>
+        @endif
+    </section>
 
     @if(
         auth()->user()->can('manageGroups', $event)
