@@ -8,8 +8,6 @@ use App\Models\EventGroup;
 use App\Models\EventEliminationMatch;
 use App\Models\EventRankingSnapshot;
 use App\Services\IndividualEliminationBracketService;
-use App\Services\RecurveSetMatchService;
-use App\Services\CompoundCumulativeMatchService;
 use App\Services\EliminationShootOffService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -82,70 +80,6 @@ class EventEliminationController extends Controller
         return view($match->bracket->scoring_mode === 'cumulative'
             ? 'organizer.elimination.compound-match'
             : 'organizer.elimination.match', compact('event', 'match'));
-    }
-
-    public function storeSet(
-        Request $request,
-        Event $event,
-        EventEliminationMatch $match,
-        RecurveSetMatchService $service,
-    ): RedirectResponse {
-        $this->authorize('manageScores', $event);
-        abort_unless($match->bracket()->where('event_id', $event->id)->exists(), 404);
-        $data = $request->validate([
-            'participant_one_arrows'=>['required', 'array', 'size:3'],
-            'participant_one_arrows.*'=>['required', 'string', 'max:2'],
-            'participant_two_arrows'=>['required', 'array', 'size:3'],
-            'participant_two_arrows.*'=>['required', 'string', 'max:2'],
-        ]);
-        $updated = $service->recordSet(
-            $match,
-            $data['participant_one_arrows'],
-            $data['participant_two_arrows'],
-            $request->user()->id,
-        );
-
-        $message = match ($updated->status) {
-            'completed'=>'本場比賽完成，勝者已自動晉級。',
-            'awaiting_shoot_off'=>'五局結束仍為 5：5，請進行加射與主裁判判定。',
-            default=>'第 '.$updated->sets->count().' 局已保存。',
-        };
-
-        return redirect()->route('organizer.events.elimination.matches.show', [$event, $match])->with('success', $message);
-    }
-
-    public function storeEnd(Request $request, Event $event, EventEliminationMatch $match, CompoundCumulativeMatchService $service): RedirectResponse
-    {
-        $this->authorize('manageScores', $event);
-        abort_unless($match->bracket()->where('event_id', $event->id)->exists(), 404);
-        $data = $request->validate([
-            'participant_one_arrows'=>['required', 'array', 'size:3'],
-            'participant_one_arrows.*'=>['required', 'string', 'max:2'],
-            'participant_two_arrows'=>['required', 'array', 'size:3'],
-            'participant_two_arrows.*'=>['required', 'string', 'max:2'],
-        ]);
-        $updated = $service->recordEnd($match, $data['participant_one_arrows'], $data['participant_two_arrows'], $request->user()->id);
-        $message = match ($updated->status) {
-            'completed'=>'五趟比賽完成，勝者已自動晉級。',
-            'awaiting_shoot_off'=>'十五箭累計同分，請進行加射與主裁判判定。',
-            default=>'第 '.$updated->ends->count().' 趟已保存。',
-        };
-
-        return redirect()->route('organizer.events.elimination.matches.show', [$event, $match])->with('success', $message);
-    }
-
-    public function storeShootOff(Request $request, Event $event, EventEliminationMatch $match, EliminationShootOffService $service): RedirectResponse
-    {
-        $this->authorize('manageShootOff', $event);
-        abort_unless($match->bracket()->where('event_id', $event->id)->exists(), 404);
-        $data = $request->validate([
-            'participant_one_arrow'=>['required', 'string', 'max:2'],
-            'participant_two_arrow'=>['required', 'string', 'max:2'],
-        ]);
-        $updated = $service->record($match, $data['participant_one_arrow'], $data['participant_two_arrow'], $request->user()->id);
-        $message = $updated->status === 'completed' ? '加射分值不同，勝者已自動晉級。' : '加射同分，已送交主裁判判定距離。';
-
-        return redirect()->route('organizer.events.elimination.matches.show', [$event, $match])->with('success', $message);
     }
 
     public function updateVisibility(Request $request, Event $event, \App\Models\EventEliminationBracket $bracket): RedirectResponse

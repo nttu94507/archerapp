@@ -13,8 +13,8 @@
     @endif
 
     @if($match->status === 'awaiting_shoot_off')
-    @if(($deviceMode ?? false) || auth()->user()?->can('manageShootOff', $event))
-    <form method="POST" action="{{ ($deviceMode ?? false) ? route('elimination-stations.shoot-offs.store', $stationToken) : route('organizer.events.elimination.matches.shoot-offs.store', [$event, $match]) }}" id="shoot-off-form" class="space-y-3">@csrf
+    @if($deviceMode ?? false)
+    <form method="POST" action="{{ route('elimination-stations.shoot-offs.store', $stationToken) }}" id="shoot-off-form" class="space-y-3">@csrf
         <div class="grid grid-cols-2 gap-3">@foreach([['participant_one_arrow',$match->participantOneEntry->athlete_name],['participant_two_arrow',$match->participantTwoEntry->athlete_name]] as [$field,$name])<label class="text-center text-sm font-semibold">{{ $name }}<input readonly inputmode="none" name="{{ $field }}" placeholder="＿" class="shoot-input mt-1 h-12 w-full cursor-pointer rounded-xl border-amber-300 bg-white text-center text-xl font-bold placeholder:text-gray-300"></label>@endforeach</div>
         <div class="grid grid-cols-7 gap-2">@foreach(['X','10','9','8','7','6','5','4','3','2','1','M'] as $arrow)<button type="button" data-shoot-key="{{ $arrow }}" class="min-h-11 rounded-lg border border-amber-200 bg-white font-bold">{{ $arrow }}</button>@endforeach<button type="button" data-shoot-key="BKSP" class="min-h-11 rounded-lg border bg-white font-bold">⌫</button><button class="min-h-11 rounded-lg bg-amber-600 font-semibold text-white">送出</button></div>
     </form>

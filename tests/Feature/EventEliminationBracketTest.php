@@ -268,7 +268,9 @@ class EventEliminationBracketTest extends TestCase
             ->assertSee($group->name)
             ->assertSee($firstMatch->participantOneEntry->athlete_name)
             ->assertSee($firstMatch->participantTwoEntry->athlete_name)
-            ->assertSee($firstMatch->device_pin);
+            ->assertSee($firstMatch->device_pin)
+            ->assertDontSee('管理場次')
+            ->assertDontSee('查看場次');
     }
 
     public function test_legacy_published_group_can_backfill_verification_and_create_ranking_snapshot(): void
@@ -322,6 +324,13 @@ class EventEliminationBracketTest extends TestCase
         $match->update(['device_token_hash'=>hash('sha256', $deviceToken), 'device_bound_at'=>now()]);
         $this->get(route('elimination-stations.show', $match->access_token))
             ->assertStatus(423)->assertSee('第二台設備不能讀取或輸入成績');
+        $this->post(route('elimination-stations.sets.store', $match->access_token), [
+            'participant_one_arrows'=>['10','10','10'],
+            'participant_two_arrows'=>['9','9','9'],
+        ])->assertStatus(423);
+        $this->assertDatabaseMissing('event_elimination_match_sets', [
+            'event_elimination_match_id'=>$match->id,
+        ]);
 
         $cookie = 'elimination_device_'.$match->id;
         $this->withCookie($cookie, $deviceToken)

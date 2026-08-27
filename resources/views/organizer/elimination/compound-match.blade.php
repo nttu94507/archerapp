@@ -32,8 +32,8 @@
     @elseif($match->status === 'completed')
         <section class="rounded-2xl border border-emerald-200 bg-emerald-50 p-6 text-center"><h2 class="font-bold text-emerald-950">比賽完成</h2><p class="mt-1 text-sm text-emerald-800">勝者已自動帶入下一輪；請保留紙本記分卡供核對。</p></section>
     @elseif($canEnter)
-    @if($deviceMode || auth()->user()?->can('manageScores', $event))
-    <form method="POST" action="{{ $deviceMode ? route('elimination-stations.ends.store', $stationToken) : route('organizer.events.elimination.matches.ends.store', [$event, $match]) }}" id="end-form" class="grid gap-3">@csrf
+    @if($deviceMode)
+    <form method="POST" action="{{ route('elimination-stations.ends.store', $stationToken) }}" id="end-form" class="grid gap-3">@csrf
         <section class="rounded-2xl border bg-white p-3 shadow-sm"><div class="mb-3 text-center text-sm font-bold text-indigo-700">第 {{ $match->ends->count() + 1 }} 趟 / 5 趟</div><div class="divide-y rounded-xl border">
             @foreach([['participant_one_arrows',$match->participantOneEntry->athlete_name],['participant_two_arrows',$match->participantTwoEntry->athlete_name]] as [$field,$name])
             <div class="athlete-row grid grid-cols-[minmax(6rem,1fr)_minmax(10rem,1.2fr)_3rem] items-center gap-2 p-3"><strong class="truncate text-sm">{{ $name }}</strong><div class="grid grid-cols-3 gap-2">@for($arrow=0;$arrow<3;$arrow++)<input readonly inputmode="none" name="{{ $field }}[]" placeholder="＿" class="score-input h-11 min-w-0 cursor-pointer select-none rounded-lg border-gray-300 p-1 text-center text-lg font-bold placeholder:text-gray-300 focus:ring-2 focus:ring-indigo-500">@endfor</div><strong class="row-total text-right text-xl">0</strong></div>

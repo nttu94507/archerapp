@@ -149,9 +149,6 @@ Route::prefix('organizer')->middleware('auth')->name('organizer.')->group(functi
     Route::get('events/{event}/elimination/matches/{match}/qrcode', [OrganizerEliminationController::class, 'qrCode'])->name('events.elimination.matches.qrcode');
     Route::delete('events/{event}/elimination/matches/{match}/device', [OrganizerEliminationController::class, 'releaseDevice'])->name('events.elimination.matches.device.destroy');
     Route::get('events/{event}/elimination/matches/{match}', [OrganizerEliminationController::class, 'showMatch'])->name('events.elimination.matches.show');
-    Route::post('events/{event}/elimination/matches/{match}/sets', [OrganizerEliminationController::class, 'storeSet'])->name('events.elimination.matches.sets.store');
-    Route::post('events/{event}/elimination/matches/{match}/ends', [OrganizerEliminationController::class, 'storeEnd'])->name('events.elimination.matches.ends.store');
-    Route::post('events/{event}/elimination/matches/{match}/shoot-offs', [OrganizerEliminationController::class, 'storeShootOff'])->name('events.elimination.matches.shoot-offs.store');
     Route::post('events/{event}/elimination/matches/{match}/shoot-offs/adjudicate', [OrganizerEliminationController::class, 'adjudicateShootOff'])->name('events.elimination.matches.shoot-offs.adjudicate');
     Route::get('events/{event}/scoring', [OrganizerScoringController::class, 'index'])->name('events.scoring.index');
     Route::post('events/{event}/scoring', [OrganizerScoringController::class, 'store'])->name('events.scoring.store');
