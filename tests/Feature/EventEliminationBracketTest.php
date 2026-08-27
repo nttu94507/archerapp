@@ -6,6 +6,7 @@ use App\Models\Event;
 use App\Models\EventGroup;
 use App\Models\EventRegistration;
 use App\Models\EventScoreEntry;
+use App\Models\EventStaff;
 use App\Models\User;
 use App\Services\IndividualEliminationBracketService;
 use App\Services\QualificationRankingSnapshotService;
@@ -243,6 +244,25 @@ class EventEliminationBracketTest extends TestCase
         $event->update(['status'=>'draft', 'published_at'=>null]);
 
         $this->get(route('events.elimination', $event))->assertNotFound();
+    }
+
+    public function test_event_owner_can_render_individual_elimination_management_page(): void
+    {
+        [$event, $group] = $this->publishedRanking([40, 30, 20, 10], 'recurve', true);
+        $owner = User::factory()->create();
+        EventStaff::create([
+            'event_id'=>$event->id,
+            'user_id'=>$owner->id,
+            'role'=>'owner',
+            'status'=>'active',
+            'invited_by'=>$owner->id,
+        ]);
+
+        $this->actingAs($owner)
+            ->get(route('organizer.events.elimination.index', $event))
+            ->assertOk()
+            ->assertSee('個人對抗表')
+            ->assertSee($group->name);
     }
 
     private function compoundMatchAwaitingShootOff()

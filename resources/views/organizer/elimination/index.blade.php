@@ -22,7 +22,9 @@
                 <select name="event_group_id" required class="mt-1 min-h-12 w-full rounded-xl border-gray-300 text-base">
                     <option value="">請選擇</option>
                     @foreach($event->groups as $group)
-                        @php($snapshot = $snapshots->get($group->id))
+                        @php
+                            $snapshot = $snapshots->get($group->id);
+                        @endphp
                         <option value="{{ $group->id }}" @selected(old('event_group_id') == $group->id) @disabled($group->eliminationBrackets->isNotEmpty())>{{ $group->name }}（{{ $group->eliminationBrackets->isNotEmpty() ? '已建立' : ($snapshot ? $snapshot->entries->where('is_eligible', true)->count().' 名有效種子' : '尚無排名快照') }}）</option>
                     @endforeach
                 </select>
