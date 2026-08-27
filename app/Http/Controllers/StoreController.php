@@ -19,7 +19,8 @@ class StoreController extends Controller
             ->get();
 
         $selectedEvent = $events->firstWhere('uuid', $request->string('event')->toString());
+        $subscription = $request->user()->activeOrganizerSubscription();
 
-        return view('store.index', compact('events', 'selectedEvent'));
+        return view('store.index', compact('events', 'selectedEvent', 'subscription'));
     }
 }

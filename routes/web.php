@@ -91,6 +91,7 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->name('admin.')->group(fun
         ->only(['index', 'create', 'store', 'show']);
 
     Route::get('users', [AdminUserController::class, 'index'])->name('users.index');
+    Route::patch('users/{user}/subscription', [AdminUserController::class, 'updateSubscription'])->name('users.subscription.update');
     Route::get('badges', [BadgeOversightController::class, 'index'])->name('badges.index');
     Route::get('badges/create', [BadgeOversightController::class, 'create'])->name('badges.create');
     Route::post('badges', [BadgeOversightController::class, 'store'])->name('badges.store');

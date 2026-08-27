@@ -38,7 +38,7 @@
         <section class="rounded-2xl border border-amber-200 bg-amber-50 p-5 text-sm text-amber-900">你目前沒有可管理的賽事。建立賽事後，就能在這裡選擇要升級的場次。</section>
     @endif
 
-    <section class="grid gap-5 lg:grid-cols-2">
+    <section class="grid gap-5 lg:grid-cols-3">
         <article class="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
             <p class="text-sm font-semibold text-gray-500">免費方案</p>
             <h2 class="mt-2 text-2xl font-bold text-gray-950">社團排名賽</h2>
@@ -69,6 +69,26 @@
                 <div class="mt-7 min-h-11 rounded-xl bg-emerald-100 px-4 py-3 text-center text-sm font-semibold text-emerald-700">這場賽事已啟用</div>
             @else
                 <button type="button" disabled class="mt-7 min-h-11 w-full cursor-not-allowed rounded-xl bg-indigo-200 px-4 text-sm font-semibold text-indigo-700">付款功能準備中</button>
+            @endif
+        </article>
+
+        <article class="relative rounded-3xl border-2 border-violet-500 bg-white p-6 shadow-md">
+            <span class="absolute right-5 top-5 rounded-full bg-violet-100 px-3 py-1 text-xs font-semibold text-violet-700">主辦方帳號</span>
+            <p class="text-sm font-semibold text-violet-600">訂閱方案</p>
+            <h2 class="mt-2 text-2xl font-bold text-gray-950">持續舉辦賽事</h2>
+            <p class="mt-2 text-sm text-gray-500">訂閱有效期間建立的新賽事，會自動取得完整進階權益。</p>
+            <ul class="mt-6 space-y-3 text-sm text-gray-700">
+                <li>✓ 不必逐場購買方案</li>
+                <li>✓ 新賽事自動套用進階功能</li>
+                <li>✓ 訂閱到期不影響既有賽事</li>
+                <li>✓ 適合社團、俱樂部與協會</li>
+            </ul>
+            @if($subscription)
+                <div class="mt-7 rounded-xl bg-emerald-100 px-4 py-3 text-center text-sm font-semibold text-emerald-700">
+                    訂閱中{{ $subscription->ends_at ? '・至 '.$subscription->ends_at->format('Y-m-d') : '・無到期日' }}
+                </div>
+            @else
+                <button type="button" disabled class="mt-7 min-h-11 w-full cursor-not-allowed rounded-xl bg-violet-200 px-4 text-sm font-semibold text-violet-700">線上訂閱準備中</button>
             @endif
         </article>
     </section>

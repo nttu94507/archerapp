@@ -9,6 +9,7 @@ use App\Models\EventStaff;
 use App\Models\User;
 use App\Services\EventBadgeAwardService;
 use App\Services\EventCompletionService;
+use App\Support\EventPlanCatalog;
 use BaconQrCode\Renderer\Image\SvgImageBackEnd;
 use BaconQrCode\Renderer\ImageRenderer;
 use BaconQrCode\Renderer\RendererStyle\RendererStyle;
@@ -52,6 +53,17 @@ class EventController extends Controller
         $validated['status'] = $publish ? 'approved' : 'draft';
         $validated['published_at'] = $publish ? now() : null;
         $validated['verified'] = $publish;
+
+        $subscription = $request->user()->activeOrganizerSubscription();
+        if ($subscription) {
+            $validated['plan_code'] = EventPlanCatalog::SUBSCRIPTION;
+            $validated['plan_status'] = EventPlanCatalog::STATUS_ACTIVE;
+            $validated['plan_limits_snapshot'] = EventPlanCatalog::limits(EventPlanCatalog::SUBSCRIPTION);
+            $validated['plan_features_snapshot'] = EventPlanCatalog::features(EventPlanCatalog::SUBSCRIPTION);
+            $validated['plan_activated_at'] = now();
+            $validated['plan_expires_at'] = null;
+            $validated['plan_order_reference'] = 'subscription:'.$subscription->id;
+        }
 
         $event = DB::transaction(function () use ($validated, $groups, $request, $publish) {
             $event = Event::create($validated);

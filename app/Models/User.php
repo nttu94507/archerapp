@@ -93,6 +93,21 @@ class User extends Authenticatable
         return $this->hasOne(OrganizerProfile::class);
     }
 
+    public function organizerSubscription(): HasOne
+    {
+        return $this->hasOne(OrganizerSubscription::class);
+    }
+
+    public function activeOrganizerSubscription(): ?OrganizerSubscription
+    {
+        return $this->organizerSubscription()->active()->first();
+    }
+
+    public function hasActiveOrganizerSubscription(): bool
+    {
+        return $this->organizerSubscription()->active()->exists();
+    }
+
     public function canCreateEvents(): bool
     {
         return $this->isAdmin() || $this->organizerProfile()->where('status', 'approved')->exists();
