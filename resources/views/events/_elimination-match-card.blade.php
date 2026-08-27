@@ -4,9 +4,18 @@
     @php
         $roundTotals = ($bracket->scoring_mode === 'set' ? $match->sets : $match->ends)
             ->take(5)
-            ->map(fn ($round) => $slot === 1
-                ? ($bracket->scoring_mode === 'set' ? $round->participant_one_total : $round->participant_one_end_total)
-                : ($bracket->scoring_mode === 'set' ? $round->participant_two_total : $round->participant_two_end_total));
+            ->map(function ($round) use ($slot, $bracket): array {
+                $oneTotal = $bracket->scoring_mode === 'set'
+                    ? $round->participant_one_total
+                    : $round->participant_one_end_total;
+                $twoTotal = $bracket->scoring_mode === 'set'
+                    ? $round->participant_two_total
+                    : $round->participant_two_end_total;
+                return [
+                    'total'=>$slot === 1 ? $oneTotal : $twoTotal,
+                    'won'=>$slot === 1 ? $oneTotal > $twoTotal : $twoTotal > $oneTotal,
+                ];
+            });
         $latestShootOff = $match->shootOffs->last();
         $shootOffArrow = $latestShootOff
             ? ($slot === 1 ? $latestShootOff->participant_one_arrow : $latestShootOff->participant_two_arrow)
@@ -18,11 +27,11 @@
             <p class="truncate text-sm font-semibold">{{ $entry?->athlete_name ?? ($match->round_number === 1 ? '輪空' : '等待前場勝者') }}</p>
             @if($entry && ($roundTotals->isNotEmpty() || $shootOffArrow !== null))
                 <div class="mt-1 flex flex-wrap gap-1" aria-label="{{ $entry->athlete_name }}各輪分數">
-                    @foreach($roundTotals as $roundIndex => $roundTotal)
-                        <span title="第 {{ $roundIndex + 1 }} 輪三箭總分 {{ $roundTotal }}" class="inline-flex min-w-6 items-center justify-center rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-semibold tabular-nums text-slate-600">{{ $roundTotal }}</span>
+                    @foreach($roundTotals as $roundIndex => $roundResult)
+                        <span title="第 {{ $roundIndex + 1 }} 輪三箭總分 {{ $roundResult['total'] }}{{ $roundResult['won'] ? '，本輪勝出' : '' }}" class="inline-flex min-w-6 items-center justify-center rounded px-1.5 py-0.5 text-[10px] tabular-nums {{ $roundResult['won'] ? 'bg-indigo-600 font-black text-white ring-1 ring-indigo-700' : 'bg-slate-100 font-semibold text-slate-600' }}">{{ $roundResult['total'] }}</span>
                     @endforeach
                     @if($shootOffArrow !== null)
-                        <span title="加射箭值 {{ $shootOffArrow }}" class="inline-flex items-center justify-center rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-bold text-amber-800">加 {{ $shootOffArrow }}</span>
+                        <span title="加射箭值 {{ $shootOffArrow }}" class="inline-flex min-w-6 items-center justify-center rounded bg-amber-200 px-1.5 py-0.5 text-[10px] font-black text-amber-900 ring-1 ring-amber-300">{{ $shootOffArrow }}</span>
                     @endif
                 </div>
             @endif
