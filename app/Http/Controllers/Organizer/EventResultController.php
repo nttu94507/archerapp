@@ -339,15 +339,6 @@ class EventResultController extends Controller
                 'published_at'=>$now,
             ]);
 
-            $eventHasUnpublished = EventRegistration::query()
-                ->where('event_id', $event->id)
-                ->whereIn('status', ['registered', 'checked_in', 'no_show'])
-                ->whereNull('result_published_at')
-                ->exists();
-            if (! $eventHasUnpublished) {
-                $event->update(['completed_at'=>$now]);
-            }
-
             EventAuditLog::create([
                 'event_id'=>$event->id,
                 'user_id'=>$request->user()->id,

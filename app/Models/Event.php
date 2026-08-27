@@ -94,6 +94,11 @@ class Event extends Model
         return $this->status === 'approved' && $this->published_at !== null && $this->cancelled_at === null;
     }
 
+    public function isOfficiallyCompleted(): bool
+    {
+        return $this->auditLogs()->where('action', 'event.completed')->exists();
+    }
+
     public function hasPlanFeature(string $feature): bool
     {
         if (! $this->planIsActive()) {

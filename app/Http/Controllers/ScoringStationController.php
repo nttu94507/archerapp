@@ -232,7 +232,7 @@ class ScoringStationController extends Controller
 
     private function target(string $token): EventScoringTarget
     {
-        return EventScoringTarget::query()
+        $target = EventScoringTarget::query()
             ->where('access_token', $token)
             ->with([
                 'session.event',
@@ -240,6 +240,13 @@ class ScoringStationController extends Controller
                 'session.phase',
             ])
             ->firstOrFail();
+        abort_if(
+            $target->session->event->auditLogs()->where('action', 'event.completed')->exists(),
+            410,
+            '此賽事已正式完成，計分設備已停用。'
+        );
+
+        return $target;
     }
 
     private function isAuthorizedDevice(Request $request, EventScoringTarget $target): bool

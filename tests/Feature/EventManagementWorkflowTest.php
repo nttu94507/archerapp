@@ -8,6 +8,7 @@ use App\Models\EventRegistration;
 use App\Models\EventScoreEntry;
 use App\Models\EventStaff;
 use App\Models\EventScoringSession;
+use App\Models\EventScoringTarget;
 use App\Models\User;
 use App\Models\OrganizerProfile;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -193,7 +194,7 @@ class EventManagementWorkflowTest extends TestCase
         $this->createScoringTarget($event, $group, $owner);
         $this->actingAs($owner)->post(route('organizer.events.results.publish',[$event,$group]))->assertSessionHas('success');
         $this->assertNotNull($registration->fresh()->result_published_at);
-        $this->assertNotNull($event->fresh()->completed_at);
+        $this->assertNull($event->fresh()->completed_at);
         $phase = $group->qualificationPhase()->firstOrFail();
         $this->assertSame('published', $phase->status);
         $this->assertNotNull($phase->locked_at);
@@ -201,6 +202,22 @@ class EventManagementWorkflowTest extends TestCase
         $snapshot = $phase->rankingSnapshots()->with('entries')->firstOrFail();
         $this->assertSame(1, $snapshot->version);
         $this->assertSame($registration->id, $snapshot->entries->first()->event_registration_id);
+
+        $target = EventScoringTarget::whereHas('session', fn ($query) => $query->where('event_id', $event->id))->firstOrFail();
+        $oldAccessToken = $target->access_token;
+        $this->actingAs($owner)
+            ->get(route('organizer.events.show', $event))
+            ->assertOk()
+            ->assertSee('完成整場賽事');
+        $this->actingAs($owner)
+            ->post(route('organizer.events.complete', $event))
+            ->assertRedirect()
+            ->assertSessionHas('success');
+
+        $this->assertNotNull($event->fresh()->completed_at);
+        $this->assertDatabaseHas('event_audit_logs', ['event_id'=>$event->id, 'action'=>'event.completed']);
+        $this->assertNotSame($oldAccessToken, $target->fresh()->access_token);
+        $this->get(route('scoring-stations.show', $target->fresh()->access_token))->assertStatus(410);
     }
 
     public function test_organizer_can_create_shared_target_station_and_submit_an_end_for_all_archers(): void

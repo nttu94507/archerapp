@@ -8,6 +8,7 @@ use App\Models\EventAuditLog;
 use App\Models\EventStaff;
 use App\Models\User;
 use App\Services\EventBadgeAwardService;
+use App\Services\EventCompletionService;
 use BaconQrCode\Renderer\Image\SvgImageBackEnd;
 use BaconQrCode\Renderer\ImageRenderer;
 use BaconQrCode\Renderer\RendererStyle\RendererStyle;
@@ -74,7 +75,7 @@ class EventController extends Controller
         );
     }
 
-    public function show(Request $request, Event $event): View
+    public function show(Request $request, Event $event, EventCompletionService $completion): View
     {
         $this->authorize('viewManagement', $event);
         $event->load(['groups' => fn ($query) => $query->withCount('registrations'), 'staff.user'])
@@ -103,7 +104,14 @@ class EventController extends Controller
             }
         }
 
-        return view('organizer.events.show', compact('event', 'statusCounts', 'auditLogs', 'staffInviteQrs'));
+        $officiallyCompleted = $event->auditLogs()->where('action', 'event.completed')->exists();
+        $completionCheck = $officiallyCompleted
+            ? ['ready'=>true, 'blockers'=>[]]
+            : $completion->inspect($event);
+
+        return view('organizer.events.show', compact(
+            'event', 'statusCounts', 'auditLogs', 'staffInviteQrs', 'officiallyCompleted', 'completionCheck'
+        ));
     }
 
     public function edit(Event $event): View
@@ -149,6 +157,22 @@ class EventController extends Controller
         $this->audit($event, $request, 'event.cancelled');
 
         return back()->with('success', '賽事已取消並停止公開報名。');
+    }
+
+    public function complete(
+        Request $request,
+        Event $event,
+        EventCompletionService $completion,
+        EventBadgeAwardService $badges,
+    ): RedirectResponse {
+        $this->authorize('update', $event);
+        abort_if($event->cancelled_at, 422, '已取消的賽事不能結案。');
+        abort_if($event->auditLogs()->where('action', 'event.completed')->exists(), 422, '此賽事已經完成結案。');
+
+        $completion->complete($event, $request->user()->id);
+        $finisherBadges = $badges->awardFinishersFor($event->fresh());
+
+        return back()->with('success', '整場賽事已正式完成，計分設備已停用'.($finisherBadges ? '，並發放 '.$finisherBadges.' 枚完賽 Badge' : '').'。');
     }
 
     public function addStaff(Request $request, Event $event, EventBadgeAwardService $badges): RedirectResponse

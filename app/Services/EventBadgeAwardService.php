@@ -11,6 +11,24 @@ use Illuminate\Support\Facades\DB;
 
 class EventBadgeAwardService
 {
+    public function awardFinishersFor(Event $event): int
+    {
+        $count = 0;
+        $badges = $event->badges()->where('type', 'finisher')->where('is_active', true)->get();
+        foreach ($badges as $badge) {
+            $registrations = $event->registrations()
+                ->whereIn('status', ['registered', 'checked_in'])
+                ->whereNotIn('result_status', ['dns', 'dnf', 'dsq'])
+                ->whereNotNull('result_published_at')
+                ->when($badge->event_group_id, fn ($query) => $query->where('event_group_id', $badge->event_group_id))
+                ->get();
+            foreach ($registrations as $registration) {
+                if ($this->award($badge, $registration->user_id, 'finisher')) $count++;
+            }
+        }
+        return $count;
+    }
+
     public function awardTeamFor(EventStaff $staff): int
     {
         if ($staff->status !== 'active') return 0;
@@ -118,7 +136,7 @@ class EventBadgeAwardService
     {
         return match ($source) {
             'attendance'=>'完成繳費並報到','placement'=>'正式成績名次','staff'=>'加入賽事工作團隊',
-            'volunteer'=>'成為賽事志工','platform'=>'平台官方發放','platform_all'=>'官方全站派發',
+            'volunteer'=>'成為賽事志工','finisher'=>'正式完成賽事','platform'=>'平台官方發放','platform_all'=>'官方全站派發',
             'public_qr'=>'登入帳號並掃描官方 QR Code',default=>'主辦方授予',
         };
     }

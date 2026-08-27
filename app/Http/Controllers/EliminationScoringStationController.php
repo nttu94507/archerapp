@@ -93,7 +93,14 @@ class EliminationScoringStationController extends Controller
 
     private function match(string $token): EventEliminationMatch
     {
-        return EventEliminationMatch::where('access_token', $token)->with('bracket.event', 'bracket.group')->firstOrFail();
+        $match = EventEliminationMatch::where('access_token', $token)->with('bracket.event', 'bracket.group')->firstOrFail();
+        abort_if(
+            $match->bracket->event->auditLogs()->where('action', 'event.completed')->exists(),
+            410,
+            '此賽事已正式完成，對抗賽計分設備已停用。'
+        );
+
+        return $match;
     }
 
     private function authorizedMatch(Request $request, string $token): EventEliminationMatch

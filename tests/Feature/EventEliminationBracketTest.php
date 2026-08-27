@@ -410,6 +410,27 @@ class EventEliminationBracketTest extends TestCase
             ->assertDontSee('查看場次');
     }
 
+    public function test_event_cannot_be_completed_while_elimination_matches_are_unresolved(): void
+    {
+        [$event, $group] = $this->publishedRanking([40, 30, 20, 10], 'recurve', true);
+        $owner = User::factory()->create();
+        EventStaff::create([
+            'event_id'=>$event->id,
+            'user_id'=>$owner->id,
+            'role'=>'owner',
+            'status'=>'active',
+            'invited_by'=>$owner->id,
+        ]);
+        app(IndividualEliminationBracketService::class)->create($event, $group, 4, true, $owner->id);
+
+        $this->actingAs($owner)
+            ->post(route('organizer.events.complete', $event))
+            ->assertRedirect()
+            ->assertSessionHasErrors('completion');
+        $this->assertNull($event->fresh()->completed_at);
+        $this->assertDatabaseMissing('event_audit_logs', ['event_id'=>$event->id, 'action'=>'event.completed']);
+    }
+
     public function test_legacy_published_group_can_backfill_verification_and_create_ranking_snapshot(): void
     {
         $event = Event::factory()->create([
