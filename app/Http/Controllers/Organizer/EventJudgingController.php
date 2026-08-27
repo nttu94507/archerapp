@@ -21,12 +21,19 @@ class EventJudgingController extends Controller
             'scoringSessions.targets.reviewer',
             'scoringSessions.targets.confirmer',
             'scoringSessions.targets.assignments.registration.scoreEntries' => fn ($query) => $query->orderBy('end_number'),
+            'eliminationBrackets' => fn ($query) => $query->with([
+                'group',
+                'matches' => fn ($matches) => $matches
+                    ->where('status', 'awaiting_judge')
+                    ->with(['participantOneEntry', 'participantTwoEntry', 'shootOffs']),
+            ]),
         ]);
 
         $role = $this->role($request, $event);
         $canConfirm = $request->user()->isAdmin() || in_array($role, ['owner', 'manager', 'chief_judge'], true);
+        $canAdjudicateShootOff = $request->user()->can('adjudicateShootOff', $event);
 
-        return view('organizer.judging.index', compact('event', 'role', 'canConfirm'));
+        return view('organizer.judging.index', compact('event', 'role', 'canConfirm', 'canAdjudicateShootOff'));
     }
 
     public function update(Request $request, Event $event, EventScoringTarget $target): RedirectResponse

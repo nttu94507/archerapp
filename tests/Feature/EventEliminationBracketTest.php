@@ -238,6 +238,35 @@ class EventEliminationBracketTest extends TestCase
         $this->assertNotNull($shootOff->judged_at);
     }
 
+    public function test_chief_judge_can_open_pending_shoot_off_from_judging_workspace(): void
+    {
+        $match = $this->compoundMatchAwaitingShootOff();
+        $waiting = app(EliminationShootOffService::class)->record($match, '10', '10', null);
+        $event = $waiting->bracket->event;
+        $judge = User::factory()->create();
+        EventStaff::create([
+            'event_id'=>$event->id,
+            'user_id'=>$judge->id,
+            'role'=>'chief_judge',
+            'status'=>'active',
+            'invited_by'=>$judge->id,
+        ]);
+
+        $this->actingAs($judge)
+            ->get(route('organizer.events.judging.index', $event))
+            ->assertOk()
+            ->assertSee('待主裁判判定')
+            ->assertSee($waiting->participantOneEntry->athlete_name)
+            ->assertSee($waiting->participantTwoEntry->athlete_name)
+            ->assertSee('進入判定')
+            ->assertSee(route('organizer.events.elimination.matches.show', [$event, $waiting]), false);
+
+        $this->actingAs($judge)
+            ->get(route('organizer.events.elimination.matches.show', [$event, $waiting]))
+            ->assertOk()
+            ->assertSee('送出主裁判判定');
+    }
+
     public function test_public_elimination_page_is_hidden_until_bracket_is_explicitly_published(): void
     {
         [$event, $group] = $this->publishedRanking([40, 30, 20, 10], 'recurve', true);

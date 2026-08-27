@@ -13,6 +13,36 @@
     @if(session('success'))<div class="rounded-xl bg-green-50 p-4 text-sm text-green-700">{{ session('success') }}</div>@endif
     @if($errors->any())<div class="rounded-xl bg-red-50 p-4 text-sm text-red-700">{{ $errors->first() }}</div>@endif
 
+    @if($canAdjudicateShootOff)
+        @php
+            $pendingEliminationJudgements = $event->eliminationBrackets->flatMap->matches;
+        @endphp
+        <section class="overflow-hidden rounded-2xl border border-amber-200 bg-white shadow-sm">
+            <div class="flex items-center justify-between gap-3 border-b border-amber-200 bg-amber-50 p-4 sm:p-5">
+                <div><h2 class="font-bold text-amber-950">待主裁判判定</h2><p class="mt-1 text-sm text-amber-800">加射同分的場次由主裁判依箭孔距離靶心遠近判定。</p></div>
+                <span class="rounded-full bg-amber-200 px-3 py-1 text-sm font-bold text-amber-900">{{ $pendingEliminationJudgements->count() }}</span>
+            </div>
+            @forelse($pendingEliminationJudgements as $match)
+                @php
+                    $shootOff = $match->shootOffs->where('status', 'pending_judge')->last();
+                @endphp
+                <article class="grid gap-4 border-b border-amber-100 p-4 last:border-b-0 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center sm:p-5">
+                    <div>
+                        <p class="text-xs font-medium text-gray-500">{{ $match->bracket->group->name }}・{{ $match->match_type === 'bronze' ? '季軍賽' : $match->label }} #{{ $match->position }}・第 {{ $shootOff?->attempt_number }} 次加射</p>
+                        <div class="mt-3 grid grid-cols-[minmax(0,1fr)_3rem_minmax(0,1fr)] items-center gap-2 text-center">
+                            <div class="rounded-xl border bg-gray-50 p-3"><p class="truncate font-semibold">{{ $match->participantOneEntry->athlete_name }}</p><p class="mt-1 text-2xl font-black text-amber-700">{{ $shootOff?->participant_one_arrow }}</p></div>
+                            <span class="text-sm font-bold text-gray-400">VS</span>
+                            <div class="rounded-xl border bg-gray-50 p-3"><p class="truncate font-semibold">{{ $match->participantTwoEntry->athlete_name }}</p><p class="mt-1 text-2xl font-black text-amber-700">{{ $shootOff?->participant_two_arrow }}</p></div>
+                        </div>
+                    </div>
+                    <a href="{{ route('organizer.events.elimination.matches.show', [$event, $match]) }}" class="inline-flex min-h-12 items-center justify-center rounded-xl bg-gray-900 px-5 text-sm font-semibold text-white">進入判定</a>
+                </article>
+            @empty
+                <p class="p-6 text-center text-sm text-gray-500">目前沒有等待主裁判判定的加射場次。</p>
+            @endforelse
+        </section>
+    @endif
+
     <div class="grid grid-cols-3 gap-3">
         @php
             $targets = $event->scoringSessions->flatMap->targets;
