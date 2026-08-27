@@ -51,19 +51,21 @@
                     @foreach($mainRounds as $round => $matches)
                     <div><h3 class="mb-3 text-center text-sm font-semibold text-gray-600">{{ $matches->first()->label }}</h3><div class="flex h-full flex-col justify-around gap-4">
                         @foreach($matches as $match)
-                        <article class="overflow-hidden rounded-xl border bg-white shadow-sm">
-                            <div class="flex items-center justify-between bg-gray-50 px-3 py-2 text-xs text-gray-500"><span>#{{ $match->position }}</span><span>{{ $statusNames[$match->status] ?? $match->status }}</span></div>
-                            @foreach([[$match->participant_one_seed, $match->participantOneEntry], [$match->participant_two_seed, $match->participantTwoEntry]] as [$seed, $entry])
-                                <div class="flex min-h-12 items-center gap-3 border-t px-3"><span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gray-100 text-xs font-bold text-gray-600">{{ $seed ?? '—' }}</span><span class="min-w-0 truncate text-sm font-medium">{{ $entry?->athlete_name ?? ($round === 1 ? '輪空' : '等待前場勝者') }}</span></div>
-                            @endforeach
-                            @if($match->participant_one_registration_id && $match->participant_two_registration_id)<a href="{{ route('organizer.events.elimination.matches.show', [$event, $match]) }}" class="flex min-h-11 items-center justify-center border-t bg-indigo-50 text-sm font-semibold text-indigo-700">{{ $match->status === 'completed' ? ($bracket->scoring_mode === 'set' ? '查看局分' : '查看累計分') : '進入計分' }}</a>@endif
-                        </article>
+                        @include('events._elimination-match-card', ['match'=>$match, 'bracket'=>$bracket, 'statusNames'=>$statusNames, 'management'=>true])
                         @endforeach
                     </div>
                     @endforeach
-                    @if($bronze)<div><h3 class="mb-3 text-center text-sm font-semibold text-gray-600">季軍賽</h3><div class="flex h-full items-center"><article class="w-full overflow-hidden rounded-xl border bg-white shadow-sm"><div class="bg-gray-50 px-3 py-2 text-right text-xs text-gray-500">{{ $statusNames[$bronze->status] ?? $bronze->status }}</div>@foreach([$bronze->participantOneEntry, $bronze->participantTwoEntry] as $entry)<div class="flex min-h-12 items-center border-t px-3 text-sm font-medium">{{ $entry?->athlete_name ?? '等待準決賽結果' }}</div>@endforeach @if($bronze->participant_one_registration_id && $bronze->participant_two_registration_id)<a href="{{ route('organizer.events.elimination.matches.show', [$event, $bronze]) }}" class="flex min-h-11 items-center justify-center border-t bg-indigo-50 text-sm font-semibold text-indigo-700">{{ $bronze->status === 'completed' ? ($bracket->scoring_mode === 'set' ? '查看局分' : '查看累計分') : '進入計分' }}</a>@endif</article></div></div>@endif
+                    @if($bronze)<div><h3 class="mb-3 text-center text-sm font-semibold text-gray-600">季軍賽</h3><div class="flex h-full items-center">@include('events._elimination-match-card', ['match'=>$bronze, 'bracket'=>$bracket, 'statusNames'=>$statusNames, 'management'=>true])</div></div>@endif
                 </div>
             </div>
+            <details class="group border-t bg-gray-50 p-4 sm:p-5">
+                <summary class="flex min-h-11 cursor-pointer list-none items-center justify-between font-semibold"><span>對戰列表與計分設備</span><span class="text-sm text-gray-400 group-open:rotate-180">⌄</span></summary>
+                <div class="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                    @foreach($bracket->matches->filter(fn ($item) => $item->participant_one_registration_id && $item->participant_two_registration_id) as $match)
+                    <article class="rounded-2xl border bg-white p-4"><div class="flex items-start justify-between gap-3"><div><p class="text-xs text-gray-500">{{ $match->match_type === 'bronze' ? '季軍賽' : $match->label }} #{{ $match->position }}</p><h3 class="mt-1 font-semibold">{{ $match->participantOneEntry->athlete_name }} vs {{ $match->participantTwoEntry->athlete_name }}</h3><p class="mt-1 text-xs {{ $match->device_token_hash ? 'text-emerald-700' : 'text-gray-500' }}">{{ $match->device_token_hash ? '設備已綁定' : '尚未綁定設備' }}</p></div><img src="{{ route('organizer.events.elimination.matches.qrcode', [$event, $match]) }}" class="h-20 w-20" alt="對戰計分 QR Code"></div><div class="mt-3 flex items-end justify-between gap-3"><div><p class="text-xs text-gray-500">設備 PIN</p><p class="font-mono text-xl font-bold tracking-[.2em]">{{ $match->device_pin }}</p></div><div class="flex gap-2"><a href="{{ route('elimination-stations.show', $match->access_token) }}" class="inline-flex min-h-10 items-center rounded-lg border px-3 text-xs font-medium">開啟網址</a>@if($match->device_token_hash)<form method="POST" action="{{ route('organizer.events.elimination.matches.device.destroy', [$event, $match]) }}">@csrf @method('DELETE')<button class="min-h-10 rounded-lg border border-red-200 px-3 text-xs text-red-600" onclick="return confirm('解除後舊設備與網址會立即失效，確定？')">解除設備</button></form>@endif</div></div></article>
+                    @endforeach
+                </div>
+            </details>
         </section>
     @empty
         <section class="rounded-2xl border border-dashed bg-white p-8 text-center"><h2 class="font-semibold">尚未建立個人對抗表</h2><p class="mt-1 text-sm text-gray-500">先完成排名賽成績發布，再依鎖定的種子快照建立籤表。</p></section>

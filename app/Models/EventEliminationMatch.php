@@ -11,11 +11,14 @@ class EventEliminationMatch extends Model
     {
         static::creating(function (EventEliminationMatch $match): void {
             $match->uuid ??= (string) Str::uuid();
+            $match->access_token ??= (string) Str::uuid();
+            $match->device_pin ??= (string) random_int(100000, 999999);
         });
     }
 
     protected $fillable = [
-        'uuid', 'event_elimination_bracket_id', 'round_number', 'position', 'match_type',
+        'uuid', 'access_token', 'device_pin', 'device_token_hash', 'device_bound_at',
+        'device_last_seen_at', 'device_user_agent', 'event_elimination_bracket_id', 'round_number', 'position', 'match_type',
         'label', 'status', 'participant_one_snapshot_entry_id', 'participant_two_snapshot_entry_id',
         'participant_one_registration_id', 'participant_two_registration_id',
         'participant_one_seed', 'participant_two_seed', 'participant_one_set_points',
@@ -25,7 +28,7 @@ class EventEliminationMatch extends Model
         'loser_registration_id', 'target_number', 'scheduled_at', 'completed_at',
     ];
 
-    protected $casts = ['scheduled_at'=>'datetime', 'completed_at'=>'datetime'];
+    protected $casts = ['scheduled_at'=>'datetime', 'completed_at'=>'datetime', 'device_bound_at'=>'datetime', 'device_last_seen_at'=>'datetime'];
 
     public function getRouteKeyName(): string { return 'uuid'; }
     public function bracket() { return $this->belongsTo(EventEliminationBracket::class, 'event_elimination_bracket_id'); }

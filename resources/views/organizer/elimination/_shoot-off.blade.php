@@ -13,13 +13,13 @@
     @endif
 
     @if($match->status === 'awaiting_shoot_off')
-    @can('manageShootOff', $event)
-    <form method="POST" action="{{ route('organizer.events.elimination.matches.shoot-offs.store', [$event, $match]) }}" id="shoot-off-form" class="space-y-3">@csrf
+    @if(($deviceMode ?? false) || auth()->user()?->can('manageShootOff', $event))
+    <form method="POST" action="{{ ($deviceMode ?? false) ? route('elimination-stations.shoot-offs.store', $stationToken) : route('organizer.events.elimination.matches.shoot-offs.store', [$event, $match]) }}" id="shoot-off-form" class="space-y-3">@csrf
         <div class="grid grid-cols-2 gap-3">@foreach([['participant_one_arrow',$match->participantOneEntry->athlete_name],['participant_two_arrow',$match->participantTwoEntry->athlete_name]] as [$field,$name])<label class="text-center text-sm font-semibold">{{ $name }}<input readonly inputmode="none" name="{{ $field }}" placeholder="＿" class="shoot-input mt-1 h-12 w-full cursor-pointer rounded-xl border-amber-300 bg-white text-center text-xl font-bold placeholder:text-gray-300"></label>@endforeach</div>
         <div class="grid grid-cols-7 gap-2">@foreach(['X','10','9','8','7','6','5','4','3','2','1','M'] as $arrow)<button type="button" data-shoot-key="{{ $arrow }}" class="min-h-11 rounded-lg border border-amber-200 bg-white font-bold">{{ $arrow }}</button>@endforeach<button type="button" data-shoot-key="BKSP" class="min-h-11 rounded-lg border bg-white font-bold">⌫</button><button class="min-h-11 rounded-lg bg-amber-600 font-semibold text-white">送出</button></div>
     </form>
     <script>(()=>{const form=document.getElementById('shoot-off-form');if(!form)return;const inputs=[...form.querySelectorAll('.shoot-input')];let active=0;const select=i=>{active=i;inputs.forEach(x=>x.classList.remove('ring-2','ring-amber-500'));inputs[active].classList.add('ring-2','ring-amber-500')};inputs.forEach((x,i)=>x.addEventListener('pointerdown',e=>{e.preventDefault();select(i)}));form.querySelectorAll('[data-shoot-key]').forEach(key=>key.addEventListener('click',()=>{const value=key.dataset.shootKey;if(value==='BKSP'){inputs[active].value='';select(Math.max(0,active-1));return}inputs[active].value=value;if(active===0)select(1)}));form.addEventListener('submit',e=>{if(inputs.some(x=>!x.value)||!confirm('確認雙方加射箭值？送出後同分將交由主裁判判定。'))e.preventDefault()});select(0)})();</script>
-    @endcan
+    @endif
     @elseif($match->status === 'awaiting_judge')
     @can('adjudicateShootOff', $event)
     <form method="POST" action="{{ route('organizer.events.elimination.matches.shoot-offs.adjudicate', [$event, $match]) }}" class="space-y-3">@csrf

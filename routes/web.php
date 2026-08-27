@@ -30,6 +30,7 @@ use App\Http\Controllers\Admin\OrganizerQualificationController as AdminOrganize
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Storage;
 use App\Http\Controllers\ScoringStationController;
+use App\Http\Controllers\EliminationScoringStationController;
 
 // open page
 Route::get('/', [DashboardController::class, 'index'])->name('dashboard.index');
@@ -145,6 +146,8 @@ Route::prefix('organizer')->middleware('auth')->name('organizer.')->group(functi
     Route::get('events/{event}/elimination', [OrganizerEliminationController::class, 'index'])->name('events.elimination.index');
     Route::post('events/{event}/elimination', [OrganizerEliminationController::class, 'store'])->name('events.elimination.store');
     Route::patch('events/{event}/elimination/{bracket}/visibility', [OrganizerEliminationController::class, 'updateVisibility'])->name('events.elimination.visibility');
+    Route::get('events/{event}/elimination/matches/{match}/qrcode', [OrganizerEliminationController::class, 'qrCode'])->name('events.elimination.matches.qrcode');
+    Route::delete('events/{event}/elimination/matches/{match}/device', [OrganizerEliminationController::class, 'releaseDevice'])->name('events.elimination.matches.device.destroy');
     Route::get('events/{event}/elimination/matches/{match}', [OrganizerEliminationController::class, 'showMatch'])->name('events.elimination.matches.show');
     Route::post('events/{event}/elimination/matches/{match}/sets', [OrganizerEliminationController::class, 'storeSet'])->name('events.elimination.matches.sets.store');
     Route::post('events/{event}/elimination/matches/{match}/ends', [OrganizerEliminationController::class, 'storeEnd'])->name('events.elimination.matches.ends.store');
@@ -173,6 +176,11 @@ Route::get('/scoring-stations/{token}', [ScoringStationController::class, 'show'
 Route::post('/scoring-stations/{token}/claim', [ScoringStationController::class, 'claim'])->middleware('throttle:10,1')->name('scoring-stations.claim');
 Route::post('/scoring-stations/{token}/ends', [ScoringStationController::class, 'storeEnd'])->name('scoring-stations.ends.store');
 Route::post('/scoring-stations/{token}/second-round', [ScoringStationController::class, 'startSecondRound'])->name('scoring-stations.second-round.start');
+Route::get('/elimination-stations/{token}', [EliminationScoringStationController::class, 'show'])->name('elimination-stations.show');
+Route::post('/elimination-stations/{token}/claim', [EliminationScoringStationController::class, 'claim'])->middleware('throttle:10,1')->name('elimination-stations.claim');
+Route::post('/elimination-stations/{token}/sets', [EliminationScoringStationController::class, 'storeSet'])->name('elimination-stations.sets.store');
+Route::post('/elimination-stations/{token}/ends', [EliminationScoringStationController::class, 'storeEnd'])->name('elimination-stations.ends.store');
+Route::post('/elimination-stations/{token}/shoot-offs', [EliminationScoringStationController::class, 'storeShootOff'])->name('elimination-stations.shoot-offs.store');
 
 Route::middleware('auth')->group(function () {
     Route::get('/badge-claims/{token}', [EventBadgeClaimController::class, 'show'])->name('badge-claims.show');

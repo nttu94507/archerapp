@@ -14,6 +14,12 @@ use App\Services\EliminationShootOffService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
+use Illuminate\Support\Str;
+use Illuminate\Support\Facades\DB;
+use BaconQrCode\Renderer\Image\SvgImageBackEnd;
+use BaconQrCode\Renderer\ImageRenderer;
+use BaconQrCode\Renderer\RendererStyle\RendererStyle;
+use BaconQrCode\Writer;
 
 class EventEliminationController extends Controller
 {
@@ -23,7 +29,7 @@ class EventEliminationController extends Controller
 
         $event->load([
             'groups'=>fn ($query) => $query->with(['eliminationBrackets'=>fn ($brackets) => $brackets
-                ->with(['rankingSnapshot', 'matches.participantOneEntry', 'matches.participantTwoEntry'])]),
+                ->with(['rankingSnapshot', 'matches.participantOneEntry', 'matches.participantTwoEntry', 'matches.sets', 'matches.ends', 'matches.shootOffs'])]),
         ]);
         $snapshots = EventRankingSnapshot::query()
             ->where('event_id', $event->id)
@@ -162,6 +168,34 @@ class EventEliminationController extends Controller
         ]);
 
         return back()->with('success', $data['visibility'] === 'public' ? '已公開此組別的對抗賽戰況。' : '已改為僅工作人員可查看。');
+    }
+
+    public function qrCode(Event $event, EventEliminationMatch $match)
+    {
+        $this->authorize('manageScores', $event);
+        abort_unless($match->bracket()->where('event_id', $event->id)->exists(), 404);
+        $svg = (new Writer(new ImageRenderer(new RendererStyle(280, 2), new SvgImageBackEnd())))
+            ->writeString(route('elimination-stations.show', $match->access_token));
+        return response($svg, 200, ['Content-Type'=>'image/svg+xml', 'Cache-Control'=>'no-store, private']);
+    }
+
+    public function releaseDevice(Request $request, Event $event, EventEliminationMatch $match): RedirectResponse
+    {
+        $this->authorize('manageScores', $event);
+        abort_unless($match->bracket()->where('event_id', $event->id)->exists(), 404);
+        DB::transaction(function () use ($request, $event, $match): void {
+            $locked = EventEliminationMatch::whereKey($match->id)->lockForUpdate()->firstOrFail();
+            $locked->update([
+                'access_token'=>(string) Str::uuid(), 'device_pin'=>(string) random_int(100000, 999999),
+                'device_token_hash'=>null, 'device_bound_at'=>null, 'device_last_seen_at'=>null, 'device_user_agent'=>null,
+            ]);
+            \App\Models\EventAuditLog::create([
+                'event_id'=>$event->id, 'user_id'=>$request->user()->id,
+                'action'=>'elimination.match_device_released', 'subject_type'=>EventEliminationMatch::class,
+                'subject_id'=>$match->id, 'metadata'=>['round'=>$match->round_number, 'position'=>$match->position],
+            ]);
+        });
+        return back()->with('success', '舊設備與連結已失效，請使用新的 QR Code 與 PIN。');
     }
 
     public function adjudicateShootOff(Request $request, Event $event, EventEliminationMatch $match, EliminationShootOffService $service): RedirectResponse

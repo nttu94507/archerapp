@@ -302,6 +302,36 @@ class EventEliminationBracketTest extends TestCase
         $this->assertDatabaseHas('event_audit_logs', ['event_id'=>$event->id, 'action'=>'results.legacy_verification_backfilled']);
     }
 
+    public function test_elimination_match_allows_only_its_bound_device_to_read_and_score(): void
+    {
+        [$event, $group] = $this->publishedRanking([40, 30, 20, 10], 'recurve', true);
+        $bracket = app(IndividualEliminationBracketService::class)->create($event, $group, 4, false);
+        $match = $bracket->matches()->where('round_number', 1)->where('position', 1)->firstOrFail();
+
+        $this->get(route('elimination-stations.show', $match->access_token))
+            ->assertOk()->assertSee('驗證並綁定設備')
+            ->assertDontSee($match->participantOneEntry->athlete_name);
+
+        $deviceToken = 'test-elimination-device-token';
+        $match->update(['device_token_hash'=>hash('sha256', $deviceToken), 'device_bound_at'=>now()]);
+        $this->get(route('elimination-stations.show', $match->access_token))
+            ->assertStatus(423)->assertSee('第二台設備不能讀取或輸入成績');
+
+        $cookie = 'elimination_device_'.$match->id;
+        $this->withCookie($cookie, $deviceToken)
+            ->get(route('elimination-stations.show', $match->access_token))
+            ->assertOk()->assertSee($match->participantOneEntry->athlete_name)->assertSee('送出本局');
+        $this->withCookie($cookie, $deviceToken)
+            ->post(route('elimination-stations.sets.store', $match->access_token), [
+                'participant_one_arrows'=>['10','10','10'],
+                'participant_two_arrows'=>['9','9','9'],
+            ])->assertSessionHas('success');
+        $this->assertDatabaseHas('event_elimination_match_sets', [
+            'event_elimination_match_id'=>$match->id, 'set_number'=>1,
+            'participant_one_total'=>30, 'participant_two_total'=>27,
+        ]);
+    }
+
     private function compoundMatchAwaitingShootOff()
     {
         [$event, $group] = $this->publishedRanking([40, 30, 20, 10], 'compound', true);

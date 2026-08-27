@@ -1,0 +1,5 @@
+@extends('layouts.app')
+@section('title', '對戰計分設備驗證')
+@section('content')
+<div class="mx-auto flex min-h-[calc(100dvh-4rem)] max-w-md items-center px-4 py-10"><div class="w-full rounded-2xl border bg-white p-6 shadow-sm sm:p-8"><div class="text-center"><p class="text-sm text-gray-500">{{ $match->bracket->event->name }}</p><h1 class="mt-2 text-xl font-bold">{{ $match->bracket->group->name }}・{{ $match->label }} #{{ $match->position }}</h1><p class="mt-3 text-sm text-gray-600">輸入主辦方提供的 6 位 PIN。成功後，本設備將成為這場對戰唯一可讀取與輸入的設備。</p></div><form method="POST" action="{{ route('elimination-stations.claim', $match->access_token) }}" class="mt-6 space-y-4">@csrf<input name="pin" value="{{ old('pin') }}" required autofocus inputmode="numeric" pattern="[0-9]{6}" maxlength="6" class="min-h-14 w-full rounded-xl border-gray-300 text-center font-mono text-2xl font-bold tracking-[.35em]" placeholder="000000">@error('pin')<p class="text-sm text-red-600">{{ $message }}</p>@enderror<button class="min-h-12 w-full rounded-xl bg-indigo-600 font-semibold text-white">驗證並綁定設備</button></form></div></div>
+@endsection
