@@ -52,7 +52,7 @@ class EventEliminationController extends Controller
         $this->authorize('manageScoreCorrections', $event);
         $data = $request->validate([
             'event_group_id'=>['required', 'integer'],
-            'bracket_size'=>['required', 'integer', 'in:4,8,16,32,64'],
+            'bracket_size'=>['required', 'integer', 'in:4,8,16,32,64,128'],
             'bronze_match_enabled'=>['nullable', 'boolean'],
         ]);
         $group = EventGroup::query()

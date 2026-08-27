@@ -56,6 +56,23 @@ class EventEliminationBracketTest extends TestCase
         $this->assertSame(0, $bracket->matches()->where('match_type', 'bronze')->count());
     }
 
+    public function test_bracket_engine_supports_128_and_is_ready_for_256(): void
+    {
+        [$event128, $group128] = $this->publishedRanking([40, 30, 20, 10], 'recurve', true);
+        $bracket128 = app(IndividualEliminationBracketService::class)->create($event128, $group128, 128, false);
+
+        $this->assertSame(127, $bracket128->matches()->where('match_type', 'main')->count());
+        $this->assertSame('128 強賽', $bracket128->matches()->where('round_number', 1)->firstOrFail()->label);
+        $this->assertSame('決賽', $bracket128->matches()->where('round_number', 7)->firstOrFail()->label);
+
+        [$event256, $group256] = $this->publishedRanking([40, 30, 20, 10], 'compound', true);
+        $bracket256 = app(IndividualEliminationBracketService::class)->create($event256, $group256, 256, false);
+
+        $this->assertSame(255, $bracket256->matches()->where('match_type', 'main')->count());
+        $this->assertSame('256 強賽', $bracket256->matches()->where('round_number', 1)->firstOrFail()->label);
+        $this->assertSame('決賽', $bracket256->matches()->where('round_number', 8)->firstOrFail()->label);
+    }
+
     public function test_bracket_is_blocked_when_selected_seeds_still_require_tiebreak(): void
     {
         [$event, $group] = $this->publishedRanking([50, 50, 40, 30], 'recurve', true);
@@ -269,6 +286,8 @@ class EventEliminationBracketTest extends TestCase
             ->assertSee($firstMatch->participantOneEntry->athlete_name)
             ->assertSee($firstMatch->participantTwoEntry->athlete_name)
             ->assertSee($firstMatch->device_pin)
+            ->assertSee('128 人制')
+            ->assertDontSee('256 人制')
             ->assertDontSee('管理場次')
             ->assertDontSee('查看場次');
     }

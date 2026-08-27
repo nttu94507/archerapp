@@ -15,7 +15,11 @@ use Illuminate\Validation\ValidationException;
 
 class IndividualEliminationBracketService
 {
-    public const SIZES = [4, 8, 16, 32, 64];
+    /** Sizes currently offered in the organizer UI. */
+    public const SIZES = [4, 8, 16, 32, 64, 128];
+
+    /** Sizes supported by the bracket engine. 256 can be enabled in the UI later. */
+    public const SUPPORTED_SIZES = [4, 8, 16, 32, 64, 128, 256];
 
     public function create(
         Event $event,
@@ -24,8 +28,8 @@ class IndividualEliminationBracketService
         bool $bronzeMatchEnabled = true,
         ?int $actorId = null,
     ): EventEliminationBracket {
-        if (! in_array($bracketSize, self::SIZES, true)) {
-            throw ValidationException::withMessages(['bracket_size'=>'對抗表只支援 4、8、16、32 或 64 人。']);
+        if (! in_array($bracketSize, self::SUPPORTED_SIZES, true)) {
+            throw ValidationException::withMessages(['bracket_size'=>'對抗表只支援 4、8、16、32、64、128 或 256 人。']);
         }
         if ($group->event_id !== $event->id) {
             throw ValidationException::withMessages(['event_group_id'=>'所選組別不屬於此賽事。']);
@@ -221,7 +225,8 @@ class IndividualEliminationBracketService
     {
         return match ($matchCount) {
             1=>'決賽', 2=>'準決賽', 4=>'八強賽', 8=>'十六強賽',
-            16=>'三十二強賽', 32=>'六十四強賽', default=>'淘汰賽',
+            16=>'三十二強賽', 32=>'六十四強賽',
+            default=>($matchCount * 2).' 強賽',
         };
     }
 }
