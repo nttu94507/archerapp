@@ -358,6 +358,28 @@ class EventResultController extends Controller
         return back()->with('success', $group->name.'正式成績已發布（'.$publication['published_count'].' 人），排名種子快照 v'.$publication['snapshot_version'].' 已鎖定，已發放 '.$awarded.' 個名次 Badge。');
     }
 
+    public function updateLiveVisibility(Request $request, Event $event, EventGroup $group): RedirectResponse
+    {
+        $this->authorize('manageScores', $event);
+        abort_unless($group->event_id === $event->id, 404);
+        $validated = $request->validate(['visible' => ['required', 'boolean']]);
+
+        $visible = (bool) $validated['visible'];
+        $group->update(['live_results_visible' => $visible]);
+        EventAuditLog::create([
+            'event_id' => $event->id,
+            'user_id' => $request->user()->id,
+            'action' => 'results.live_visibility_updated',
+            'subject_type' => EventGroup::class,
+            'subject_id' => $group->id,
+            'metadata' => ['visible' => $visible],
+        ]);
+
+        return back()->with('success', $visible
+            ? $group->name.'已開放排名賽公開戰況。'
+            : $group->name.'已停止顯示排名賽公開戰況。');
+    }
+
     public function createRankingSnapshot(
         Request $request,
         Event $event,

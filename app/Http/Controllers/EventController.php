@@ -205,6 +205,9 @@ class EventController extends Controller
         $canManage = auth()->check() && auth()->user()->can('viewManagement', $event);
 
         $isEventFinished = $event->isOfficiallyCompleted();
+        $hasPublicQualificationLive = $event->groups->contains(
+            fn (EventGroup $group) => $group->live_results_visible
+        );
 
         return view('events.show', [
             'event'      => $event,
@@ -220,6 +223,7 @@ class EventController extends Controller
             'myRegistrations' => $myRegistrations,
             'isEventFinished' => $isEventFinished,
             'registrationLocked' => $registrationLocked,
+            'hasPublicQualificationLive' => $hasPublicQualificationLive,
         ]);
     }
 
@@ -228,7 +232,12 @@ class EventController extends Controller
         if (! $event->isPublished()) {
             abort_unless($request->user() && $request->user()->can('viewManagement', $event), 404);
         }
-        $event->load('groups');
+        $canManage = $request->user() && $request->user()->can('viewManagement', $event);
+        $publicGroupIds = $event->groups()->where('live_results_visible', true)->pluck('id');
+        abort_unless($canManage || $publicGroupIds->isNotEmpty(), 404);
+
+        $event->load(['groups' => fn ($query) => $query
+            ->when(! $canManage, fn ($groups) => $groups->where('live_results_visible', true))]);
         $now = Carbon::now();
 
         $selectedGroupId = $request->input('group');
@@ -237,11 +246,13 @@ class EventController extends Controller
         $registrations = EventRegistration::query()
             ->with('event_group')
             ->where('event_id', $event->id)
+            ->when(! $canManage, fn ($query) => $query->whereIn('event_group_id', $publicGroupIds))
             ->whereIn('status', ['registered', 'checked_in', 'no_show'])
             ->get();
 
         $scoreEntries = EventScoreEntry::query()
             ->where('event_id', $event->id)
+            ->when(! $canManage, fn ($query) => $query->whereIn('event_registration_id', $registrations->pluck('id')))
             ->orderBy('end_number')
             ->get()
             ->groupBy('event_registration_id');

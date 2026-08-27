@@ -49,7 +49,9 @@
     </section>
 
     <p class="text-center text-xs text-gray-400">此頁為主辦方正式發布的唯讀成績，選手無法修改。</p>
-    <a href="{{ route('events.live', ['event'=>$registration->event, 'group'=>$registration->event_group_id, 'sort'=>'desc']) }}"
-       class="inline-flex min-h-12 w-full items-center justify-center rounded-xl border border-indigo-200 bg-white px-4 text-sm font-semibold text-indigo-700">查看此組別完整排名</a>
+    @if($registration->event_group?->live_results_visible)
+        <a href="{{ route('events.live', ['event'=>$registration->event, 'group'=>$registration->event_group_id, 'sort'=>'desc']) }}"
+           class="inline-flex min-h-12 w-full items-center justify-center rounded-xl border border-indigo-200 bg-white px-4 text-sm font-semibold text-indigo-700">查看此組別完整排名</a>
+    @endif
 </div>
 @endsection

@@ -207,6 +207,14 @@ class EventManagementWorkflowTest extends TestCase
         $oldAccessToken = $target->access_token;
         $this->get(route('events.show', $event))
             ->assertOk()
+            ->assertDontSee('排名賽戰況');
+        $this->app['auth']->logout();
+        $this->get(route('events.live', $event))->assertNotFound();
+        $this->actingAs($owner)->patch(route('organizer.events.results.live-visibility', [$event, $group]), [
+            'visible' => 1,
+        ])->assertSessionHas('success');
+        $this->get(route('events.show', $event))
+            ->assertOk()
             ->assertSee('排名賽戰況')
             ->assertDontSee('即時戰況');
         $this->actingAs($owner)
