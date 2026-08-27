@@ -4,12 +4,11 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\OrganizerSubscription;
-use App\Models\Event;
 use App\Models\User;
-use App\Support\EventPlanCatalog;
+use App\Services\OrganizerSubscriptionService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Carbon;
 
 class UserController extends Controller
 {
@@ -26,10 +25,10 @@ class UserController extends Controller
         return view('admin.users.index', compact('users'));
     }
 
-    public function updateSubscription(Request $request, User $user): RedirectResponse
+    public function updateSubscription(Request $request, User $user, OrganizerSubscriptionService $subscriptions): RedirectResponse
     {
         $validated = $request->validate([
-            'action' => ['required', 'in:activate,cancel'],
+            'action' => ['required', 'in:activate,cancel,sync'],
             'ends_at' => ['nullable', 'date', 'after:now'],
         ]);
 
@@ -43,36 +42,23 @@ class UserController extends Controller
             return back()->with('success', "已停止 {$user->display_name} 的主辦方訂閱；既有賽事權益不受影響。");
         }
 
-        $upgradedEvents = DB::transaction(function () use ($user, $validated, $request): int {
-            $subscription = $user->organizerSubscription()->updateOrCreate(
-                ['user_id' => $user->id],
-                [
-                    'plan_code' => EventPlanCatalog::SUBSCRIPTION,
-                    'status' => OrganizerSubscription::STATUS_ACTIVE,
-                    'starts_at' => now(),
-                    'ends_at' => $validated['ends_at'] ?? null,
-                    'auto_renew' => false,
-                    'activated_by' => $request->user()->id,
-                ]
-            );
+        if ($validated['action'] === 'sync') {
+            $subscription = $user->activeOrganizerSubscription();
+            if (! $subscription) {
+                return back()->withErrors(['subscription' => '此帳號目前沒有有效訂閱，無法同步賽事權益。']);
+            }
 
-            return Event::query()
-                ->where('plan_code', EventPlanCatalog::FREE)
-                ->whereHas('staff', fn ($query) => $query
-                    ->where('user_id', $user->id)
-                    ->where('role', 'owner')
-                    ->where('status', 'active'))
-                ->update([
-                    'plan_code' => EventPlanCatalog::SUBSCRIPTION,
-                    'plan_status' => EventPlanCatalog::STATUS_ACTIVE,
-                    'plan_limits_snapshot' => json_encode(EventPlanCatalog::limits(EventPlanCatalog::SUBSCRIPTION)),
-                    'plan_features_snapshot' => json_encode(EventPlanCatalog::features(EventPlanCatalog::SUBSCRIPTION)),
-                    'plan_activated_at' => now(),
-                    'plan_expires_at' => null,
-                    'plan_order_reference' => 'subscription:'.$subscription->id,
-                ]);
-        });
+            $upgradedEvents = $subscriptions->syncExistingEvents($user, $subscription);
 
-        return back()->with('success', "已啟用 {$user->display_name} 的主辦方訂閱，並解鎖 {$upgradedEvents} 場既有賽事。");
+            return back()->with('success', "已同步 {$user->display_name} 的訂閱權益，並解鎖 {$upgradedEvents} 場既有賽事。");
+        }
+
+        $result = $subscriptions->activate(
+            $user,
+            $request->user(),
+            isset($validated['ends_at']) ? Carbon::parse($validated['ends_at']) : null,
+        );
+
+        return back()->with('success', "已啟用 {$user->display_name} 的主辦方訂閱，並解鎖 {$result['upgraded_events']} 場既有賽事。");
     }
 }

@@ -42,11 +42,18 @@
                                         <span class="rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-semibold text-emerald-700">訂閱中</span>
                                         <span class="text-xs text-gray-500">{{ $subscription->ends_at ? '至 '.$subscription->ends_at->format('Y-m-d H:i') : '無到期日' }}</span>
                                     </div>
+                                    <div class="flex flex-wrap gap-2">
+                                    <form method="POST" action="{{ route('admin.users.subscription.update', $user) }}">
+                                        @csrf @method('PATCH')
+                                        <input type="hidden" name="action" value="sync">
+                                        <button class="min-h-10 rounded-xl border border-indigo-200 px-3 text-xs font-semibold text-indigo-700">同步既有賽事權益</button>
+                                    </form>
                                     <form method="POST" action="{{ route('admin.users.subscription.update', $user) }}" onsubmit="return confirm('停止後，這個帳號新建立的賽事將使用免費方案；既有賽事不受影響。確定停止？')">
                                         @csrf @method('PATCH')
                                         <input type="hidden" name="action" value="cancel">
                                         <button class="min-h-10 rounded-xl border border-red-200 px-3 text-xs font-semibold text-red-600">停止訂閱</button>
                                     </form>
+                                    </div>
                                 @else
                                     <form method="POST" action="{{ route('admin.users.subscription.update', $user) }}" class="space-y-2">
                                         @csrf @method('PATCH')

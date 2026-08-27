@@ -36,6 +36,29 @@ class OrganizerSubscriptionTest extends TestCase
         $this->assertFalse($organizer->hasActiveOrganizerSubscription());
     }
 
+    public function test_admin_can_resync_existing_events_for_an_already_active_subscription(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+        $organizer = User::factory()->create();
+        $subscription = OrganizerSubscription::create([
+            'user_id' => $organizer->id,
+            'plan_code' => EventPlanCatalog::SUBSCRIPTION,
+            'status' => OrganizerSubscription::STATUS_ACTIVE,
+            'starts_at' => now()->subDay(),
+        ]);
+        $event = Event::factory()->create(['plan_code' => EventPlanCatalog::FREE]);
+        $event->staff()->create(['user_id' => $organizer->id, 'role' => 'owner', 'status' => 'active']);
+
+        $this->actingAs($admin)->patch(route('admin.users.subscription.update', $organizer), [
+            'action' => 'sync',
+        ])->assertSessionHas('success', fn (string $message) => str_contains($message, '解鎖 1 場'));
+
+        $event->refresh();
+        $this->assertSame(EventPlanCatalog::SUBSCRIPTION, $event->plan_code);
+        $this->assertSame('subscription:'.$subscription->id, $event->plan_order_reference);
+        $this->assertTrue($event->hasPlanFeature('individual_elimination'));
+    }
+
     public function test_event_created_during_subscription_keeps_paid_snapshot_after_cancellation(): void
     {
         $admin = User::factory()->create(['is_admin' => true]);
