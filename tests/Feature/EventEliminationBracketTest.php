@@ -257,6 +257,14 @@ class EventEliminationBracketTest extends TestCase
         $this->assertSame('completed', $completed->status);
         $this->assertCount(2, $completed->shootOffs);
         $this->assertSame($completed->participant_two_registration_id, $completed->winner_registration_id);
+
+        $completed->bracket->update(['visibility'=>'public', 'published_at'=>now()]);
+        $completed->bracket->event->update(['status'=>'approved', 'published_at'=>now()]);
+        $this->get(route('events.elimination', $completed->bracket->event))
+            ->assertOk()
+            ->assertSee('第 1 輪三箭總分 27')
+            ->assertSee('加射箭值 8')
+            ->assertSee('加射箭值 9');
     }
 
     public function test_chief_judge_closest_to_center_decision_completes_match(): void
