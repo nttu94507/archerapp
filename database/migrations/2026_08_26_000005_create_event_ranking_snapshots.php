@@ -8,7 +8,7 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('event_ranking_snapshots', function (Blueprint $table): void {
+        if (! Schema::hasTable('event_ranking_snapshots')) Schema::create('event_ranking_snapshots', function (Blueprint $table): void {
             $table->id();
             $table->uuid('uuid')->unique();
             $table->foreignId('event_id')->constrained()->cascadeOnDelete();
@@ -27,7 +27,7 @@ return new class extends Migration
             $table->index(['event_phase_id', 'superseded_at']);
         });
 
-        Schema::create('event_ranking_snapshot_entries', function (Blueprint $table): void {
+        if (! Schema::hasTable('event_ranking_snapshot_entries')) Schema::create('event_ranking_snapshot_entries', function (Blueprint $table): void {
             $table->id();
             $table->foreignId('event_ranking_snapshot_id')->constrained('event_ranking_snapshots')->cascadeOnDelete();
             $table->foreignId('event_registration_id')->constrained('event_registrations')->cascadeOnDelete();
@@ -47,13 +47,24 @@ return new class extends Migration
 
             $table->unique(['event_ranking_snapshot_id', 'event_registration_id'], 'ranking_snapshot_registration_unique');
             $table->unique(['event_ranking_snapshot_id', 'seed_position'], 'ranking_snapshot_seed_unique');
-            $table->index(['event_ranking_snapshot_id', 'rank_position']);
+            $table->index(['event_ranking_snapshot_id', 'rank_position'], 'ranking_snapshot_rank_index');
         });
+
+        if (Schema::hasTable('event_ranking_snapshot_entries') && ! $this->hasIndex('event_ranking_snapshot_entries', 'ranking_snapshot_rank_index')) {
+            Schema::table('event_ranking_snapshot_entries', function (Blueprint $table): void {
+                $table->index(['event_ranking_snapshot_id', 'rank_position'], 'ranking_snapshot_rank_index');
+            });
+        }
     }
 
     public function down(): void
     {
         Schema::dropIfExists('event_ranking_snapshot_entries');
         Schema::dropIfExists('event_ranking_snapshots');
+    }
+
+    private function hasIndex(string $table, string $name): bool
+    {
+        return collect(Schema::getIndexes($table))->contains(fn (array $index): bool => ($index['name'] ?? null) === $name);
     }
 };

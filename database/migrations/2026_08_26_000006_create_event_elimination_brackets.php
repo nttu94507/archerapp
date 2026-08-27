@@ -42,10 +42,10 @@ return new class extends Migration
             $table->string('match_type', 20)->default('main');
             $table->string('label', 60);
             $table->string('status', 30)->default('pending');
-            $table->foreignId('participant_one_snapshot_entry_id')->nullable()->constrained('event_ranking_snapshot_entries')->restrictOnDelete();
-            $table->foreignId('participant_two_snapshot_entry_id')->nullable()->constrained('event_ranking_snapshot_entries')->restrictOnDelete();
-            $table->foreignId('participant_one_registration_id')->nullable()->constrained('event_registrations')->restrictOnDelete();
-            $table->foreignId('participant_two_registration_id')->nullable()->constrained('event_registrations')->restrictOnDelete();
+            $table->foreignId('participant_one_snapshot_entry_id')->nullable();
+            $table->foreignId('participant_two_snapshot_entry_id')->nullable();
+            $table->foreignId('participant_one_registration_id')->nullable();
+            $table->foreignId('participant_two_registration_id')->nullable();
             $table->unsignedSmallInteger('participant_one_seed')->nullable();
             $table->unsignedSmallInteger('participant_two_seed')->nullable();
             $table->unsignedBigInteger('next_match_id')->nullable();
@@ -58,6 +58,11 @@ return new class extends Migration
             $table->timestamp('scheduled_at')->nullable();
             $table->timestamp('completed_at')->nullable();
             $table->timestamps();
+
+            $table->foreign('participant_one_snapshot_entry_id', 'elim_match_p1_entry_fk')->references('id')->on('event_ranking_snapshot_entries')->restrictOnDelete();
+            $table->foreign('participant_two_snapshot_entry_id', 'elim_match_p2_entry_fk')->references('id')->on('event_ranking_snapshot_entries')->restrictOnDelete();
+            $table->foreign('participant_one_registration_id', 'elim_match_p1_registration_fk')->references('id')->on('event_registrations')->restrictOnDelete();
+            $table->foreign('participant_two_registration_id', 'elim_match_p2_registration_fk')->references('id')->on('event_registrations')->restrictOnDelete();
 
             $table->unique(['event_elimination_bracket_id', 'match_type', 'round_number', 'position'], 'elimination_match_position_unique');
             $table->index(['event_elimination_bracket_id', 'round_number', 'position'], 'elimination_round_position_index');
