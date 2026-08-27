@@ -110,7 +110,13 @@ class User extends Authenticatable
 
     public function canCreateEvents(): bool
     {
-        return $this->isAdmin() || $this->organizerProfile()->where('status', 'approved')->exists();
+        return $this->isAdmin()
+            || $this->organizerProfile()->where('status', 'suspended')->doesntExist();
+    }
+
+    public function isVerifiedOrganizer(): bool
+    {
+        return $this->organizerProfile()->where('status', 'approved')->exists();
     }
 
     public function hasCompletedProfile(): bool

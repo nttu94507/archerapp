@@ -13,11 +13,23 @@ class OrganizerQualificationTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_regular_member_cannot_create_event_before_organizer_approval(): void
+    public function test_registered_member_can_create_free_event_without_organizer_approval(): void
     {
         $user=User::factory()->create();
-        $this->actingAs($user)->get(route('organizer.events.create'))->assertForbidden();
-        $this->actingAs($user)->post(route('organizer.events.store'),[])->assertForbidden();
+        $this->actingAs($user)->get(route('organizer.events.create'))->assertOk();
+        $this->actingAs($user)->post(route('organizer.events.store'), [
+            'name'=>'會員自由賽事',
+            'start_date'=>now()->addMonth()->toDateString(),
+            'end_date'=>now()->addMonth()->toDateString(),
+            'mode'=>'outdoor',
+            'organizer'=>'一般會員主辦',
+            'reg_start'=>now()->toDateTimeString(),
+            'reg_end'=>now()->addWeeks(2)->toDateTimeString(),
+        ])->assertRedirect();
+
+        $event=Event::where('name','會員自由賽事')->firstOrFail();
+        $this->assertTrue($event->isFreePlan());
+        $this->assertDatabaseHas('event_staff',['event_id'=>$event->id,'user_id'=>$user->id,'role'=>'owner']);
     }
 
     public function test_member_can_save_submit_and_withdraw_application(): void

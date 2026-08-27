@@ -237,8 +237,9 @@
                                 <a href="{{ route('organizer.events.index') }}" class="flex min-h-10 items-center rounded-lg px-3 text-sm hover:bg-gray-50 {{ request()->routeIs('organizer.events.index') || request()->routeIs('organizer.events.show') ? 'bg-gray-50 font-semibold text-gray-900' : 'text-gray-700' }}" role="menuitem">我的主辦賽事</a>
                                 <a href="{{ route('organizer.events.create') }}" class="flex min-h-10 items-center rounded-lg px-3 text-sm hover:bg-gray-50 {{ request()->routeIs('organizer.events.create') ? 'bg-gray-50 font-semibold text-gray-900' : 'text-gray-700' }}" role="menuitem">建立賽事</a>
                                 <a href="{{ route('organizer.badges.index') }}" class="flex min-h-10 items-center rounded-lg px-3 text-sm hover:bg-gray-50 {{ request()->routeIs('organizer.badges.*') ? 'bg-gray-50 font-semibold text-gray-900' : 'text-gray-700' }}" role="menuitem">Badge 列表</a>
+                                @unless(auth()->user()->isVerifiedOrganizer())<a href="{{ route('organizer.qualification.show') }}" class="flex min-h-10 items-center rounded-lg px-3 text-sm text-indigo-700 hover:bg-indigo-50 {{ request()->routeIs('organizer.qualification.*') ? 'bg-indigo-50 font-semibold' : '' }}" role="menuitem">申請官方主辦方認證</a>@endunless
                             @else
-                                <a href="{{ route('organizer.qualification.show') }}" class="flex min-h-10 items-center rounded-lg px-3 text-sm text-indigo-700 hover:bg-indigo-50 {{ request()->routeIs('organizer.qualification.*') ? 'bg-indigo-50 font-semibold' : '' }}" role="menuitem">申請成為主辦方</a>
+                                <a href="{{ route('organizer.qualification.show') }}" class="flex min-h-10 items-center rounded-lg px-3 text-sm text-red-700 hover:bg-red-50 {{ request()->routeIs('organizer.qualification.*') ? 'bg-red-50 font-semibold' : '' }}" role="menuitem">查看主辦方資格狀態</a>
                             @endif
 
                             @if(auth()->user()->isAdmin())
@@ -306,8 +307,9 @@
                     <a href="{{ route('organizer.events.index') }}" class="flex min-h-11 items-center rounded-lg px-3 hover:bg-gray-50 {{ request()->routeIs('organizer.events.index') || request()->routeIs('organizer.events.show') ? 'bg-gray-50 font-semibold text-gray-900' : 'text-gray-700' }}">我的主辦賽事</a>
                     <a href="{{ route('organizer.badges.index') }}" class="flex min-h-11 items-center rounded-lg px-3 hover:bg-gray-50 {{ request()->routeIs('organizer.badges.*') ? 'bg-gray-50 font-semibold text-gray-900' : 'text-gray-700' }}">Badge 列表</a>
                     <a href="{{ route('organizer.events.create') }}" class="flex min-h-11 items-center rounded-lg px-3 hover:bg-gray-50 {{ request()->routeIs('organizer.events.create') ? 'bg-gray-50 font-semibold text-gray-900' : 'text-gray-700' }}">建立賽事</a>
+                    @unless(auth()->user()->isVerifiedOrganizer())<a href="{{ route('organizer.qualification.show') }}" class="flex min-h-11 items-center rounded-lg px-3 text-indigo-700 hover:bg-indigo-50 {{ request()->routeIs('organizer.qualification.*') ? 'bg-indigo-50 font-semibold' : '' }}">申請官方主辦方認證</a>@endunless
                 @else
-                    <a href="{{ route('organizer.qualification.show') }}" class="flex min-h-11 items-center rounded-lg px-3 text-indigo-700 hover:bg-indigo-50 {{ request()->routeIs('organizer.qualification.*') ? 'bg-indigo-50 font-semibold' : '' }}">申請成為主辦方</a>
+                    <a href="{{ route('organizer.qualification.show') }}" class="flex min-h-11 items-center rounded-lg px-3 text-red-700 hover:bg-red-50 {{ request()->routeIs('organizer.qualification.*') ? 'bg-red-50 font-semibold' : '' }}">查看主辦方資格狀態</a>
                 @endif
 
                 @if(auth()->user()->isAdmin())

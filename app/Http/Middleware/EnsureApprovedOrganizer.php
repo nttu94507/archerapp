@@ -10,7 +10,7 @@ class EnsureApprovedOrganizer
 {
     public function handle(Request $request, Closure $next): Response
     {
-        abort_unless($request->user()?->canCreateEvents(), 403, '主辦方資格尚未核准，無法建立新賽事。');
+        abort_unless($request->user()?->canCreateEvents(), 403, '帳號目前已被停止建立新賽事，請聯絡平台管理員。');
         return $next($request);
     }
 }
