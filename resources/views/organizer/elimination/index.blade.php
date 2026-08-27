@@ -46,6 +46,14 @@
     @forelse($brackets as $bracket)
         <section class="overflow-hidden rounded-2xl border bg-white shadow-sm">
             <div class="flex flex-wrap items-center justify-between gap-3 border-b bg-gray-50 p-4 sm:p-5"><div><h2 class="font-semibold">{{ $bracket->name }}</h2><p class="mt-1 text-xs text-gray-500">{{ $bracket->bracket_size }} 人制・{{ $bracket->scoring_mode === 'set' ? '局分制' : '累計制' }}・種子快照 v{{ $bracket->rankingSnapshot->version }}</p></div><div class="flex items-center gap-2"><span class="rounded-full px-3 py-1 text-xs font-medium {{ $bracket->visibility === 'public' ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-200 text-gray-600' }}">{{ $bracket->visibility === 'public' ? '公開戰況' : '僅工作人員' }}</span>@can('manageScoreCorrections',$event)<form method="POST" action="{{ route('organizer.events.elimination.visibility', [$event, $bracket]) }}">@csrf @method('PATCH')<input type="hidden" name="visibility" value="{{ $bracket->visibility === 'public' ? 'internal' : 'public' }}"><button class="min-h-9 rounded-lg border bg-white px-3 text-xs font-medium" onclick="return confirm('{{ $bracket->visibility === 'public' ? '確定關閉公開戰況？' : '公開後任何人都能查看籤表與即時分數，確定公開？' }}')">{{ $bracket->visibility === 'public' ? '停止公開' : '公開戰況' }}</button></form>@endcan</div></div>
+            @php
+                $pendingBronze = $bracket->matches->first(fn ($match) => $match->match_type === 'bronze' && ! $match->winner_registration_id);
+            @endphp
+            @if($pendingBronze)
+                @can('manageScoreCorrections', $event)
+                    <div class="flex flex-wrap items-center justify-between gap-3 border-b border-amber-200 bg-amber-50 px-4 py-3 sm:px-5"><p class="text-sm text-amber-900">季軍賽仍在等待；若只有一位有效選手，可重新檢查輪空資格。</p><form method="POST" action="{{ route('organizer.events.elimination.bronze-walkover', [$event, $bracket]) }}">@csrf<button class="min-h-10 rounded-xl bg-amber-600 px-4 text-sm font-semibold text-white" onclick="return confirm('系統只會在兩場準決賽都已結束且季軍賽只有一人時自動判定，確定重新檢查？')">重新檢查季軍輪空</button></form></div>
+                @endcan
+            @endif
             @include('events._elimination-bracket-tree', ['bracket'=>$bracket, 'statusNames'=>$statusNames])
         </section>
     @empty

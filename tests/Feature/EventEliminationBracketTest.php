@@ -182,6 +182,26 @@ class EventEliminationBracketTest extends TestCase
         $this->get(route('events.elimination', $event))
             ->assertOk()
             ->assertSee('輪空取得季軍');
+
+        // Existing tournaments may have become stuck before automatic reconciliation existed.
+        $bronze->update([
+            'status'=>'pending',
+            'winner_registration_id'=>null,
+            'completed_at'=>null,
+        ]);
+        $owner = User::factory()->create();
+        EventStaff::create([
+            'event_id'=>$event->id,
+            'user_id'=>$owner->id,
+            'role'=>'owner',
+            'status'=>'active',
+            'invited_by'=>$owner->id,
+        ]);
+        $this->actingAs($owner)
+            ->post(route('organizer.events.elimination.bronze-walkover', [$event, $bracket]))
+            ->assertRedirect()
+            ->assertSessionHas('success');
+        $this->assertSame($expectedBronzeWinner, $bronze->fresh()->winner_registration_id);
     }
 
     public function test_compound_match_counts_all_five_ends_before_declaring_winner(): void
@@ -249,6 +269,13 @@ class EventEliminationBracketTest extends TestCase
         $this->assertSame('pending_judge', $waiting->shootOffs->first()->status);
         $this->assertNull($waiting->winner_registration_id);
 
+        $waiting->bracket->update(['visibility'=>'public', 'published_at'=>now()]);
+        $waiting->bracket->event->update(['status'=>'approved', 'published_at'=>now()]);
+        $this->get(route('events.elimination', $waiting->bracket->event))
+            ->assertOk()
+            ->assertSee('加射：#1')
+            ->assertSee('等待主裁判判定');
+
         $repeat = $service->adjudicate($waiting, 're_shoot', '雙方箭孔至靶心距離無法區分。', User::factory()->create()->id);
         $this->assertSame('awaiting_shoot_off', $repeat->status);
         $this->assertSame('equal_distance', $repeat->shootOffs->first()->decision_type);
@@ -264,7 +291,8 @@ class EventEliminationBracketTest extends TestCase
             ->assertOk()
             ->assertSee('第 1 輪三箭總分 27')
             ->assertSee('加射箭值 8')
-            ->assertSee('加射箭值 9');
+            ->assertSee('加射箭值 9')
+            ->assertDontSee('加射：');
     }
 
     public function test_chief_judge_closest_to_center_decision_completes_match(): void

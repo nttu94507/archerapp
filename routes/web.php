@@ -146,6 +146,7 @@ Route::prefix('organizer')->middleware('auth')->name('organizer.')->group(functi
     Route::get('events/{event}/elimination', [OrganizerEliminationController::class, 'index'])->name('events.elimination.index');
     Route::post('events/{event}/elimination', [OrganizerEliminationController::class, 'store'])->name('events.elimination.store');
     Route::patch('events/{event}/elimination/{bracket}/visibility', [OrganizerEliminationController::class, 'updateVisibility'])->name('events.elimination.visibility');
+    Route::post('events/{event}/elimination/{bracket}/bronze-walkover', [OrganizerEliminationController::class, 'reconcileBronzeWalkover'])->name('events.elimination.bronze-walkover');
     Route::get('events/{event}/elimination/matches/{match}/qrcode', [OrganizerEliminationController::class, 'qrCode'])->name('events.elimination.matches.qrcode');
     Route::delete('events/{event}/elimination/matches/{match}/device', [OrganizerEliminationController::class, 'releaseDevice'])->name('events.elimination.matches.device.destroy');
     Route::get('events/{event}/elimination/matches/{match}', [OrganizerEliminationController::class, 'showMatch'])->name('events.elimination.matches.show');

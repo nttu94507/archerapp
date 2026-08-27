@@ -16,7 +16,7 @@ class EliminationMatchProgressionService
 
         $this->placeParticipant($match->nextMatch, $match->next_slot, $winnerEntry);
         $this->placeParticipant($match->loserNextMatch, $match->loser_next_slot, $loserEntry);
-        $this->resolveBronzeWalkover($match->loserNextMatch);
+        $this->reconcileBronzeWalkover($match->loserNextMatch);
     }
 
     private function placeParticipant(?EventEliminationMatch $destination, ?int $slot, ?EventRankingSnapshotEntry $entry): void
@@ -34,25 +34,25 @@ class EliminationMatchProgressionService
         }
     }
 
-    private function resolveBronzeWalkover(?EventEliminationMatch $bronze): void
+    public function reconcileBronzeWalkover(?EventEliminationMatch $bronze): bool
     {
-        if (! $bronze || $bronze->match_type !== 'bronze') return;
+        if (! $bronze || $bronze->match_type !== 'bronze') return false;
 
         $bronze->refresh();
-        if ($bronze->winner_registration_id || $bronze->status === 'completed') return;
+        if ($bronze->winner_registration_id || $bronze->status === 'completed') return false;
 
         $feeders = EventEliminationMatch::query()
             ->where('loser_next_match_id', $bronze->id)
             ->get();
         if ($feeders->isEmpty() || $feeders->contains(
             fn (EventEliminationMatch $match) => ! in_array($match->status, ['completed', 'walkover'], true)
-        )) return;
+        )) return false;
 
         $participants = collect([
             $bronze->participant_one_registration_id,
             $bronze->participant_two_registration_id,
         ])->filter()->unique()->values();
-        if ($participants->count() !== 1) return;
+        if ($participants->count() !== 1) return false;
 
         $winnerId = (int) $participants->first();
         $bronze->update([
@@ -72,5 +72,7 @@ class EliminationMatchProgressionService
                 'reason'=>'only_eligible_semifinal_loser',
             ],
         ]);
+
+        return true;
     }
 }

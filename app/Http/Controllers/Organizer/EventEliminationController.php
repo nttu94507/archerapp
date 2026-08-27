@@ -9,6 +9,7 @@ use App\Models\EventEliminationMatch;
 use App\Models\EventRankingSnapshot;
 use App\Services\IndividualEliminationBracketService;
 use App\Services\EliminationShootOffService;
+use App\Services\EliminationMatchProgressionService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -102,6 +103,25 @@ class EventEliminationController extends Controller
         ]);
 
         return back()->with('success', $data['visibility'] === 'public' ? '已公開此組別的對抗賽戰況。' : '已改為僅工作人員可查看。');
+    }
+
+    public function reconcileBronzeWalkover(
+        Event $event,
+        \App\Models\EventEliminationBracket $bracket,
+        EliminationMatchProgressionService $progression,
+    ): RedirectResponse {
+        $this->authorize('manageScoreCorrections', $event);
+        abort_unless($bracket->event_id === $event->id, 404);
+        $bronze = $bracket->matches()->where('match_type', 'bronze')->first();
+
+        if (! $bronze) {
+            return back()->withErrors(['bronze'=>'此對抗表沒有設定季軍賽。']);
+        }
+        if (! $progression->reconcileBronzeWalkover($bronze)) {
+            return back()->withErrors(['bronze'=>'目前不符合自動輪空條件；請確認兩場準決賽都已結束，且季軍賽只有一位有效選手。']);
+        }
+
+        return back()->with('success', '季軍賽已重新檢查，唯一有效選手已輪空取得季軍。');
     }
 
     public function qrCode(Event $event, EventEliminationMatch $match)

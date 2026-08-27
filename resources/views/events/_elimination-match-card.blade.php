@@ -41,5 +41,13 @@
     </div>
     @endforeach
     @if($bracket->scoring_mode === 'set' && $match->sets->isNotEmpty())<div class="border-t bg-gray-50 px-3 py-2 text-xs text-gray-500">@foreach($match->sets as $set)<span class="mr-2">第{{ $set->set_number }}局 {{ $set->participant_one_total }}–{{ $set->participant_two_total }}</span>@endforeach</div>@elseif($bracket->scoring_mode === 'cumulative' && $match->ends->isNotEmpty())<div class="border-t bg-gray-50 px-3 py-2 text-xs text-gray-500">已完成 {{ $match->ends->count() }} / 5 趟</div>@endif
-    @if($match->shootOffs->isNotEmpty())<div class="border-t bg-amber-50 px-3 py-2 text-xs font-medium text-amber-800">加射：@foreach($match->shootOffs as $shootOff)<span class="mr-2">#{{ $shootOff->attempt_number }} {{ $shootOff->participant_one_arrow }}–{{ $shootOff->participant_two_arrow }} {{ $shootOff->status === 're_shoot' ? '重射' : ($shootOff->status === 'pending_judge' ? '待判定' : '已判定') }}</span>@endforeach</div>@endif
+    @if(in_array($match->status, ['awaiting_shoot_off', 'awaiting_judge'], true) && $match->shootOffs->isNotEmpty())
+        @php
+            $pendingShootOff = $match->shootOffs->last();
+        @endphp
+        <div class="border-t bg-amber-50 px-3 py-2 text-xs font-medium text-amber-800">
+            加射：#{{ $pendingShootOff->attempt_number }} {{ $pendingShootOff->participant_one_arrow }}–{{ $pendingShootOff->participant_two_arrow }}
+            {{ $match->status === 'awaiting_judge' ? '等待主裁判判定' : '同距離，等待重新加射' }}
+        </div>
+    @endif
 </article>
