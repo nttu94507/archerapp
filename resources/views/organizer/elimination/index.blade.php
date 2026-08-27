@@ -9,6 +9,11 @@
     @if(session('success'))<div class="rounded-xl border border-green-200 bg-green-50 p-4 text-sm text-green-700">{{ session('success') }}</div>@endif
     @if($errors->any())<div class="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">{{ $errors->first() }}</div>@endif
 
+    @php
+        $brackets = $event->groups->flatMap->eliminationBrackets;
+        $statusNames = ['pending'=>'等待前場', 'ready'=>'等待比賽', 'in_progress'=>'比賽中', 'awaiting_shoot_off'=>'等待加射', 'awaiting_judge'=>'等待主裁判', 'walkover'=>'輪空晉級', 'completed'=>'已完成'];
+    @endphp
+
     @unless($event->hasPlanFeature('individual_elimination'))
         <section class="rounded-2xl border border-amber-200 bg-amber-50 p-5"><h2 class="font-semibold text-amber-950">免費方案僅提供排名賽</h2><p class="mt-1 text-sm text-amber-800">個人對抗表、對抗計分與公開對戰戰況屬於付費賽事功能。現有排名成績不受影響。</p></section>
     @endunless
@@ -38,11 +43,10 @@
     @endif
     @endcan
 
-    @forelse($event->groups->flatMap->eliminationBrackets as $bracket)
+    @forelse($brackets as $bracket)
         @php
             $mainRounds = $bracket->matches->where('match_type', 'main')->groupBy('round_number');
             $bronze = $bracket->matches->firstWhere('match_type', 'bronze');
-            $statusNames = ['pending'=>'等待前場', 'ready'=>'等待比賽', 'in_progress'=>'比賽中', 'awaiting_shoot_off'=>'等待加射', 'awaiting_judge'=>'等待主裁判', 'walkover'=>'輪空晉級', 'completed'=>'已完成'];
         @endphp
         <section class="overflow-hidden rounded-2xl border bg-white shadow-sm">
             <div class="flex flex-wrap items-center justify-between gap-3 border-b bg-gray-50 p-4 sm:p-5"><div><h2 class="font-semibold">{{ $bracket->name }}</h2><p class="mt-1 text-xs text-gray-500">{{ $bracket->bracket_size }} 人制・{{ $bracket->scoring_mode === 'set' ? '局分制' : '累計制' }}・種子快照 v{{ $bracket->rankingSnapshot->version }}</p></div><div class="flex items-center gap-2"><span class="rounded-full px-3 py-1 text-xs font-medium {{ $bracket->visibility === 'public' ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-200 text-gray-600' }}">{{ $bracket->visibility === 'public' ? '公開戰況' : '僅工作人員' }}</span>@can('manageScoreCorrections',$event)<form method="POST" action="{{ route('organizer.events.elimination.visibility', [$event, $bracket]) }}">@csrf @method('PATCH')<input type="hidden" name="visibility" value="{{ $bracket->visibility === 'public' ? 'internal' : 'public' }}"><button class="min-h-9 rounded-lg border bg-white px-3 text-xs font-medium" onclick="return confirm('{{ $bracket->visibility === 'public' ? '確定關閉公開戰況？' : '公開後任何人都能查看籤表與即時分數，確定公開？' }}')">{{ $bracket->visibility === 'public' ? '停止公開' : '公開戰況' }}</button></form>@endcan</div></div>
@@ -58,17 +62,29 @@
                     @if($bronze)<div><h3 class="mb-3 text-center text-sm font-semibold text-gray-600">季軍賽</h3><div class="flex h-full items-center">@include('events._elimination-match-card', ['match'=>$bronze, 'bracket'=>$bracket, 'statusNames'=>$statusNames, 'management'=>true])</div></div>@endif
                 </div>
             </div>
-            <details class="group border-t bg-gray-50 p-4 sm:p-5">
-                <summary class="flex min-h-11 cursor-pointer list-none items-center justify-between font-semibold"><span>對戰列表與計分設備</span><span class="text-sm text-gray-400 group-open:rotate-180">⌄</span></summary>
-                <div class="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-                    @foreach($bracket->matches->filter(fn ($item) => $item->participant_one_registration_id && $item->participant_two_registration_id) as $match)
-                    <article class="rounded-2xl border bg-white p-4"><div class="flex items-start justify-between gap-3"><div><p class="text-xs text-gray-500">{{ $match->match_type === 'bronze' ? '季軍賽' : $match->label }} #{{ $match->position }}</p><h3 class="mt-1 font-semibold">{{ $match->participantOneEntry->athlete_name }} vs {{ $match->participantTwoEntry->athlete_name }}</h3><p class="mt-1 text-xs {{ $match->device_token_hash ? 'text-emerald-700' : 'text-gray-500' }}">{{ $match->device_token_hash ? '設備已綁定' : '尚未綁定設備' }}</p></div><img src="{{ route('organizer.events.elimination.matches.qrcode', [$event, $match]) }}" class="h-20 w-20" alt="對戰計分 QR Code"></div><div class="mt-3 flex items-end justify-between gap-3"><div><p class="text-xs text-gray-500">設備 PIN</p><p class="font-mono text-xl font-bold tracking-[.2em]">{{ $match->device_pin }}</p></div><div class="flex gap-2"><a href="{{ route('elimination-stations.show', $match->access_token) }}" class="inline-flex min-h-10 items-center rounded-lg border px-3 text-xs font-medium">開啟網址</a>@if($match->device_token_hash)<form method="POST" action="{{ route('organizer.events.elimination.matches.device.destroy', [$event, $match]) }}">@csrf @method('DELETE')<button class="min-h-10 rounded-lg border border-red-200 px-3 text-xs text-red-600" onclick="return confirm('解除後舊設備與網址會立即失效，確定？')">解除設備</button></form>@endif</div></div></article>
-                    @endforeach
-                </div>
-            </details>
         </section>
     @empty
         <section class="rounded-2xl border border-dashed bg-white p-8 text-center"><h2 class="font-semibold">尚未建立個人對抗表</h2><p class="mt-1 text-sm text-gray-500">先完成排名賽成績發布，再依鎖定的種子快照建立籤表。</p></section>
     @endforelse
+
+    @can('manageScores', $event)
+    @if($brackets->isNotEmpty())
+    <section class="space-y-4">
+        <div><h2 class="text-xl font-bold">對戰列表</h2><p class="mt-1 text-sm text-gray-500">每場對戰使用獨立 QR Code 與 PIN 綁定唯一計分設備。</p></div>
+        <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            @forelse($brackets->flatMap->matches->filter(fn ($item) => $item->participant_one_registration_id && $item->participant_two_registration_id) as $match)
+            <article class="overflow-hidden rounded-2xl border bg-white shadow-sm">
+                <div class="flex items-center justify-between bg-gray-50 px-4 py-3 text-xs"><span class="font-medium text-gray-600">{{ $match->bracket->group->name }}・{{ $match->match_type === 'bronze' ? '季軍賽' : $match->label }} #{{ $match->position }}</span><span class="rounded-full px-2 py-1 {{ $match->device_token_hash ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-200 text-gray-600' }}">{{ $match->device_token_hash ? '設備已綁定' : '等待綁定' }}</span></div>
+                <div class="grid grid-cols-[minmax(0,1fr)_6.5rem] gap-3 p-4">
+                    <div class="space-y-2"><div class="flex min-h-11 items-center gap-2 rounded-xl border px-3"><span class="text-xs font-bold text-gray-400">{{ $match->participant_one_seed }}</span><strong class="truncate">{{ $match->participantOneEntry->athlete_name }}</strong></div><div class="flex min-h-11 items-center gap-2 rounded-xl border px-3"><span class="text-xs font-bold text-gray-400">{{ $match->participant_two_seed }}</span><strong class="truncate">{{ $match->participantTwoEntry->athlete_name }}</strong></div><div><p class="text-xs text-gray-500">設備 PIN</p><p class="font-mono text-xl font-bold tracking-[.2em]">{{ $match->device_pin }}</p></div></div>
+                    <img src="{{ route('organizer.events.elimination.matches.qrcode', [$event, $match]) }}" class="h-24 w-24 self-start rounded-lg border bg-white p-1" alt="{{ $match->participantOneEntry->athlete_name }} 對 {{ $match->participantTwoEntry->athlete_name }} 計分 QR Code">
+                </div>
+                <div class="grid grid-cols-2 gap-2 border-t p-3"><a href="{{ route('elimination-stations.show', $match->access_token) }}" class="inline-flex min-h-11 items-center justify-center rounded-xl bg-indigo-600 px-3 text-sm font-semibold text-white">開啟計分網址</a>@if($match->device_token_hash)<form method="POST" action="{{ route('organizer.events.elimination.matches.device.destroy', [$event, $match]) }}">@csrf @method('DELETE')<button class="min-h-11 w-full rounded-xl border border-red-200 text-sm text-red-600" onclick="return confirm('解除後舊設備與網址會立即失效，確定？')">解除設備</button></form>@else<a href="{{ route('organizer.events.elimination.matches.show', [$event, $match]) }}" class="inline-flex min-h-11 items-center justify-center rounded-xl border text-sm font-medium">查看場次</a>@endif</div>
+            </article>
+            @empty<p class="col-span-full rounded-2xl border border-dashed bg-white p-6 text-center text-sm text-gray-500">目前尚無雙方選手都已確定的對戰。</p>@endforelse
+        </div>
+    </section>
+    @endif
+    @endcan
 </div>
 @endsection

@@ -257,12 +257,18 @@ class EventEliminationBracketTest extends TestCase
             'status'=>'active',
             'invited_by'=>$owner->id,
         ]);
+        $bracket = app(IndividualEliminationBracketService::class)->create($event, $group, 4, false, $owner->id);
+        $firstMatch = $bracket->matches->where('round_number', 1)->first();
 
         $this->actingAs($owner)
             ->get(route('organizer.events.elimination.index', $event))
             ->assertOk()
             ->assertSee('個人對抗表')
-            ->assertSee($group->name);
+            ->assertSee('對戰列表')
+            ->assertSee($group->name)
+            ->assertSee($firstMatch->participantOneEntry->athlete_name)
+            ->assertSee($firstMatch->participantTwoEntry->athlete_name)
+            ->assertSee($firstMatch->device_pin);
     }
 
     public function test_legacy_published_group_can_backfill_verification_and_create_ranking_snapshot(): void
