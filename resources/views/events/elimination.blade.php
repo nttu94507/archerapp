@@ -6,7 +6,6 @@
 
     @foreach($brackets as $bracket)
     @php
-        $mainRounds = $bracket->matches->where('match_type', 'main')->groupBy('round_number');
         $bronze = $bracket->matches->firstWhere('match_type', 'bronze');
         $final = $bracket->matches->where('match_type', 'main')->sortByDesc('round_number')->first();
         $champion = $final?->winner_registration_id === $final?->participant_one_registration_id ? $final?->participantOneEntry : ($final?->winner_registration_id ? $final?->participantTwoEntry : null);
@@ -16,10 +15,7 @@
     @endphp
     <section class="overflow-hidden rounded-2xl border bg-white shadow-sm">
         <div class="flex flex-wrap items-center justify-between gap-3 border-b bg-gray-50 p-4 sm:p-5"><div><h2 class="text-lg font-bold">{{ $bracket->group->name }}</h2><p class="mt-1 text-xs text-gray-500">{{ $bracket->bracket_size }} 人制・{{ $bracket->scoring_mode === 'set' ? '反曲弓局分制' : '複合弓累計制' }}</p></div>@if($champion)<div class="flex gap-2 text-xs"><span class="rounded-full bg-yellow-100 px-3 py-1 font-semibold text-yellow-800">冠軍 {{ $champion->athlete_name }}</span>@if($runnerUp)<span class="rounded-full bg-gray-200 px-3 py-1 font-semibold text-gray-700">亞軍 {{ $runnerUp->athlete_name }}</span>@endif @if($bronzeWinner)<span class="rounded-full bg-amber-100 px-3 py-1 font-semibold text-amber-800">季軍 {{ $bronzeWinner->athlete_name }}</span>@endif</div>@endif</div>
-        <div class="overflow-x-auto p-4 sm:p-5"><div class="grid min-w-max auto-cols-[18rem] grid-flow-col gap-5">
-            @foreach($mainRounds as $round=>$matches)<div><h3 class="mb-3 text-center text-sm font-semibold text-gray-600">{{ $matches->first()->label }}</h3><div class="flex h-full flex-col justify-around gap-4">@foreach($matches as $match)@include('events._elimination-match-card', compact('match','bracket','statusNames'))@endforeach</div></div>@endforeach
-            @if($bronze)<div><h3 class="mb-3 text-center text-sm font-semibold text-gray-600">季軍賽</h3><div class="flex h-full items-center">@include('events._elimination-match-card', ['match'=>$bronze,'bracket'=>$bracket,'statusNames'=>$statusNames])</div></div>@endif
-        </div></div>
+        @include('events._elimination-bracket-tree', ['bracket'=>$bracket, 'statusNames'=>$statusNames])
     </section>
     @endforeach
 </div>
