@@ -205,6 +205,10 @@ class EventManagementWorkflowTest extends TestCase
 
         $target = EventScoringTarget::whereHas('session', fn ($query) => $query->where('event_id', $event->id))->firstOrFail();
         $oldAccessToken = $target->access_token;
+        $this->get(route('events.show', $event))
+            ->assertOk()
+            ->assertSee('排名賽戰況')
+            ->assertDontSee('即時戰況');
         $this->actingAs($owner)
             ->get(route('organizer.events.show', $event))
             ->assertOk()
@@ -218,6 +222,9 @@ class EventManagementWorkflowTest extends TestCase
         $this->assertDatabaseHas('event_audit_logs', ['event_id'=>$event->id, 'action'=>'event.completed']);
         $this->assertNotSame($oldAccessToken, $target->fresh()->access_token);
         $this->get(route('scoring-stations.show', $target->fresh()->access_token))->assertStatus(410);
+        $this->get(route('events.show', $event->fresh()))
+            ->assertOk()
+            ->assertSee('排名賽結果');
     }
 
     public function test_organizer_can_create_shared_target_station_and_submit_an_end_for_all_archers(): void

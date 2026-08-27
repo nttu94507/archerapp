@@ -1,7 +1,7 @@
 @extends('layouts.app')
 
 @php
-    $liveLabel = ($isEventFinished ?? false) ? '查詢戰積' : '即時戰況';
+    $liveLabel = ($isEventFinished ?? false) ? '排名賽結果' : '排名賽戰況';
 @endphp
 
 @section('title', $event->name)

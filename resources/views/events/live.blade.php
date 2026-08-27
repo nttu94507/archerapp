@@ -1,7 +1,7 @@
 @extends('layouts.app')
 
 @php
-    $liveLabel = $eventFinished ? '查詢戰積' : '即時戰況';
+    $liveLabel = $eventFinished ? '排名賽結果' : '排名賽戰況';
 @endphp
 
 @section('title', $event->name.' '.$liveLabel)
@@ -25,7 +25,7 @@
                 <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                     <div>
                         <p class="text-xs uppercase tracking-widest text-gray-500">組別清單</p>
-                        <h2 class="text-lg font-semibold text-gray-900">選擇組別查看{{ $eventFinished ? '戰積' : '戰況' }}</h2>
+                        <h2 class="text-lg font-semibold text-gray-900">選擇組別查看{{ $eventFinished ? '排名賽結果' : '排名賽戰況' }}</h2>
                         <p class="text-xs text-gray-500">初次進入僅顯示組別狀態，點擊後開啟詳情。</p>
                     </div>
                     <p class="text-xs text-gray-400">狀態：尚未開始 / 正在進行 / 已結束</p>
@@ -187,7 +187,7 @@
                 </div>
             @elseif(isset($groupsBoard) && $groupsBoard->isNotEmpty())
                 <div class="rounded-2xl border border-dashed border-gray-300 bg-white p-6 text-center text-gray-500">
-                    選擇上方組別即可查看排名與對抗賽詳細{{ $eventFinished ? '戰積' : '成績' }}。
+                    選擇上方組別即可查看排名賽詳細{{ $eventFinished ? '結果' : '成績' }}。
                 </div>
             @endif
         </div>
