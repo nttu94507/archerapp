@@ -1,5 +1,5 @@
 <article class="w-full overflow-hidden rounded-xl border bg-white shadow-sm">
-    <div class="flex items-center justify-between bg-gray-50 px-3 py-2 text-xs text-gray-500"><span>#{{ $match->position }}</span><span>{{ $statusNames[$match->status] ?? $match->status }}</span></div>
+    <div class="flex items-center justify-between bg-gray-50 px-3 py-2 text-xs text-gray-500"><span>#{{ $match->position }}</span><span>{{ $match->match_type === 'bronze' && $match->status === 'walkover' ? '輪空取得季軍' : ($statusNames[$match->status] ?? $match->status) }}</span></div>
     @foreach([[1,$match->participant_one_seed,$match->participantOneEntry],[2,$match->participant_two_seed,$match->participantTwoEntry]] as [$slot,$seed,$entry])
     <div class="grid min-h-12 grid-cols-[2rem_minmax(0,1fr)_auto] items-center gap-2 border-t px-3"><span class="text-xs font-bold text-gray-400">{{ $seed ?? '—' }}</span><span class="truncate text-sm font-semibold">{{ $entry?->athlete_name ?? ($match->round_number === 1 ? '輪空' : '等待前場勝者') }}</span>@if($entry)<strong class="text-lg text-indigo-700">{{ $bracket->scoring_mode === 'set' ? ($slot === 1 ? $match->participant_one_set_points : $match->participant_two_set_points) : ($slot === 1 ? $match->participant_one_total : $match->participant_two_total) }}</strong>@endif</div>
     @endforeach

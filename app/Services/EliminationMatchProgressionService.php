@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\EventAuditLog;
 use App\Models\EventEliminationMatch;
 use App\Models\EventRankingSnapshotEntry;
 
@@ -15,6 +16,7 @@ class EliminationMatchProgressionService
 
         $this->placeParticipant($match->nextMatch, $match->next_slot, $winnerEntry);
         $this->placeParticipant($match->loserNextMatch, $match->loser_next_slot, $loserEntry);
+        $this->resolveBronzeWalkover($match->loserNextMatch);
     }
 
     private function placeParticipant(?EventEliminationMatch $destination, ?int $slot, ?EventRankingSnapshotEntry $entry): void
@@ -30,5 +32,45 @@ class EliminationMatchProgressionService
         if ($destination->participant_one_registration_id && $destination->participant_two_registration_id) {
             $destination->update(['status'=>'ready']);
         }
+    }
+
+    private function resolveBronzeWalkover(?EventEliminationMatch $bronze): void
+    {
+        if (! $bronze || $bronze->match_type !== 'bronze') return;
+
+        $bronze->refresh();
+        if ($bronze->winner_registration_id || $bronze->status === 'completed') return;
+
+        $feeders = EventEliminationMatch::query()
+            ->where('loser_next_match_id', $bronze->id)
+            ->get();
+        if ($feeders->isEmpty() || $feeders->contains(
+            fn (EventEliminationMatch $match) => ! in_array($match->status, ['completed', 'walkover'], true)
+        )) return;
+
+        $participants = collect([
+            $bronze->participant_one_registration_id,
+            $bronze->participant_two_registration_id,
+        ])->filter()->unique()->values();
+        if ($participants->count() !== 1) return;
+
+        $winnerId = (int) $participants->first();
+        $bronze->update([
+            'status'=>'walkover',
+            'winner_registration_id'=>$winnerId,
+            'loser_registration_id'=>null,
+            'completed_at'=>now(),
+        ]);
+
+        EventAuditLog::create([
+            'event_id'=>$bronze->bracket->event_id,
+            'action'=>'elimination.bronze_walkover_completed',
+            'subject_type'=>EventEliminationMatch::class,
+            'subject_id'=>$bronze->id,
+            'metadata'=>[
+                'winner_registration_id'=>$winnerId,
+                'reason'=>'only_eligible_semifinal_loser',
+            ],
+        ]);
     }
 }

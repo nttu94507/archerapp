@@ -146,6 +146,44 @@ class EventEliminationBracketTest extends TestCase
         $this->assertSame('pending', $bronze->status);
     }
 
+    public function test_only_eligible_semifinal_loser_automatically_wins_bronze_by_walkover(): void
+    {
+        [$event, $group] = $this->publishedRanking([30, 20, 10], 'recurve', true);
+        $bracket = app(IndividualEliminationBracketService::class)->create($event, $group, 4, true);
+        $playedSemifinal = $bracket->matches()
+            ->where('match_type', 'main')
+            ->where('round_number', 1)
+            ->where('status', 'ready')
+            ->firstOrFail();
+        $expectedBronzeWinner = $playedSemifinal->participant_two_registration_id;
+
+        foreach (range(1, 3) as $_) {
+            $playedSemifinal = app(RecurveSetMatchService::class)->recordSet(
+                $playedSemifinal,
+                ['10', '10', '10'],
+                ['8', '8', '8'],
+                null,
+            );
+        }
+
+        $bronze = $bracket->matches()->where('match_type', 'bronze')->firstOrFail()->fresh();
+        $this->assertSame('walkover', $bronze->status);
+        $this->assertSame($expectedBronzeWinner, $bronze->winner_registration_id);
+        $this->assertNull($bronze->loser_registration_id);
+        $this->assertNotNull($bronze->completed_at);
+        $this->assertDatabaseHas('event_audit_logs', [
+            'event_id'=>$event->id,
+            'action'=>'elimination.bronze_walkover_completed',
+            'subject_id'=>$bronze->id,
+        ]);
+
+        $bracket->update(['visibility'=>'public', 'published_at'=>now()]);
+        $event->update(['status'=>'approved', 'published_at'=>now()]);
+        $this->get(route('events.elimination', $event))
+            ->assertOk()
+            ->assertSee('輪空取得季軍');
+    }
+
     public function test_compound_match_counts_all_five_ends_before_declaring_winner(): void
     {
         [$event, $group] = $this->publishedRanking([40, 30, 20, 10], 'compound', true);
