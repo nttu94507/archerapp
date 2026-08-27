@@ -14,6 +14,7 @@
                 return [
                     'total'=>$slot === 1 ? $oneTotal : $twoTotal,
                     'won'=>$slot === 1 ? $oneTotal > $twoTotal : $twoTotal > $oneTotal,
+                    'tied'=>$oneTotal === $twoTotal,
                 ];
             });
         $latestShootOff = $match->shootOffs->last();
@@ -28,7 +29,7 @@
             @if($entry && ($roundTotals->isNotEmpty() || $shootOffArrow !== null))
                 <div class="mt-1 flex flex-wrap gap-1" aria-label="{{ $entry->athlete_name }}各輪分數">
                     @foreach($roundTotals as $roundIndex => $roundResult)
-                        <span title="第 {{ $roundIndex + 1 }} 輪三箭總分 {{ $roundResult['total'] }}{{ $roundResult['won'] ? '，本輪勝出' : '' }}" class="inline-flex min-w-6 items-center justify-center rounded px-1.5 py-0.5 text-[10px] tabular-nums {{ $roundResult['won'] ? 'bg-indigo-600 font-black text-white ring-1 ring-indigo-700' : 'bg-slate-100 font-semibold text-slate-600' }}">{{ $roundResult['total'] }}</span>
+                        <span title="第 {{ $roundIndex + 1 }} 輪三箭總分 {{ $roundResult['total'] }}{{ $roundResult['won'] ? '，本輪勝出' : ($roundResult['tied'] ? '，本輪同分' : '') }}" class="inline-flex min-w-6 items-center justify-center rounded px-1.5 py-0.5 text-[10px] tabular-nums {{ $roundResult['won'] ? 'bg-indigo-600 font-black text-white ring-1 ring-indigo-700' : ($roundResult['tied'] ? 'bg-violet-200 font-black text-violet-900 ring-1 ring-violet-300' : 'bg-slate-100 font-semibold text-slate-600') }}">{{ $roundResult['total'] }}</span>
                     @endforeach
                     @if($shootOffArrow !== null)
                         <span title="加射箭值 {{ $shootOffArrow }}" class="inline-flex min-w-6 items-center justify-center rounded bg-amber-200 px-1.5 py-0.5 text-[10px] font-black text-amber-900 ring-1 ring-amber-300">{{ $shootOffArrow }}</span>
