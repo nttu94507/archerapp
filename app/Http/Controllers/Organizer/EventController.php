@@ -40,6 +40,7 @@ class EventController extends Controller
         abort_unless(request()->user()->canCreateEvents(),403);
         return view('organizer.events.create', [
             'organizerName' => request()->user()->organizerProfile?->organization_name,
+            'maxArrows' => request()->user()->hasActiveOrganizerSubscription() ? 180 : 36,
         ]);
     }
 
@@ -238,6 +239,7 @@ class EventController extends Controller
 
     private function validateEvent(Request $request, bool $creating = false): array
     {
+        $maxArrows = $request->user()->hasActiveOrganizerSubscription() ? 180 : 36;
         $rules = [
             'name' => ['required', 'string', 'max:120'], 'start_date' => ['required', 'date'],
             'end_date' => ['required', 'date', 'after_or_equal:start_date'], 'mode' => ['required', 'in:indoor,outdoor'],
@@ -256,7 +258,14 @@ class EventController extends Controller
                 'groups.*.gender' => ['required', 'in:male,female,open'],
                 'groups.*.age_class' => ['nullable', 'string', 'max:50'],
                 'groups.*.distance' => ['nullable', 'string', 'max:50'],
-                'groups.*.arrow_count' => ['required', 'integer', 'min:6', 'max:180', 'multiple_of:6'],
+                'groups.*.arrow_count' => [
+                    'required', 'integer', 'min:6', 'max:'.$maxArrows, 'multiple_of:6',
+                    function (string $attribute, mixed $value, \Closure $fail) use ($maxArrows): void {
+                        if ($maxArrows === 36 && (int) $value > 36) {
+                            $fail('免費方案最多只能建立 36 箭單局賽事，請先升級單場方案或訂閱。');
+                        }
+                    },
+                ],
                 'groups.*.arrows_per_end' => ['required', 'integer', 'in:3,6'],
                 'groups.*.quota' => ['nullable', 'integer', 'min:1'],
                 'groups.*.fee' => ['nullable', 'integer', 'min:0'],

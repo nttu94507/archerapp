@@ -8,6 +8,7 @@
         <div class="mb-6">
             <h1 class="text-2xl font-bold">新增組別 — {{ $event->name }}</h1>
             <p class="text-sm text-gray-500 mt-1">一次新增多個組別，提交後可再編輯。</p>
+            @if($maxArrows === 36)<p class="mt-2 rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-800">免費方案僅支援單局最多 36 箭。</p>@endif
         </div>
 
         <form method="POST" action="{{ route('events.groups.store', $event) }}" id="group-form">
@@ -83,13 +84,13 @@
                     <div class="flex items-center gap-2">
                         <select class="w-full rounded-lg border px-3 py-2 text-sm arrow-select">
                             <option value="{{ $event->mode === 'indoor' ? 30 : 36 }}">{{ $event->mode === 'indoor' ? '30 支' : '36 支' }}</option>
-                            <option value="{{ $event->mode === 'indoor' ? 60 : 72 }}">{{ $event->mode === 'indoor' ? '60 支' : '72 支' }}</option>
+                            @if($maxArrows > 36)<option value="{{ $event->mode === 'indoor' ? 60 : 72 }}">{{ $event->mode === 'indoor' ? '60 支' : '72 支' }}</option>@endif
                             <option value="custom">自訂</option>
                         </select>
-                        <input type="number" min="6" step="6" class="hidden w-28 rounded-lg border px-3 py-2 text-sm custom-arrow-input" placeholder="6 的倍數">
+                        <input type="number" min="6" max="{{ $maxArrows }}" step="6" class="hidden w-28 rounded-lg border px-3 py-2 text-sm custom-arrow-input" placeholder="6 的倍數">
                     </div>
                     <input type="hidden" name="groups[__INDEX__][arrow_count]" class="arrow-count-field" value="{{ $event->mode === 'indoor' ? 30 : 36 }}">
-                    <p class="text-xs text-gray-500 mt-1">室{{ $event->mode === 'indoor' ? '內' : '外' }}預設 {{ $event->mode === 'indoor' ? '30/60' : '36/72' }} 箭，可改自訂（6 的倍數）。</p>
+                    <p class="text-xs text-gray-500 mt-1">最多 {{ $maxArrows }} 箭，箭數須為 6 的倍數。</p>
                 </div>
 
                 <div>

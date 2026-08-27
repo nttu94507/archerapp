@@ -113,6 +113,68 @@ class OrganizerSubscriptionTest extends TestCase
         $this->assertTrue($ownedEvent->fresh()->hasPlanFeature('individual_elimination'));
     }
 
+    public function test_free_organizer_cannot_create_72_arrow_group_but_subscriber_can(): void
+    {
+        $freeOrganizer = $this->approvedOrganizer('免費主辦方');
+        $subscriber = $this->approvedOrganizer('訂閱主辦方');
+
+        OrganizerSubscription::create([
+            'user_id' => $subscriber->id,
+            'plan_code' => EventPlanCatalog::SUBSCRIPTION,
+            'status' => OrganizerSubscription::STATUS_ACTIVE,
+            'starts_at' => now(),
+        ]);
+
+        $payload = array_merge($this->eventPayload('72 箭賽事'), [
+            'submit_mode' => 'publish',
+            'groups' => [[
+                'name' => '反曲弓公開組',
+                'bow_type' => 'recurve',
+                'gender' => 'open',
+                'distance' => '70m',
+                'arrow_count' => 72,
+                'arrows_per_end' => 6,
+                'quota' => 32,
+                'fee' => 0,
+                'is_team' => 0,
+            ]],
+        ]);
+
+        $this->actingAs($freeOrganizer)
+            ->from(route('organizer.events.create'))
+            ->post(route('organizer.events.store'), $payload)
+            ->assertRedirect(route('organizer.events.create'))
+            ->assertSessionHasErrors('groups.0.arrow_count');
+
+        $this->assertDatabaseMissing('events', ['name' => '72 箭賽事']);
+
+        $this->actingAs($subscriber)
+            ->post(route('organizer.events.store'), $payload)
+            ->assertRedirect();
+
+        $event = Event::where('name', '72 箭賽事')->firstOrFail();
+        $this->assertSame(EventPlanCatalog::SUBSCRIPTION, $event->plan_code);
+        $this->assertDatabaseHas('event_groups', ['event_id' => $event->id, 'arrow_count' => 72]);
+    }
+
+    private function approvedOrganizer(string $organizationName): User
+    {
+        $user = User::factory()->create();
+        OrganizerProfile::create([
+            'user_id' => $user->id,
+            'organization_name' => $organizationName,
+            'organization_type' => 'club',
+            'contact_name' => $user->name,
+            'contact_email' => $user->email,
+            'contact_phone' => '0912345678',
+            'application_reason' => '測試',
+            'status' => 'approved',
+            'approved_at' => now(),
+        ]);
+
+        return $user;
+    }
+
     private function eventPayload(string $name): array
     {
         return [

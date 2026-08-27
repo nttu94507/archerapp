@@ -43,7 +43,10 @@ class EventGroupController extends Controller
                 ->with('error', '賽事已完成排靶，不能再新增組別。');
         }
 
-        return view('event-groups.create', ['event' => $event]);
+        return view('event-groups.create', [
+            'event' => $event,
+            'maxArrows' => $event->planLimit('arrows_per_phase') ?? 180,
+        ]);
     }
 
     public function store(Request $req, Event $event)
@@ -54,9 +57,13 @@ class EventGroupController extends Controller
                 ->with('error', '賽事已完成排靶，不能再新增組別。');
         }
 
-        $arrowRule = ['required','integer','min:6','max:180', function ($attribute, $value, $fail) {
+        $maxArrows = $event->planLimit('arrows_per_phase') ?? 180;
+        $arrowRule = ['required','integer','min:6','max:'.$maxArrows, function ($attribute, $value, $fail) use ($maxArrows) {
             if ($value % 6 !== 0) {
                 $fail('箭數需為 6 的倍數');
+            }
+            if ($maxArrows === 36 && (int) $value > 36) {
+                $fail('免費方案最多只能建立 36 箭單局賽事，請先升級單場方案或訂閱。');
             }
         }];
 
@@ -92,15 +99,20 @@ class EventGroupController extends Controller
     public function edit(Event $event, EventGroup $group)
     {
         $this->authorizeGroup($event, $group);
-        return view('event-groups.edit', compact('event','group'));
+        $maxArrows = $event->planLimit('arrows_per_phase') ?? 180;
+        return view('event-groups.edit', compact('event','group', 'maxArrows'));
     }
 
     public function update(Request $req, Event $event, EventGroup $group)
     {
         $this->authorizeGroup($event, $group);
-        $arrowRule = ['required','integer','min:6','max:180', function ($attribute, $value, $fail) {
+        $maxArrows = $event->planLimit('arrows_per_phase') ?? 180;
+        $arrowRule = ['required','integer','min:6','max:'.$maxArrows, function ($attribute, $value, $fail) use ($maxArrows) {
             if ($value % 6 !== 0) {
                 $fail('箭數需為 6 的倍數');
+            }
+            if ($maxArrows === 36 && (int) $value > 36) {
+                $fail('免費方案最多只能設定 36 箭單局賽事，請先升級單場方案或訂閱。');
             }
         }];
 

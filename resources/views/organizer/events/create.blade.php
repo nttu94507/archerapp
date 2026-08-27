@@ -40,13 +40,14 @@
 
         <section class="rounded-2xl border bg-white p-4 shadow-sm sm:p-6">
             <div class="mb-5"><p class="text-xs font-semibold text-indigo-600">步驟 2</p><h2 class="text-lg font-semibold">第一個報名組別</h2><p class="mt-1 text-xs text-gray-500">先建立主要組別，發布後仍可新增更多組別。</p></div>
+            @if($maxArrows === 36)<div class="mb-4 flex items-center justify-between gap-3 rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-800"><span>免費方案僅支援單局最多 36 箭。</span><a href="{{ route('store.index') }}" class="shrink-0 font-semibold underline">查看方案</a></div>@endif
             <div class="mb-4">
                 <label class="text-sm font-medium">快速套用賽制</label>
                 <select id="group-preset" class="mt-1 min-h-12 w-full rounded-xl border-indigo-200 bg-indigo-50">
-                    <option value="outdoor70">室外 70m／72 箭</option>
-                    <option value="outdoor50">室外 50m／72 箭</option>
+                    @if($maxArrows > 36)<option value="outdoor70">室外 70m／72 箭</option>
+                    <option value="outdoor50">室外 50m／72 箭</option>@endif
                     <option value="outdoor30">室外 30m／36 箭</option>
-                    <option value="indoor18">室內 18m／60 箭</option>
+                    @if($maxArrows > 36)<option value="indoor18">室內 18m／60 箭</option>@endif
                     <option value="custom">自訂</option>
                 </select>
             </div>
@@ -55,7 +56,7 @@
                 <div><label class="text-sm font-medium">弓種</label><select name="groups[0][bow_type]" class="mt-1 min-h-12 w-full rounded-xl border-gray-300"><option value="recurve">反曲弓</option><option value="compound">複合弓</option><option value="barebow">光弓</option><option value="">不限</option></select></div>
                 <div><label class="text-sm font-medium">性別</label><select name="groups[0][gender]" class="mt-1 min-h-12 w-full rounded-xl border-gray-300"><option value="open">公開／不限</option><option value="male">男子</option><option value="female">女子</option></select></div>
                 <div><label class="text-sm font-medium">距離</label><input id="group-distance" name="groups[0][distance]" value="{{ old('groups.0.distance','70m') }}" class="mt-1 min-h-12 w-full rounded-xl border-gray-300"></div>
-                <div><label class="text-sm font-medium">總箭數 *</label><input id="group-arrows" type="number" min="6" max="180" step="6" name="groups[0][arrow_count]" required value="{{ old('groups.0.arrow_count',72) }}" class="mt-1 min-h-12 w-full rounded-xl border-gray-300"></div>
+                <div><label class="text-sm font-medium">總箭數 *</label><input id="group-arrows" type="number" min="6" max="{{ $maxArrows }}" step="6" name="groups[0][arrow_count]" required value="{{ old('groups.0.arrow_count', $maxArrows > 36 ? 72 : 36) }}" class="mt-1 min-h-12 w-full rounded-xl border-gray-300"></div>
                 <div><label class="text-sm font-medium">每趟箭數 *</label><select name="groups[0][arrows_per_end]" class="mt-1 min-h-12 w-full rounded-xl border-gray-300"><option value="6">6 箭</option><option value="3">3 箭</option></select></div>
                 <div><label class="text-sm font-medium">名額</label><input type="number" min="1" name="groups[0][quota]" value="{{ old('groups.0.quota') }}" placeholder="不填表示不限" class="mt-1 min-h-12 w-full rounded-xl border-gray-300"></div>
                 <div><label class="text-sm font-medium">報名費</label><input type="number" min="0" name="groups[0][fee]" value="{{ old('groups.0.fee',0) }}" class="mt-1 min-h-12 w-full rounded-xl border-gray-300"></div>

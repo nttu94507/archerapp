@@ -53,7 +53,7 @@ class EventManagementWorkflowTest extends TestCase
             'submit_mode'=>'publish',
             'groups'=>[[
                 'name'=>'反曲弓公開組', 'bow_type'=>'recurve', 'gender'=>'open', 'distance'=>'70m',
-                'arrow_count'=>72, 'arrows_per_end'=>6, 'quota'=>32, 'fee'=>500, 'is_team'=>0,
+                'arrow_count'=>36, 'arrows_per_end'=>6, 'quota'=>32, 'fee'=>500, 'is_team'=>0,
             ]],
         ]));
 
@@ -61,7 +61,7 @@ class EventManagementWorkflowTest extends TestCase
         $response->assertRedirect(route('organizer.events.show', $event));
         $this->assertTrue($event->isPublished());
         $this->assertDatabaseHas('event_groups', [
-            'event_id'=>$event->id, 'name'=>'反曲弓公開組', 'arrow_count'=>72, 'quota'=>32,
+            'event_id'=>$event->id, 'name'=>'反曲弓公開組', 'arrow_count'=>36, 'quota'=>32,
         ]);
     }
 
