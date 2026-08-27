@@ -22,6 +22,7 @@
             @php
                 $state = $groupStates->get($group->id);
                 $items = $state['registrations'];
+                $rankingSnapshot = $currentSnapshots->get($group->id);
                 $canPublish = $items->isNotEmpty()
                     && $state['has_session']
                     && $state['has_targets']
@@ -42,6 +43,7 @@
                             <h2 class="text-lg font-semibold">{{ $group->name }}</h2>
                             @if($state['published'])
                                 <span class="rounded-full bg-green-100 px-2.5 py-1 text-xs font-medium text-green-700">已發布</span>
+                                @if($rankingSnapshot)<span class="rounded-full bg-violet-100 px-2.5 py-1 text-xs font-medium text-violet-700">種子快照 v{{ $rankingSnapshot->version }}</span>@else<span class="rounded-full bg-red-100 px-2.5 py-1 text-xs font-medium text-red-700">缺少種子快照</span>@endif
                             @elseif($canPublish)
                                 <span class="rounded-full bg-indigo-100 px-2.5 py-1 text-xs font-medium text-indigo-700">可發布</span>
                             @else
@@ -81,6 +83,11 @@
                             </form>
                             @endif
                         </div>
+                    @elseif($state['published'] && $canManageResults && !$rankingSnapshot)
+                        <form method="POST" action="{{ route('organizer.events.results.ranking-snapshot', [$event, $group]) }}" onsubmit="return confirm('將依目前已發布的正式成績補建排名種子快照，不會更改成績或重發 Badge。確定繼續？')">
+                            @csrf
+                            <button class="min-h-11 rounded-xl bg-violet-600 px-4 text-sm font-medium text-white hover:bg-violet-500">補建排名種子快照</button>
+                        </form>
                     @endif
                 </div>
 

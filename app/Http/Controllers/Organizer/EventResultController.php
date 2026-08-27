@@ -9,6 +9,7 @@ use App\Models\EventGroup;
 use App\Models\EventRegistration;
 use App\Models\EventScoreEntry;
 use App\Models\EventScoringSession;
+use App\Models\EventRankingSnapshot;
 use App\Services\EventBadgeAwardService;
 use App\Services\QualificationRankingSnapshotService;
 use Illuminate\Http\RedirectResponse;
@@ -30,6 +31,12 @@ class EventResultController extends Controller
         })->sortByDesc('calculated_total');
 
         $event->load(['groups.scoringSessions.targets']);
+        $currentSnapshots = EventRankingSnapshot::query()
+            ->where('event_id', $event->id)
+            ->where('status', 'locked')
+            ->whereNull('superseded_at')
+            ->get()
+            ->keyBy('event_group_id');
         $requiresJudgeReview = $event->staff()->where('status', 'active')->whereIn('role', ['judge', 'chief_judge'])->exists();
         $groupStates = $event->groups->mapWithKeys(function (EventGroup $group) use ($registrations, $event, $requiresJudgeReview): array {
             $items = $registrations->where('event_group_id', $group->id)->values();
@@ -57,7 +64,7 @@ class EventResultController extends Controller
         $canApproveResults = request()->user()->can('approveResults', $event);
         $canCorrectScores = request()->user()->can('manageScoreCorrections', $event);
 
-        return view('organizer.results.index', compact('event', 'registrations', 'groupStates', 'canManageResults', 'canApproveResults', 'canCorrectScores'));
+        return view('organizer.results.index', compact('event', 'registrations', 'groupStates', 'currentSnapshots', 'canManageResults', 'canApproveResults', 'canCorrectScores'));
     }
 
     public function edit(Event $event, EventRegistration $registration): View
@@ -358,5 +365,63 @@ class EventResultController extends Controller
         $awarded = $badges->awardPlacementsFor($event, $group->id);
 
         return back()->with('success', $group->name.'正式成績已發布（'.$publication['published_count'].' 人），排名種子快照 v'.$publication['snapshot_version'].' 已鎖定，已發放 '.$awarded.' 個名次 Badge。');
+    }
+
+    public function createRankingSnapshot(
+        Request $request,
+        Event $event,
+        EventGroup $group,
+        QualificationRankingSnapshotService $rankingSnapshots,
+    ): RedirectResponse {
+        $this->authorize('manageScores', $event);
+        abort_unless($group->event_id === $event->id, 404);
+
+        $snapshot = DB::transaction(function () use ($request, $event, $group, $rankingSnapshots) {
+            EventGroup::whereKey($group->id)->lockForUpdate()->firstOrFail();
+            $registrations = EventRegistration::query()
+                ->where('event_id', $event->id)
+                ->where('event_group_id', $group->id)
+                ->whereIn('status', ['registered', 'checked_in', 'no_show'])
+                ->lockForUpdate()
+                ->get();
+
+            abort_if($registrations->isEmpty(), 422, '此組別沒有可建立快照的正式成績。');
+            abort_if($registrations->contains(fn ($registration) => $registration->result_published_at === null), 422, '此組別並非所有成績都已正式發布。');
+
+            $legacyVerified = 0;
+            foreach ($registrations->whereNull('score_verified_at') as $registration) {
+                $didNotStart = $registration->status === 'no_show' || $registration->result_status === 'dns';
+                $registration->update([
+                    'score_verified_at'=>$registration->result_published_at,
+                    'score_verified_by'=>$request->user()->id,
+                    'result_status'=>$didNotStart ? 'dns' : 'completed',
+                ]);
+                $legacyVerified++;
+            }
+
+            $publishedAt = $registrations->max('result_published_at') ?? now();
+            $phase = $group->qualificationPhase()->lockForUpdate()->firstOrFail();
+            $phase->update([
+                'status'=>'published',
+                'locked_at'=>$phase->locked_at ?? $publishedAt,
+                'completed_at'=>$phase->completed_at ?? $publishedAt,
+                'published_at'=>$phase->published_at ?? $publishedAt,
+            ]);
+
+            if ($legacyVerified > 0) {
+                EventAuditLog::create([
+                    'event_id'=>$event->id,
+                    'user_id'=>$request->user()->id,
+                    'action'=>'results.legacy_verification_backfilled',
+                    'subject_type'=>EventGroup::class,
+                    'subject_id'=>$group->id,
+                    'metadata'=>['count'=>$legacyVerified, 'reason'=>'published_before_ranking_snapshots'],
+                ]);
+            }
+
+            return $rankingSnapshots->capture($event, $group, $request->user()->id);
+        });
+
+        return back()->with('success', $group->name.'排名種子快照 v'.$snapshot->version.' 已補建完成，可以建立個人對抗表。');
     }
 }

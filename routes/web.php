@@ -141,6 +141,7 @@ Route::prefix('organizer')->middleware('auth')->name('organizer.')->group(functi
     Route::post('events/{event}/results/verify', [OrganizerResultController::class, 'verify'])->name('events.results.verify');
     Route::post('events/{event}/results/groups/{group}/verify', [OrganizerResultController::class, 'verifyGroup'])->name('events.results.groups.verify');
     Route::post('events/{event}/results/groups/{group}/publish', [OrganizerResultController::class, 'publish'])->name('events.results.publish');
+    Route::post('events/{event}/results/groups/{group}/ranking-snapshot', [OrganizerResultController::class, 'createRankingSnapshot'])->name('events.results.ranking-snapshot');
     Route::get('events/{event}/elimination', [OrganizerEliminationController::class, 'index'])->name('events.elimination.index');
     Route::post('events/{event}/elimination', [OrganizerEliminationController::class, 'store'])->name('events.elimination.store');
     Route::patch('events/{event}/elimination/{bracket}/visibility', [OrganizerEliminationController::class, 'updateVisibility'])->name('events.elimination.visibility');

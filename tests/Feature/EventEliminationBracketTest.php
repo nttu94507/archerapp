@@ -265,6 +265,43 @@ class EventEliminationBracketTest extends TestCase
             ->assertSee($group->name);
     }
 
+    public function test_legacy_published_group_can_backfill_verification_and_create_ranking_snapshot(): void
+    {
+        $event = Event::factory()->create([
+            'plan_code'=>EventPlanCatalog::LEGACY,
+            'plan_features_snapshot'=>EventPlanCatalog::features(EventPlanCatalog::LEGACY),
+            'plan_limits_snapshot'=>EventPlanCatalog::limits(EventPlanCatalog::LEGACY),
+        ]);
+        $group = EventGroup::factory()->create(['event_id'=>$event->id, 'name'=>'舊賽事公開組', 'bow_type'=>'recurve']);
+        foreach ([30, 20, 10] as $score) {
+            $user = User::factory()->create();
+            $registration = EventRegistration::create([
+                'event_id'=>$event->id, 'event_group_id'=>$group->id, 'user_id'=>$user->id,
+                'name'=>$user->name, 'email'=>$user->email, 'status'=>'checked_in',
+                'result_published_at'=>now()->subDay(),
+            ]);
+            EventScoreEntry::create([
+                'event_id'=>$event->id, 'event_registration_id'=>$registration->id,
+                'user_id'=>$user->id, 'end_number'=>1, 'scores'=>[$score], 'end_total'=>$score,
+            ]);
+        }
+        $owner = User::factory()->create();
+        EventStaff::create([
+            'event_id'=>$event->id, 'user_id'=>$owner->id, 'role'=>'owner',
+            'status'=>'active', 'invited_by'=>$owner->id,
+        ]);
+
+        $this->actingAs($owner)
+            ->post(route('organizer.events.results.ranking-snapshot', [$event, $group]))
+            ->assertRedirect()
+            ->assertSessionHas('success');
+
+        $this->assertDatabaseHas('event_ranking_snapshots', ['event_group_id'=>$group->id, 'version'=>1, 'status'=>'locked']);
+        $this->assertSame('published', $group->qualificationPhase()->firstOrFail()->status);
+        $this->assertSame(0, $group->registrations()->whereNull('score_verified_at')->count());
+        $this->assertDatabaseHas('event_audit_logs', ['event_id'=>$event->id, 'action'=>'results.legacy_verification_backfilled']);
+    }
+
     private function compoundMatchAwaitingShootOff()
     {
         [$event, $group] = $this->publishedRanking([40, 30, 20, 10], 'compound', true);
