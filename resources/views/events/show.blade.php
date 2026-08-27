@@ -36,6 +36,7 @@
                     <span class="inline-flex h-6 w-6 items-center justify-center rounded-full bg-white/20 text-[11px]">{{ ($isEventFinished ?? false) ? 'Result' : 'LIVE' }}</span>
                     <span>{{ $liveLabel }}</span>
                 </a>
+                @if(($event->public_elimination_brackets_count ?? 0) > 0)<a href="{{ route('events.elimination', $event) }}" class="inline-flex items-center rounded-2xl bg-gray-900 px-4 py-2 text-sm font-semibold text-white">個人對抗賽</a>@endif
                 {{-- 管理按鈕 --}}
                 @if($canManage)
                     <a href="{{ route('events.groups.index', $event) }}"

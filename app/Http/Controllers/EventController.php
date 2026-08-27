@@ -6,6 +6,7 @@ use App\Models\Event;
 use App\Models\EventGroup;
 use App\Models\EventRegistration;
 use App\Models\EventScoreEntry;
+use App\Models\EventRankingSnapshotEntry;
 use App\Models\EventStaff;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -166,6 +167,7 @@ class EventController extends Controller
                     }]);
             },
         ]);
+        $event->loadCount(['eliminationBrackets as public_elimination_brackets_count'=>fn ($query) => $query->where('visibility', 'public')->whereNotNull('published_at')]);
 
         $now        = now();
         $regStartAt = $event->reg_start ? \Illuminate\Support\Carbon::parse($event->reg_start) : null;
@@ -284,6 +286,13 @@ class EventController extends Controller
 
         $flatEntries = $scoreEntries->flatten(1);
 
+        $lockedRankingEntries = EventRankingSnapshotEntry::query()
+            ->whereHas('snapshot', fn ($query) => $query
+                ->where('event_id', $event->id)
+                ->whereNull('superseded_at'))
+            ->get()
+            ->keyBy('event_registration_id');
+
         $overallBoard = $scoreboard
             ->filter(fn ($row) => $row['ends_recorded'] > 0)
             ->sortByDesc('total_score')
@@ -299,7 +308,7 @@ class EventController extends Controller
 
         $groupedBoards = $scoreboard
             ->groupBy('group_id')
-            ->map(function (Collection $rows) use ($event, $sortDirection) {
+            ->map(function (Collection $rows) use ($event, $sortDirection, $lockedRankingEntries) {
                 $dnfRows = $rows->filter(fn (array $row) => in_array($row['registration']->result_status, ['dnf', 'dns'], true))
                     ->map(function (array $row): array {
                         $row['rank_position'] = strtoupper((string) $row['registration']->result_status);
@@ -312,12 +321,13 @@ class EventController extends Controller
 
                 $previousSignature = null;
                 $currentRank = 1;
-                $ranked = $ranked->map(function ($row, $idx) use (&$previousSignature, &$currentRank) {
+                $ranked = $ranked->map(function ($row, $idx) use (&$previousSignature, &$currentRank, $lockedRankingEntries) {
                     $signature = [$row['total_score'], $row['ten_count'], $row['x_count']];
                     if ($previousSignature !== null && $signature !== $previousSignature) {
                         $currentRank = $idx + 1;
                     }
-                    $row['rank_position'] = $currentRank;
+                    $row['rank_position'] = $lockedRankingEntries
+                        ->get($row['registration']->id)?->rank_position ?? $currentRank;
                     $previousSignature = $signature;
                     return $row;
                 });
@@ -439,6 +449,22 @@ class EventController extends Controller
             'sortDirection' => $sortDirection,
             'eventFinished'  => $eventFinished,
         ]);
+    }
+
+    public function elimination(Event $event)
+    {
+        abort_unless($event->isPublished() && $event->hasPlanFeature('public_visibility'), 404);
+        $brackets = $event->eliminationBrackets()
+            ->where('visibility', 'public')
+            ->whereNotNull('published_at')
+            ->with([
+                'group', 'rankingSnapshot',
+                'matches.participantOneEntry', 'matches.participantTwoEntry',
+                'matches.sets', 'matches.ends', 'matches.shootOffs',
+            ])->get();
+        abort_if($brackets->isEmpty(), 404);
+
+        return view('events.elimination', compact('event', 'brackets'));
     }
 
     private function resolveGroupArrowSettings(Event $event, ?EventGroup $group): array

@@ -10,6 +10,7 @@ use App\Models\EventRegistration;
 use App\Models\EventScoreEntry;
 use App\Models\EventScoringSession;
 use App\Services\EventBadgeAwardService;
+use App\Services\QualificationRankingSnapshotService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -279,12 +280,18 @@ class EventResultController extends Controller
         return back()->with('success', $group->name.'已核准 '.$result['count'].' 筆成績，可以進行正式發布。');
     }
 
-    public function publish(Request $request, Event $event, EventGroup $group, EventBadgeAwardService $badges): RedirectResponse
+    public function publish(
+        Request $request,
+        Event $event,
+        EventGroup $group,
+        EventBadgeAwardService $badges,
+        QualificationRankingSnapshotService $rankingSnapshots
+    ): RedirectResponse
     {
         $this->authorize('manageScores', $event);
         abort_unless($group->event_id === $event->id, 404);
 
-        $publishedCount = DB::transaction(function () use ($event, $group, $request): int {
+        $publication = DB::transaction(function () use ($event, $group, $request, $rankingSnapshots): array {
             EventGroup::whereKey($group->id)->lockForUpdate()->firstOrFail();
             $registrations = EventRegistration::query()
                 ->where('event_id', $event->id)
@@ -318,6 +325,13 @@ class EventResultController extends Controller
                 $registration->update(['result_published_at'=>$now]);
             }
 
+            $group->qualificationPhase()->update([
+                'status'=>'published',
+                'locked_at'=>DB::raw('COALESCE(locked_at, CURRENT_TIMESTAMP)'),
+                'completed_at'=>DB::raw('COALESCE(completed_at, CURRENT_TIMESTAMP)'),
+                'published_at'=>$now,
+            ]);
+
             $eventHasUnpublished = EventRegistration::query()
                 ->where('event_id', $event->id)
                 ->whereIn('status', ['registered', 'checked_in', 'no_show'])
@@ -336,11 +350,13 @@ class EventResultController extends Controller
                 'metadata'=>['group_id'=>$group->id, 'count'=>$unpublished->count()],
             ]);
 
-            return $unpublished->count();
+            $snapshot = $rankingSnapshots->capture($event, $group, $request->user()->id);
+
+            return ['published_count'=>$unpublished->count(), 'snapshot_version'=>$snapshot->version];
         });
 
         $awarded = $badges->awardPlacementsFor($event, $group->id);
 
-        return back()->with('success', $group->name.'正式成績已發布（'.$publishedCount.' 人），已發放 '.$awarded.' 個名次 Badge。');
+        return back()->with('success', $group->name.'正式成績已發布（'.$publication['published_count'].' 人），排名種子快照 v'.$publication['snapshot_version'].' 已鎖定，已發放 '.$awarded.' 個名次 Badge。');
     }
 }

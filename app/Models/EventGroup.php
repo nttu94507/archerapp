@@ -5,10 +5,30 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Carbon\Carbon;
+use Illuminate\Support\Str;
 
 class EventGroup extends Model
 {
     use HasFactory;
+
+    protected static function booted(): void
+    {
+        static::saved(function (EventGroup $group): void {
+            $phase = $group->phases()
+                ->where('type', 'qualification')
+                ->where('sequence', 1)
+                ->first();
+
+            if (! $phase) {
+                $group->phases()->create($group->qualificationPhaseAttributes());
+                return;
+            }
+
+            if (! $phase->isLocked()) {
+                $phase->update($group->qualificationPhaseAttributes());
+            }
+        });
+    }
 
     protected $fillable = [
         'event_id','name','bow_type','gender','age_class','distance','arrow_count',
@@ -36,6 +56,41 @@ class EventGroup extends Model
     public function scoringSessions()
     {
         return $this->hasMany(EventScoringSession::class, 'event_group_id');
+    }
+
+    public function phases()
+    {
+        return $this->hasMany(EventPhase::class, 'event_group_id')->orderBy('sequence');
+    }
+
+    public function qualificationPhase()
+    {
+        return $this->hasOne(EventPhase::class, 'event_group_id')
+            ->where('type', 'qualification')
+            ->where('sequence', 1);
+    }
+
+    public function rankingSnapshots()
+    {
+        return $this->hasMany(EventRankingSnapshot::class, 'event_group_id')->latest('version');
+    }
+
+    public function eliminationBrackets()
+    {
+        return $this->hasMany(EventEliminationBracket::class, 'event_group_id')->latest();
+    }
+
+    public function qualificationPhaseAttributes(): array
+    {
+        return [
+            'event_id'=>$this->event_id,
+            'name'=>Str::limit($this->name.' 排名賽', 120, ''),
+            'type'=>'qualification',
+            'sequence'=>1,
+            'scoring_mode'=>'cumulative',
+            'total_arrows'=>$this->arrow_count,
+            'arrows_per_end'=>$this->arrows_per_end ?: 6,
+        ];
     }
 
     public function usesCustomRegistrationWindow(): bool

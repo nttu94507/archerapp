@@ -161,12 +161,22 @@ class ScoringStationController extends Controller
             if ($session->started_at === null) {
                 $session->update(['status'=>'scoring', 'started_at'=>now()]);
             }
+            if ($session->phase && ! in_array($session->phase->status, ['completed', 'published'], true)) {
+                $session->phase->update([
+                    'status'=>'in_progress',
+                    'started_at'=>$session->phase->started_at ?: now(),
+                ]);
+            }
             if ($completed) {
                 foreach ($assignments as $assignment) {
                     $assignment->registration->update(['score_submitted_at'=>now()]);
                 }
                 if ($session->targets()->whereNotIn('status', ['completed', 'dns'])->doesntExist()) {
                     $session->update(['status'=>'completed', 'completed_at'=>now()]);
+                    if ($session->phase
+                        && $session->phase->scoringSessions()->where('status', '!=', 'completed')->doesntExist()) {
+                        $session->phase->update(['status'=>'completed', 'completed_at'=>now()]);
+                    }
                 }
             }
 
@@ -227,6 +237,7 @@ class ScoringStationController extends Controller
             ->with([
                 'session.event',
                 'session.group',
+                'session.phase',
             ])
             ->firstOrFail();
     }

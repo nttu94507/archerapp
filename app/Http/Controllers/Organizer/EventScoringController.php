@@ -104,9 +104,23 @@ class EventScoringController extends Controller
                         continue;
                     }
 
+                    $phase = $group->qualificationPhase()->firstOrCreate(
+                        [],
+                        array_merge($group->qualificationPhaseAttributes(), [
+                            'created_by'=>$request->user()->id,
+                        ])
+                    );
+                    $phase->update([
+                        'status'=>'ready',
+                        'total_arrows'=>$group->arrow_count ?: ($event->mode === 'indoor' ? 30 : 36),
+                        'arrows_per_end'=>$group->arrows_per_end ?: 6,
+                        'created_by'=>$phase->created_by ?: $request->user()->id,
+                    ]);
+
                     $session = EventScoringSession::create([
                         'event_id'=>$event->id,
                         'event_group_id'=>$group->id,
+                        'event_phase_id'=>$phase->id,
                         'name'=>Str::limit($validated['name'].'－'.$group->name, 120, ''),
                         'total_arrows'=>$group->arrow_count ?: ($event->mode === 'indoor' ? 30 : 36),
                         'arrows_per_end'=>$group->arrows_per_end ?: 6,

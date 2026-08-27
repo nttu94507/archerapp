@@ -7,6 +7,7 @@ use App\Models\EventBadge;
 use App\Models\EventBadgeClaim;
 use App\Models\EventGroup;
 use App\Models\EventRegistration;
+use App\Models\EventRankingSnapshot;
 use App\Models\EventScoreEntry;
 use App\Models\EventScoringSession;
 use App\Models\EventStaff;
@@ -311,6 +312,7 @@ class EventBadgeWorkflowTest extends TestCase
         $this->actingAs($owner)->post(route('organizer.events.results.publish',[$event,$group]));
         EventScoreEntry::where('event_registration_id',$registrations[1]->id)->update(['end_total'=>60,'scores'=>[60]]);
         $this->actingAs($owner)->post(route('organizer.events.results.publish',[$event,$group]));
+        $this->assertSame(2, EventRankingSnapshot::where('event_group_id', $group->id)->count());
         $this->assertDatabaseHas('user_event_badges',['event_badge_id'=>$badge->id,'user_id'=>$members[0]->id,'revoked_reason'=>'正式成績修正，名次重新判定']);
         $this->assertDatabaseHas('user_event_badges',['event_badge_id'=>$badge->id,'user_id'=>$members[1]->id,'revoked_at'=>null,'score_snapshot'=>60]);
     }
@@ -390,6 +392,7 @@ class EventBadgeWorkflowTest extends TestCase
         $this->actingAs($owner)->post(route('organizer.events.results.publish',[$event,$group]))->assertSessionHas('success');
         $this->actingAs($owner)->post(route('organizer.events.results.publish',[$event,$group]))->assertSessionHas('success');
 
+        $this->assertSame(1, EventRankingSnapshot::where('event_group_id', $group->id)->count());
         $this->assertDatabaseCount('user_event_badges', 1);
         $this->assertDatabaseHas('user_event_badges', ['event_badge_id'=>$badge->id,'user_id'=>$members[0]->id,'award_source'=>'placement']);
     }
@@ -629,9 +632,11 @@ class EventBadgeWorkflowTest extends TestCase
 
     private function createScoringTarget(Event $event, EventGroup $group, User $owner): void
     {
+        $phase = $group->qualificationPhase()->firstOrFail();
         $session = EventScoringSession::create([
             'event_id'=>$event->id,
             'event_group_id'=>$group->id,
+            'event_phase_id'=>$phase->id,
             'name'=>$group->name.' 資格賽',
             'total_arrows'=>$group->arrow_count ?: 36,
             'arrows_per_end'=>$group->arrows_per_end ?: 6,

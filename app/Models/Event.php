@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Carbon\Carbon;
 use Illuminate\Support\Str;
+use App\Support\EventPlanCatalog;
 
 class Event extends Model
 {
@@ -17,6 +18,11 @@ class Event extends Model
             if (! $event->uuid) {
                 $event->uuid = (string) Str::uuid();
             }
+            $event->plan_code ??= EventPlanCatalog::FREE;
+            $event->plan_status ??= EventPlanCatalog::STATUS_ACTIVE;
+            $event->plan_limits_snapshot ??= EventPlanCatalog::limits($event->plan_code);
+            $event->plan_features_snapshot ??= EventPlanCatalog::features($event->plan_code);
+            $event->plan_activated_at ??= now();
         });
     }
 
@@ -31,12 +37,16 @@ class Event extends Model
         'organizer', 'reg_start', 'reg_end',
         'venue', 'map_link', 'lat', 'lng', 'status', 'published_at',
         'cancelled_at', 'completed_at', 'review_note',
+        'plan_code', 'plan_status', 'plan_limits_snapshot', 'plan_features_snapshot',
+        'plan_activated_at', 'plan_expires_at', 'plan_order_reference',
     ];
     protected $casts = [
         'verified' => 'boolean',
         'start_date' => 'date', 'end_date' => 'date',
         'reg_start' => 'datetime', 'reg_end' => 'datetime',
         'published_at' => 'datetime', 'cancelled_at' => 'datetime', 'completed_at' => 'datetime',
+        'plan_limits_snapshot'=>'array', 'plan_features_snapshot'=>'array',
+        'plan_activated_at'=>'datetime', 'plan_expires_at'=>'datetime',
     ];
 
     // app/Models/Event.php
@@ -60,6 +70,18 @@ class Event extends Model
         return $this->hasMany(EventScoringSession::class);
     }
 
+    public function phases() {
+        return $this->hasMany(EventPhase::class)->orderBy('sequence');
+    }
+
+    public function rankingSnapshots() {
+        return $this->hasMany(EventRankingSnapshot::class);
+    }
+
+    public function eliminationBrackets() {
+        return $this->hasMany(EventEliminationBracket::class);
+    }
+
     public function auditLogs() {
         return $this->hasMany(EventAuditLog::class)->latest();
     }
@@ -70,6 +92,37 @@ class Event extends Model
 
     public function isPublished(): bool {
         return $this->status === 'approved' && $this->published_at !== null && $this->cancelled_at === null;
+    }
+
+    public function hasPlanFeature(string $feature): bool
+    {
+        if (! $this->planIsActive()) {
+            return false;
+        }
+
+        return (bool) ($this->plan_features_snapshot[$feature]
+            ?? EventPlanCatalog::features($this->plan_code)[$feature]
+            ?? false);
+    }
+
+    public function planLimit(string $resource): ?int
+    {
+        $value = $this->plan_limits_snapshot[$resource]
+            ?? EventPlanCatalog::limits($this->plan_code)[$resource]
+            ?? null;
+
+        return $value === null ? null : (int) $value;
+    }
+
+    public function isFreePlan(): bool
+    {
+        return $this->plan_code === EventPlanCatalog::FREE;
+    }
+
+    public function planIsActive(): bool
+    {
+        return $this->plan_status === EventPlanCatalog::STATUS_ACTIVE
+            && ($this->plan_expires_at === null || $this->plan_expires_at->isFuture());
     }
 
     public function registrationStatus(?Carbon $at = null): string

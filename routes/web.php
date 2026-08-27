@@ -24,6 +24,7 @@ use App\Http\Controllers\Organizer\EventRegistrationController as OrganizerRegis
 use App\Http\Controllers\Organizer\EventResultController as OrganizerResultController;
 use App\Http\Controllers\Organizer\EventScoringController as OrganizerScoringController;
 use App\Http\Controllers\Organizer\EventJudgingController as OrganizerJudgingController;
+use App\Http\Controllers\Organizer\EventEliminationController as OrganizerEliminationController;
 use App\Http\Controllers\Organizer\QualificationController;
 use App\Http\Controllers\Admin\OrganizerQualificationController as AdminOrganizerQualificationController;
 use Illuminate\Support\Facades\Route;
@@ -140,6 +141,14 @@ Route::prefix('organizer')->middleware('auth')->name('organizer.')->group(functi
     Route::post('events/{event}/results/verify', [OrganizerResultController::class, 'verify'])->name('events.results.verify');
     Route::post('events/{event}/results/groups/{group}/verify', [OrganizerResultController::class, 'verifyGroup'])->name('events.results.groups.verify');
     Route::post('events/{event}/results/groups/{group}/publish', [OrganizerResultController::class, 'publish'])->name('events.results.publish');
+    Route::get('events/{event}/elimination', [OrganizerEliminationController::class, 'index'])->name('events.elimination.index');
+    Route::post('events/{event}/elimination', [OrganizerEliminationController::class, 'store'])->name('events.elimination.store');
+    Route::patch('events/{event}/elimination/{bracket}/visibility', [OrganizerEliminationController::class, 'updateVisibility'])->name('events.elimination.visibility');
+    Route::get('events/{event}/elimination/matches/{match}', [OrganizerEliminationController::class, 'showMatch'])->name('events.elimination.matches.show');
+    Route::post('events/{event}/elimination/matches/{match}/sets', [OrganizerEliminationController::class, 'storeSet'])->name('events.elimination.matches.sets.store');
+    Route::post('events/{event}/elimination/matches/{match}/ends', [OrganizerEliminationController::class, 'storeEnd'])->name('events.elimination.matches.ends.store');
+    Route::post('events/{event}/elimination/matches/{match}/shoot-offs', [OrganizerEliminationController::class, 'storeShootOff'])->name('events.elimination.matches.shoot-offs.store');
+    Route::post('events/{event}/elimination/matches/{match}/shoot-offs/adjudicate', [OrganizerEliminationController::class, 'adjudicateShootOff'])->name('events.elimination.matches.shoot-offs.adjudicate');
     Route::get('events/{event}/scoring', [OrganizerScoringController::class, 'index'])->name('events.scoring.index');
     Route::post('events/{event}/scoring', [OrganizerScoringController::class, 'store'])->name('events.scoring.store');
     Route::delete('events/{event}/scoring/targets/{target}/device', [OrganizerScoringController::class, 'releaseDevice'])->name('events.scoring.targets.device.destroy');
@@ -212,6 +221,7 @@ Route::middleware(['auth', 'profile.completed'])->group(function () {
 
 //快速報名
 Route::get('events/{event}/live', [EventController::class, 'live'])->name('events.live');
+Route::get('events/{event}/elimination', [EventController::class, 'elimination'])->name('events.elimination');
 Route::get('events/{event}', [EventController::class, 'show'])->name('events.show');
 Route::post('events/{event}/groups/{group}/quick-register', [EventRegistrationController::class, 'quickRegister'])
     ->middleware('auth')

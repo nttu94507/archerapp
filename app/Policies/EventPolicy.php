@@ -67,6 +67,16 @@ class EventPolicy
         return $this->canOperate($user) && $this->hasRole($user, $event, ['owner', 'manager', 'judge', 'chief_judge']);
     }
 
+    public function manageShootOff(User $user, Event $event): bool
+    {
+        return $this->canOperate($user) && $this->hasRole($user, $event, ['owner', 'manager', 'staff', 'score_manager', 'chief_judge']);
+    }
+
+    public function adjudicateShootOff(User $user, Event $event): bool
+    {
+        return $this->canOperate($user) && $this->hasRole($user, $event, ['chief_judge']);
+    }
+
     private function canOperate(User $user): bool
     {
         return $user->organizerProfile()->where('status', 'suspended')->doesntExist();

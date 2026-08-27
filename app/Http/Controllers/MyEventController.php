@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\EventRegistration;
+use App\Models\EventRankingSnapshotEntry;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\View\View;
@@ -46,6 +47,15 @@ class MyEventController extends Controller
         ]);
 
         $stats = $this->scoreStats($registration->scoreEntries);
+        $snapshotEntry = EventRankingSnapshotEntry::query()
+            ->where('event_registration_id', $registration->id)
+            ->whereHas('snapshot', fn ($query) => $query
+                ->where('event_id', $registration->event_id)
+                ->where('event_group_id', $registration->event_group_id)
+                ->whereNull('superseded_at'))
+            ->latest('event_ranking_snapshot_id')
+            ->first();
+
         $ranking = EventRegistration::query()
             ->where('event_id', $registration->event_id)
             ->where('event_group_id', $registration->event_group_id)
@@ -63,18 +73,21 @@ class MyEventController extends Controller
             })
             ->values();
 
-        $rank = in_array($registration->result_status, ['dnf', 'dns'], true) ? null : 1;
-        $previous = null;
-        foreach ($ranking as $index => $row) {
-            if ($rank === null) break;
-            $signature = [$row['total'], $row['ten_count'], $row['x_count']];
-            if ($previous !== null && $signature !== $previous) {
-                $rank = $index + 1;
+        $rank = $snapshotEntry?->rank_position;
+        if (! $snapshotEntry) {
+            $rank = in_array($registration->result_status, ['dnf', 'dns'], true) ? null : 1;
+            $previous = null;
+            foreach ($ranking as $index => $row) {
+                if ($rank === null) break;
+                $signature = [$row['total'], $row['ten_count'], $row['x_count']];
+                if ($previous !== null && $signature !== $previous) {
+                    $rank = $index + 1;
+                }
+                if ($row['registration']->is($registration)) {
+                    break;
+                }
+                $previous = $signature;
             }
-            if ($row['registration']->is($registration)) {
-                break;
-            }
-            $previous = $signature;
         }
 
         return view('my-events.result', compact('registration', 'stats', 'rank'));

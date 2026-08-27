@@ -46,4 +46,9 @@ class EventRegistration extends Model
     {
         return $this->hasOne(EventScoringAssignment::class, 'event_registration_id');
     }
+
+    public function rankingSnapshotEntries()
+    {
+        return $this->hasMany(EventRankingSnapshotEntry::class, 'event_registration_id');
+    }
 }

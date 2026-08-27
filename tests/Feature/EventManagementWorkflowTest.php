@@ -194,6 +194,13 @@ class EventManagementWorkflowTest extends TestCase
         $this->actingAs($owner)->post(route('organizer.events.results.publish',[$event,$group]))->assertSessionHas('success');
         $this->assertNotNull($registration->fresh()->result_published_at);
         $this->assertNotNull($event->fresh()->completed_at);
+        $phase = $group->qualificationPhase()->firstOrFail();
+        $this->assertSame('published', $phase->status);
+        $this->assertNotNull($phase->locked_at);
+        $this->assertNotNull($phase->published_at);
+        $snapshot = $phase->rankingSnapshots()->with('entries')->firstOrFail();
+        $this->assertSame(1, $snapshot->version);
+        $this->assertSame($registration->id, $snapshot->entries->first()->event_registration_id);
     }
 
     public function test_organizer_can_create_shared_target_station_and_submit_an_end_for_all_archers(): void
@@ -228,6 +235,8 @@ class EventManagementWorkflowTest extends TestCase
         $this->assertSame(1, EventScoringSession::where('event_group_id', $group->id)->count());
 
         $session = EventScoringSession::where('event_group_id', $group->id)->with('targets.assignments')->firstOrFail();
+        $this->assertNotNull($session->event_phase_id);
+        $this->assertSame('qualification', $session->phase->type);
         $target = $session->targets->first();
         $this->assertCount(2,$target->assignments);
         $this->assertMatchesRegularExpression('/^\d{6}$/', $target->device_pin);
@@ -275,6 +284,7 @@ class EventManagementWorkflowTest extends TestCase
             'event_registration_id'=>$registrations[0]->id, 'end_number'=>1, 'end_total'=>50,
         ]);
         $this->assertSame(1,$target->fresh()->last_completed_end);
+        $this->assertSame('in_progress', $session->phase->fresh()->status);
 
         $oldAccessToken = $target->access_token;
         $this->actingAs($owner)
@@ -304,9 +314,11 @@ class EventManagementWorkflowTest extends TestCase
 
     private function createScoringTarget(Event $event, EventGroup $group, User $owner): void
     {
+        $phase = $group->qualificationPhase()->firstOrFail();
         $session = EventScoringSession::create([
             'event_id'=>$event->id,
             'event_group_id'=>$group->id,
+            'event_phase_id'=>$phase->id,
             'name'=>$group->name.' 資格賽',
             'total_arrows'=>$group->arrow_count ?: 36,
             'arrows_per_end'=>$group->arrows_per_end ?: 6,
