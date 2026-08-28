@@ -16,7 +16,12 @@ class OrganizerQualificationTest extends TestCase
     public function test_registered_member_can_create_free_event_without_organizer_approval(): void
     {
         $user=User::factory()->create();
-        $this->actingAs($user)->get(route('organizer.events.create'))->assertOk();
+        $this->actingAs($user)->get(route('organizer.events.create'))
+            ->assertOk()
+            ->assertSee('室外 70m／36 箭')
+            ->assertDontSee('室外 70m／72 箭')
+            ->assertSee('室內 18m／30 箭')
+            ->assertDontSee('室內 18m／60 箭');
         $this->actingAs($user)->post(route('organizer.events.store'), [
             'name'=>'會員自由賽事',
             'start_date'=>now()->addMonth()->toDateString(),

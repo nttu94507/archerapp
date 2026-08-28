@@ -3,6 +3,35 @@
 @section('title', '快速建立賽事')
 
 @section('content')
+<style>
+    #quick-event-form input:not([type="hidden"]),
+    #quick-event-form select {
+        border: 1px solid #cbd5e1;
+        background-color: #fff;
+        padding-left: .875rem;
+        padding-right: .875rem;
+        color: #0f172a;
+        box-shadow: 0 1px 2px rgba(15, 23, 42, .05);
+        transition: border-color .15s ease, box-shadow .15s ease, background-color .15s ease;
+    }
+    #quick-event-form input:not([type="hidden"]):hover,
+    #quick-event-form select:hover {
+        border-color: #94a3b8;
+    }
+    #quick-event-form input:not([type="hidden"]):focus,
+    #quick-event-form select:focus {
+        border-color: #6366f1;
+        outline: none;
+        box-shadow: 0 0 0 3px rgba(99, 102, 241, .16);
+    }
+    #quick-event-form input::placeholder {
+        color: #94a3b8;
+    }
+    #quick-event-form #group-preset {
+        border-color: #a5b4fc;
+        background-color: #eef2ff;
+    }
+</style>
 <div class="mx-auto max-w-4xl px-4 py-6 sm:px-6 sm:py-8">
     <div class="mb-6">
         <a href="{{ route('organizer.events.index') }}" class="inline-flex min-h-11 items-center text-sm font-medium text-indigo-600">← 我的賽事</a>
@@ -44,10 +73,10 @@
             <div class="mb-4">
                 <label class="text-sm font-medium">快速套用賽制</label>
                 <select id="group-preset" class="mt-1 min-h-12 w-full rounded-xl border-indigo-200 bg-indigo-50">
-                    @if($maxArrows > 36)<option value="outdoor70">室外 70m／72 箭</option>
-                    <option value="outdoor50">室外 50m／72 箭</option>@endif
+                    <option value="outdoor70">室外 70m／{{ $maxArrows > 36 ? 72 : 36 }} 箭</option>
+                    @if($maxArrows > 36)<option value="outdoor50">室外 50m／72 箭</option>@endif
                     <option value="outdoor30">室外 30m／36 箭</option>
-                    @if($maxArrows > 36)<option value="indoor18">室內 18m／60 箭</option>@endif
+                    <option value="indoor18">室內 18m／{{ $maxArrows > 36 ? 60 : 30 }} 箭</option>
                     <option value="custom">自訂</option>
                 </select>
             </div>
@@ -87,10 +116,10 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     const presets = {
-        outdoor70: { mode: 'outdoor', distance: '70m', arrows: 72 },
+        outdoor70: { mode: 'outdoor', distance: '70m', arrows: {{ $maxArrows > 36 ? 72 : 36 }} },
         outdoor50: { mode: 'outdoor', distance: '50m', arrows: 72 },
         outdoor30: { mode: 'outdoor', distance: '30m', arrows: 36 },
-        indoor18: { mode: 'indoor', distance: '18m', arrows: 60 },
+        indoor18: { mode: 'indoor', distance: '18m', arrows: {{ $maxArrows > 36 ? 60 : 30 }} },
     };
     preset.addEventListener('change', () => {
         const selected = presets[preset.value];
