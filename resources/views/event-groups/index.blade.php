@@ -14,11 +14,16 @@
                 <h1 class="text-2xl font-bold">組別管理 — {{ $event->name }}</h1>
                 <p class="text-sm text-gray-500 mt-1">共 {{ $groupsAll->total() }} 個組別</p>
             </div>
-            @if($groupCreationLocked || $groupLimitReached)
-                <button type="button" disabled title="{{ $groupCreationLocked ? '已完成排靶，無法新增組別' : '免費方案最多 1 個組別' }}"
+            @if($groupCreationLocked)
+                <button type="button" disabled title="已完成排靶，無法新增組別"
                         class="cursor-not-allowed rounded-xl bg-gray-200 px-4 py-2 text-sm font-medium text-gray-400">
                     新增組別
                 </button>
+            @elseif($groupLimitReached)
+                <a href="{{ route('store.index', ['event' => $event->uuid]) }}" title="免費方案最多 1 個組別"
+                   class="rounded-xl border border-amber-300 bg-amber-50 px-4 py-2 text-sm font-semibold text-amber-800 hover:bg-amber-100">
+                    升級以新增組別
+                </a>
             @else
                 <a href="{{ route('events.groups.create', $event) }}"
                    class="rounded-xl bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-500">
@@ -33,8 +38,9 @@
             </div>
         @endif
         @if(session('error'))
-            <div class="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-                {{ session('error') }}
+            <div class="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                <span>{{ session('error') }}</span>
+                @if($groupLimitReached && !$groupCreationLocked)<a href="{{ route('store.index', ['event' => $event->uuid]) }}" class="font-semibold underline">前往商店</a>@endif
             </div>
         @endif
 

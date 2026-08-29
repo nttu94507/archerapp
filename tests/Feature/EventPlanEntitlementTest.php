@@ -70,7 +70,9 @@ class EventPlanEntitlementTest extends TestCase
         $this->actingAs($owner)
             ->get(route('events.groups.index', $freeEvent))
             ->assertOk()
-            ->assertDontSee('免費方案最多只能建立 1 個組別。');
+            ->assertDontSee('免費方案最多只能建立 1 個組別。')
+            ->assertSee('升級以新增組別')
+            ->assertSee(route('store.index', ['event'=>$freeEvent->uuid]), false);
         $this->actingAs($owner)
             ->get(route('events.groups.create', $freeEvent))
             ->assertRedirect(route('events.groups.index', $freeEvent))
