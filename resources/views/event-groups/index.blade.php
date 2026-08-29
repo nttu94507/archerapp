@@ -27,13 +27,6 @@
             @endif
         </div>
 
-        @if($groupLimitReached && !$groupCreationLocked)
-            <div class="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-                <span>免費方案最多只能建立 1 個組別。</span>
-                <a href="{{ route('store.index', ['event' => $event->uuid]) }}" class="font-semibold underline">查看升級方案</a>
-            </div>
-        @endif
-
         @if(session('success'))
             <div class="mb-4 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">
                 {{ session('success') }}
