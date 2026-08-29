@@ -19,7 +19,7 @@
             @error('groups')<p class="text-sm text-red-600 mb-2">{{ $message }}</p>@enderror
 
             <div class="flex items-center justify-between mt-4">
-                <button type="button" id="add-group"
+                <button type="button" id="add-group" @if($maxNewGroups !== null && $maxNewGroups <= 1) hidden @endif
                         class="rounded-xl border px-3 py-2 text-sm hover:bg-gray-50">+ 新增一組</button>
                 <div class="flex gap-2">
                     <a href="{{ route('events.groups.index', $event) }}"

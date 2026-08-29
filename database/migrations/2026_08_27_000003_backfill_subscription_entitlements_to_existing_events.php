@@ -27,6 +27,13 @@ return new class extends Migration
                 DB::table('events')
                     ->whereIn('id', $eventIds)
                     ->where('plan_code', EventPlanCatalog::FREE)
+                    ->whereNull('cancelled_at')
+                    ->whereNull('completed_at')
+                    ->whereNotExists(fn ($query) => $query
+                        ->selectRaw('1')
+                        ->from('event_audit_logs')
+                        ->whereColumn('event_audit_logs.event_id', 'events.id')
+                        ->where('event_audit_logs.action', 'event.completed'))
                     ->update([
                         'plan_code' => EventPlanCatalog::SUBSCRIPTION,
                         'plan_status' => EventPlanCatalog::STATUS_ACTIVE,

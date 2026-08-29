@@ -6,6 +6,7 @@ use App\Models\Event;
 use App\Models\EventGroup;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 class EventGroupController extends Controller
 {
@@ -19,10 +20,13 @@ class EventGroupController extends Controller
     {
         $this->authorize('manageGroups', $event);
         $groupCreationLocked = $event->scoringSessions()->exists();
+        $groupLimit = $event->planLimit('groups');
+        $groupLimitReached = $groupLimit !== null && $event->groups()->count() >= $groupLimit;
 
         return view('event-groups.index', [
             'event'       => $event,
             'groupCreationLocked' => $groupCreationLocked,
+            'groupLimitReached' => $groupLimitReached,
             'groupsAll'   => $event->groups()
                 ->withCount('registrations')          // => $group->registrations_count
                 ->latest()
@@ -42,10 +46,17 @@ class EventGroupController extends Controller
             return redirect()->route('events.groups.index', $event)
                 ->with('error', '賽事已完成排靶，不能再新增組別。');
         }
+        $groupLimit = $event->planLimit('groups');
+        $currentGroups = $event->groups()->count();
+        if ($groupLimit !== null && $currentGroups >= $groupLimit) {
+            return redirect()->route('events.groups.index', $event)
+                ->with('error', '免費方案最多只能建立 1 個組別，請先升級單場方案或訂閱。');
+        }
 
         return view('event-groups.create', [
             'event' => $event,
             'maxArrows' => $event->planLimit('arrows_per_phase') ?? 180,
+            'maxNewGroups' => $groupLimit === null ? null : $groupLimit - $currentGroups,
         ]);
     }
 
@@ -55,6 +66,14 @@ class EventGroupController extends Controller
         if ($event->scoringSessions()->exists()) {
             return redirect()->route('events.groups.index', $event)
                 ->with('error', '賽事已完成排靶，不能再新增組別。');
+        }
+
+        $groupLimit = $event->planLimit('groups');
+        $currentGroups = $event->groups()->count();
+        $remainingGroups = $groupLimit === null ? null : max(0, $groupLimit - $currentGroups);
+        if ($remainingGroups === 0) {
+            return redirect()->route('events.groups.index', $event)
+                ->with('error', '免費方案最多只能建立 1 個組別，請先升級單場方案或訂閱。');
         }
 
         $maxArrows = $event->planLimit('arrows_per_phase') ?? 180;
@@ -68,7 +87,7 @@ class EventGroupController extends Controller
         }];
 
         $data = $req->validate([
-            'groups'                       => ['required','array','min:1'],
+            'groups'                       => array_filter(['required','array','min:1', $remainingGroups === null ? null : 'max:'.$remainingGroups]),
             'groups.*.name'                => ['required','string','max:100'],
             'groups.*.bow_type'            => ['nullable','in:recurve,compound,barebow'],
             'groups.*.gender'              => ['required','in:male,female,open'],
@@ -84,7 +103,13 @@ class EventGroupController extends Controller
             'groups.*.reg_end'             => ['nullable','date','required_if:groups.*.use_custom_reg_window,1','required_with:groups.*.reg_start','after_or_equal:groups.*.reg_start'],
         ]);
 
-        DB::transaction(function () use ($event, $data) {
+        DB::transaction(function () use ($event, $data, $groupLimit) {
+            Event::whereKey($event->id)->lockForUpdate()->firstOrFail();
+            if ($groupLimit !== null && $event->groups()->count() + count($data['groups']) > $groupLimit) {
+                throw ValidationException::withMessages([
+                    'groups' => '免費方案最多只能建立 1 個組別，請先升級單場方案或訂閱。',
+                ]);
+            }
             foreach ($data['groups'] as $g) {
                 unset($g['use_custom_reg_window']);
                 $event->groups()->create($g);

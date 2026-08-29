@@ -3,6 +3,8 @@
 namespace Tests\Feature;
 
 use App\Models\Event;
+use App\Models\EventGroup;
+use App\Models\User;
 use App\Support\EventPlanCatalog;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -56,5 +58,55 @@ class EventPlanEntitlementTest extends TestCase
 
         $this->assertFalse($event->hasPlanFeature('qualification'));
         $this->assertFalse($event->planIsActive());
+    }
+
+    public function test_free_event_cannot_add_a_second_group_but_paid_event_can(): void
+    {
+        $owner = User::factory()->create();
+        $freeEvent = Event::factory()->create();
+        $freeEvent->staff()->create(['user_id'=>$owner->id, 'role'=>'owner', 'status'=>'active']);
+        EventGroup::factory()->create(['event_id'=>$freeEvent->id, 'name'=>'第一組', 'arrow_count'=>36]);
+
+        $this->actingAs($owner)
+            ->get(route('events.groups.index', $freeEvent))
+            ->assertOk()
+            ->assertSee('免費方案最多只能建立 1 個組別');
+        $this->actingAs($owner)
+            ->get(route('events.groups.create', $freeEvent))
+            ->assertRedirect(route('events.groups.index', $freeEvent))
+            ->assertSessionHas('error');
+        $this->actingAs($owner)
+            ->post(route('events.groups.store', $freeEvent), ['groups'=>[$this->groupPayload('第二組')]])
+            ->assertRedirect(route('events.groups.index', $freeEvent))
+            ->assertSessionHas('error');
+        $this->assertSame(1, $freeEvent->groups()->count());
+
+        $paidEvent = Event::factory()->create([
+            'plan_code'=>EventPlanCatalog::EVENT_PASS,
+            'plan_features_snapshot'=>EventPlanCatalog::features(EventPlanCatalog::EVENT_PASS),
+            'plan_limits_snapshot'=>EventPlanCatalog::limits(EventPlanCatalog::EVENT_PASS),
+        ]);
+        $paidEvent->staff()->create(['user_id'=>$owner->id, 'role'=>'owner', 'status'=>'active']);
+        EventGroup::factory()->create(['event_id'=>$paidEvent->id, 'name'=>'第一組', 'arrow_count'=>72]);
+
+        $this->actingAs($owner)
+            ->post(route('events.groups.store', $paidEvent), ['groups'=>[$this->groupPayload('第二組', 72)]])
+            ->assertSessionHas('success');
+        $this->assertSame(2, $paidEvent->groups()->count());
+    }
+
+    private function groupPayload(string $name, int $arrows = 36): array
+    {
+        return [
+            'name'=>$name,
+            'bow_type'=>'recurve',
+            'gender'=>'open',
+            'distance'=>'70m',
+            'arrow_count'=>$arrows,
+            'arrows_per_end'=>6,
+            'quota'=>32,
+            'fee'=>0,
+            'is_team'=>false,
+        ];
     }
 }

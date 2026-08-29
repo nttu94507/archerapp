@@ -40,6 +40,9 @@ class OrganizerSubscriptionService
 
         return Event::query()
             ->where('plan_code', EventPlanCatalog::FREE)
+            ->whereNull('cancelled_at')
+            ->whereNull('completed_at')
+            ->whereDoesntHave('auditLogs', fn ($query) => $query->where('action', 'event.completed'))
             ->whereHas('staff', fn ($query) => $query
                 ->where('user_id', $user->id)
                 ->where('role', 'owner')

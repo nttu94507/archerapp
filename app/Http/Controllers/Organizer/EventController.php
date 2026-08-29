@@ -240,6 +240,7 @@ class EventController extends Controller
     private function validateEvent(Request $request, bool $creating = false): array
     {
         $maxArrows = $request->user()->hasActiveOrganizerSubscription() ? 180 : 36;
+        $maxGroups = $request->user()->hasActiveOrganizerSubscription() ? null : 1;
         $rules = [
             'name' => ['required', 'string', 'max:120'], 'start_date' => ['required', 'date'],
             'end_date' => ['required', 'date', 'after_or_equal:start_date'], 'mode' => ['required', 'in:indoor,outdoor'],
@@ -252,7 +253,7 @@ class EventController extends Controller
         if ($creating) {
             $rules += [
                 'submit_mode' => ['nullable', 'in:draft,publish'],
-                'groups' => ['nullable', 'array', 'required_if:submit_mode,publish', 'min:1'],
+                'groups' => array_filter(['nullable', 'array', 'required_if:submit_mode,publish', 'min:1', $maxGroups === null ? null : 'max:'.$maxGroups]),
                 'groups.*.name' => ['required', 'string', 'max:100'],
                 'groups.*.bow_type' => ['nullable', 'in:recurve,compound,barebow'],
                 'groups.*.gender' => ['required', 'in:male,female,open'],

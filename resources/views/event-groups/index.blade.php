@@ -14,8 +14,8 @@
                 <h1 class="text-2xl font-bold">組別管理 — {{ $event->name }}</h1>
                 <p class="text-sm text-gray-500 mt-1">共 {{ $groupsAll->total() }} 個組別</p>
             </div>
-            @if($groupCreationLocked)
-                <button type="button" disabled title="已完成排靶，無法新增組別"
+            @if($groupCreationLocked || $groupLimitReached)
+                <button type="button" disabled title="{{ $groupCreationLocked ? '已完成排靶，無法新增組別' : '免費方案最多 1 個組別' }}"
                         class="cursor-not-allowed rounded-xl bg-gray-200 px-4 py-2 text-sm font-medium text-gray-400">
                     新增組別
                 </button>
@@ -26,6 +26,13 @@
                 </a>
             @endif
         </div>
+
+        @if($groupLimitReached && !$groupCreationLocked)
+            <div class="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+                <span>免費方案最多只能建立 1 個組別。</span>
+                <a href="{{ route('store.index', ['event' => $event->uuid]) }}" class="font-semibold underline">查看升級方案</a>
+            </div>
+        @endif
 
         @if(session('success'))
             <div class="mb-4 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">

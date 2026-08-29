@@ -108,6 +108,8 @@ class OrganizerSubscriptionTest extends TestCase
         $otherOwner = User::factory()->create();
         $ownedEvent = Event::factory()->create(['name' => '訂閱前建立']);
         $managedEvent = Event::factory()->create(['name' => '僅協助管理']);
+        $completedEvent = Event::factory()->create(['name' => '訂閱前已完成']);
+        $cancelledEvent = Event::factory()->create(['name' => '訂閱前已取消', 'cancelled_at' => now()->subDay()]);
         $paidEvent = Event::factory()->create([
             'name' => '原本單場付費',
             'plan_code' => EventPlanCatalog::EVENT_PASS,
@@ -119,6 +121,14 @@ class OrganizerSubscriptionTest extends TestCase
         $managedEvent->staff()->create(['user_id' => $otherOwner->id, 'role' => 'owner', 'status' => 'active']);
         $managedEvent->staff()->create(['user_id' => $organizer->id, 'role' => 'manager', 'status' => 'active']);
         $paidEvent->staff()->create(['user_id' => $organizer->id, 'role' => 'owner', 'status' => 'active']);
+        $completedEvent->staff()->create(['user_id' => $organizer->id, 'role' => 'owner', 'status' => 'active']);
+        $cancelledEvent->staff()->create(['user_id' => $organizer->id, 'role' => 'owner', 'status' => 'active']);
+        $completedEvent->auditLogs()->create([
+            'user_id' => $organizer->id,
+            'action' => 'event.completed',
+            'subject_type' => Event::class,
+            'subject_id' => $completedEvent->id,
+        ]);
 
         $this->actingAs($admin)->patch(route('admin.users.subscription.update', $organizer), [
             'action' => 'activate',
@@ -128,6 +138,8 @@ class OrganizerSubscriptionTest extends TestCase
         $this->assertTrue($ownedEvent->fresh()->hasPlanFeature('individual_elimination'));
         $this->assertSame(EventPlanCatalog::FREE, $managedEvent->fresh()->plan_code);
         $this->assertSame(EventPlanCatalog::EVENT_PASS, $paidEvent->fresh()->plan_code);
+        $this->assertSame(EventPlanCatalog::FREE, $completedEvent->fresh()->plan_code);
+        $this->assertSame(EventPlanCatalog::FREE, $cancelledEvent->fresh()->plan_code);
 
         $this->actingAs($admin)->patch(route('admin.users.subscription.update', $organizer), [
             'action' => 'cancel',
