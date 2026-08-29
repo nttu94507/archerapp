@@ -114,12 +114,18 @@ class ScoringStationController extends Controller
             'scores'=>['nullable', 'array'],
         ]);
 
+        $requiresCheckIn = $session->event->hasPlanFeature('check_in');
         $assignments = $target->assignments->filter(fn ($assignment) =>
-            $assignment->registration?->status === 'checked_in'
-            && $assignment->registration?->result_status !== 'dns'
+            in_array(
+                $assignment->registration?->status,
+                $requiresCheckIn ? ['checked_in'] : ['registered', 'checked_in'],
+                true
+            ) && $assignment->registration?->result_status !== 'dns'
         )->values();
         if ($assignments->isEmpty()) {
-            return back()->with('error', '此靶位沒有可輸入分數的已報到選手。');
+            return back()->with('error', $requiresCheckIn
+                ? '此靶位沒有可輸入分數的已報到選手。'
+                : '此靶位沒有可輸入分數的有效報名選手。');
         }
         $normalizedScores = [];
         foreach ($assignments as $assignment) {

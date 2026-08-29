@@ -24,6 +24,7 @@ class EventScoringController extends Controller
     public function index(Event $event): View
     {
         $this->authorize('manageScores', $event);
+        $requiresCheckIn = $event->hasPlanFeature('check_in');
         $event->load(['groups' => fn ($query) => $query->withCount([
             'registrations as active_registrations_count' => fn ($registration) => $registration->whereIn('status', ['registered', 'checked_in']),
             'registrations as checked_in_registrations_count' => fn ($registration) => $registration->where('status', 'checked_in')->whereNotNull('checked_in_at'),
@@ -33,14 +34,20 @@ class EventScoringController extends Controller
             ->with(['group', 'targets.assignments.registration'])
             ->latest()
             ->get();
-        $unreportedRegistrations = $event->registrations()
+        $unreportedRegistrations = $requiresCheckIn ? $event->registrations()
             ->with('event_group')
             ->where('status', 'registered')
             ->whereNull('checked_in_at')
             ->orderBy('name')
+            ->get() : collect();
+        $participationRoster = $requiresCheckIn ? collect() : $event->registrations()
+            ->with('event_group')
+            ->whereIn('status', ['registered', 'checked_in'])
+            ->orderBy('event_group_id')
+            ->orderBy('name')
             ->get();
 
-        return view('organizer.scoring.index', compact('event', 'sessions', 'unreportedRegistrations'));
+        return view('organizer.scoring.index', compact('event', 'sessions', 'unreportedRegistrations', 'participationRoster', 'requiresCheckIn'));
     }
 
     public function store(Request $request, Event $event): RedirectResponse
@@ -50,10 +57,13 @@ class EventScoringController extends Controller
             'name' => ['required', 'string', 'max:120'],
             'athletes_per_target' => ['required', 'integer', 'between:2,4'],
             'confirm_unreported' => ['nullable', 'boolean'],
+            'participating_registration_ids' => ['nullable', 'array'],
+            'participating_registration_ids.*' => ['integer'],
         ]);
         try {
             $summary = DB::transaction(function () use ($event, $validated, $request): array {
                 $lockedEvent = Event::whereKey($event->id)->lockForUpdate()->firstOrFail();
+                $requiresCheckIn = $lockedEvent->hasPlanFeature('check_in');
 
                 if (EventScoringSession::where('event_id', $event->id)->exists()) {
                     abort(422, '此賽事已完成排靶，不能重複執行。');
@@ -68,7 +78,7 @@ class EventScoringController extends Controller
                     abort(422, '此賽事尚未建立任何組別。');
                 }
 
-                $registrationsByGroup = $groups->mapWithKeys(fn (EventGroup $group) => [
+                $allRegistrationsByGroup = $groups->mapWithKeys(fn (EventGroup $group) => [
                     $group->id => EventRegistration::where('event_id', $event->id)
                         ->where('event_group_id', $group->id)
                         ->whereIn('status', ['registered', 'checked_in'])
@@ -77,12 +87,35 @@ class EventScoringController extends Controller
                         ->get(),
                 ]);
 
+                $excluded = collect();
+                $registrationsByGroup = $allRegistrationsByGroup;
+                if (! $requiresCheckIn) {
+                    $selectedIds = collect($validated['participating_registration_ids'] ?? [])
+                        ->map(fn ($id) => (int) $id)
+                        ->unique();
+                    $eligibleIds = $allRegistrationsByGroup->flatten(1)->pluck('id');
+                    abort_if($selectedIds->diff($eligibleIds)->isNotEmpty(), 422, '出賽名單包含不屬於此賽事的選手。');
+                    abort_if($selectedIds->isEmpty(), 422, '請至少保留一位出賽選手再進行排靶。');
+
+                    $excluded = $allRegistrationsByGroup->flatten(1)
+                        ->reject(fn (EventRegistration $registration) => $selectedIds->contains($registration->id));
+                    foreach ($excluded as $registration) {
+                        $registration->update(['status'=>'no_show', 'result_status'=>'dns', 'checked_in_at'=>null]);
+                    }
+                    $registrationsByGroup = $allRegistrationsByGroup->map(
+                        fn ($registrations) => $registrations->filter(
+                            fn (EventRegistration $registration) => $selectedIds->contains($registration->id)
+                        )->values()
+                    );
+                }
+
                 if ($registrationsByGroup->every(fn ($registrations) => $registrations->isEmpty())) {
                     abort(422, '目前所有組別都沒有可排靶的選手。');
                 }
 
-                $unreported = $registrationsByGroup->flatten(1)
-                    ->filter(fn (EventRegistration $registration) => $registration->status === 'registered' && $registration->checked_in_at === null);
+                $unreported = $requiresCheckIn ? $registrationsByGroup->flatten(1)
+                    ->filter(fn (EventRegistration $registration) => $registration->status === 'registered' && $registration->checked_in_at === null)
+                    : collect();
                 if ($unreported->isNotEmpty() && ! ($validated['confirm_unreported'] ?? false)) {
                     abort(422, '目前還有 '.$unreported->count().' 位選手尚未報到，請確認名單後再選擇繼續排靶。');
                 }
@@ -170,6 +203,7 @@ class EventScoringController extends Controller
                     'athletes'=>$assignedAthletes,
                     'skipped_groups'=>$groups->count() - $createdGroups,
                     'dns'=>$unreported->count(),
+                    'excluded'=>$excluded->count(),
                 ];
             });
         } catch (\Symfony\Component\HttpKernel\Exception\HttpException $e) {
@@ -182,6 +216,9 @@ class EventScoringController extends Controller
         }
         if ($summary['dns'] > 0) {
             $message .= " {$summary['dns']} 位未報到選手已標記為 DNS，保留靶位但不能輸入分數。";
+        }
+        if ($summary['excluded'] > 0) {
+            $message .= " {$summary['excluded']} 位未出賽選手已標記為 DNS，且未占用靶位。";
         }
 
         return back()->with('success', $message);

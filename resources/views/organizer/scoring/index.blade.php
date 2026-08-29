@@ -23,7 +23,7 @@
                 <summary class="flex h-11 w-11 cursor-pointer list-none items-center justify-center rounded-full border bg-gray-50 text-sm font-bold text-gray-500 hover:bg-gray-100" aria-label="查看全部組別排靶說明">i</summary>
                 <div class="absolute right-0 z-20 mt-2 w-72 max-w-[calc(100vw-3rem)] rounded-xl border bg-white p-4 text-sm leading-6 text-gray-600 shadow-xl">
                     <p class="font-semibold text-gray-900">排靶說明</p>
-                    <p class="mt-1">系統會一次處理所有組別，依姓名將已報名或已報到選手排入 1A、1B…。無選手組別會略過；成功後所有組別立即截止報名，且整場只能執行一次。</p>
+                    <p class="mt-1">系統會一次處理所有組別，依姓名將{{ $requiresCheckIn ? '已報名或已報到' : '已報名' }}選手排入 1A、1B…。無選手組別會略過；成功後所有組別立即截止報名，且整場只能執行一次。</p>
                 </div>
             </details>
         </div>
@@ -31,7 +31,7 @@
             @foreach($event->groups as $group)
                 <div class="flex items-center justify-between rounded-xl bg-gray-50 px-4 py-3 text-sm">
                     <span class="font-medium">{{ $group->name }}</span>
-                    <span class="{{ $group->active_registrations_count > 0 ? 'text-gray-600' : 'text-amber-600' }}">{{ $group->active_registrations_count > 0 ? '已報到 '.$group->checked_in_registrations_count.' / '.$group->active_registrations_count.' 人' : '無選手，將略過' }}</span>
+                    <span class="{{ $group->active_registrations_count > 0 ? 'text-gray-600' : 'text-amber-600' }}">{{ $group->active_registrations_count > 0 ? ($requiresCheckIn ? '已報到 '.$group->checked_in_registrations_count.' / '.$group->active_registrations_count.' 人' : '已報名 '.$group->active_registrations_count.' 人') : '無選手，將略過' }}</span>
                 </div>
             @endforeach
         </div>
@@ -47,12 +47,30 @@
             </div>
         @endif
         @if($sessions->isEmpty())
-            <form method="POST" action="{{ route('organizer.events.scoring.store',$event) }}" onsubmit="return confirmScoringAssignment(this)" class="mt-4 grid gap-3 lg:grid-cols-[1fr_12rem_auto]">
+            <form method="POST" action="{{ route('organizer.events.scoring.store',$event) }}" onsubmit="return confirmScoringAssignment(this)" class="mt-4 space-y-4">
                 @csrf
                 <input type="hidden" name="confirm_unreported" value="0">
-                <input name="name" required value="{{ old('name',$event->name.' 資格賽') }}" class="min-h-12 rounded-xl border-gray-300" placeholder="場次名稱">
-                <select name="athletes_per_target" class="min-h-12 rounded-xl border-gray-300"><option value="4">每靶 4 人</option><option value="3">每靶 3 人</option><option value="2">每靶 2 人</option></select>
-                <button class="min-h-12 rounded-xl bg-indigo-600 px-5 text-sm font-medium text-white">確認全部排靶並停止報名</button>
+                @unless($requiresCheckIn)
+                    <div class="rounded-2xl border border-indigo-200 bg-indigo-50 p-4">
+                        <div class="flex flex-wrap items-start justify-between gap-3">
+                            <div><h3 class="font-semibold text-indigo-950">確認今天出賽名單</h3><p class="mt-1 text-sm text-indigo-700">預設全部出賽；取消勾選未到場選手。排靶後未出賽者會標記為 DNS，且不占靶位。</p></div>
+                            <button type="button" onclick="document.querySelectorAll('.participation-check').forEach(el => el.checked = true)" class="min-h-10 rounded-xl border border-indigo-200 bg-white px-3 text-xs font-medium text-indigo-700">全部選取</button>
+                        </div>
+                        <div class="mt-3 grid max-h-64 gap-2 overflow-y-auto sm:grid-cols-2 lg:grid-cols-3">
+                            @foreach($participationRoster as $registration)
+                                <label class="flex min-h-12 cursor-pointer items-center gap-3 rounded-xl bg-white px-3 py-2 text-sm">
+                                    <input class="participation-check rounded border-gray-300 text-indigo-600" type="checkbox" name="participating_registration_ids[]" value="{{ $registration->id }}" @checked(in_array($registration->id, old('participating_registration_ids', $participationRoster->pluck('id')->all())))>
+                                    <span class="min-w-0"><strong class="block truncate">{{ $registration->name }}</strong><small class="text-gray-500">{{ $registration->event_group?->name }}</small></span>
+                                </label>
+                            @endforeach
+                        </div>
+                    </div>
+                @endunless
+                <div class="grid gap-3 lg:grid-cols-[1fr_12rem_auto]">
+                    <input name="name" required value="{{ old('name',$event->name.' 資格賽') }}" class="min-h-12 rounded-xl border-gray-300" placeholder="場次名稱">
+                    <select name="athletes_per_target" class="min-h-12 rounded-xl border-gray-300"><option value="4">每靶 4 人</option><option value="3">每靶 3 人</option><option value="2">每靶 2 人</option></select>
+                    <button class="min-h-12 rounded-xl bg-indigo-600 px-5 text-sm font-medium text-white">確認名單、排靶並停止報名</button>
+                </div>
             </form>
         @else
             <div class="mt-4 rounded-xl bg-gray-100 px-4 py-3 text-sm font-medium text-gray-500">全賽事排靶已完成，此操作已鎖定。</div>

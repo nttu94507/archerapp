@@ -365,6 +365,11 @@ class EventBadgeWorkflowTest extends TestCase
     public function test_paid_and_checked_in_registration_receives_attendance_badge_regardless_of_order(): void
     {
         [$owner, $event] = $this->eventWithOwner();
+        $event->update([
+            'plan_code'=>\App\Support\EventPlanCatalog::EVENT_PASS,
+            'plan_features_snapshot'=>\App\Support\EventPlanCatalog::features(\App\Support\EventPlanCatalog::EVENT_PASS),
+            'plan_limits_snapshot'=>\App\Support\EventPlanCatalog::limits(\App\Support\EventPlanCatalog::EVENT_PASS),
+        ]);
         $member = User::factory()->create();
         $registration = $this->register($event, $member, 'registered');
         $badge = EventBadge::create(['event_id'=>$event->id,'created_by'=>$owner->id,'name'=>'參賽 Badge','type'=>'participant','eligibility'=>'checked_in','award_rule'=>'attendance']);
@@ -416,9 +421,9 @@ class EventBadgeWorkflowTest extends TestCase
 
         $response = $this->actingAs($owner)->post(route('organizer.events.badges.store', $event), [
             'name' => '公開賽參賽者',
-            'description' => '完成現場報到',
+            'description' => '完成賽事報名',
             'type' => 'participant',
-            'eligibility' => 'checked_in',
+            'eligibility' => 'registered',
             'claim_enabled' => '1',
             'icon' => UploadedFile::fake()->createWithContent(
                 'badge.png',

@@ -107,6 +107,11 @@ class EventManagementWorkflowTest extends TestCase
     public function test_staff_can_check_in_member_by_uuid_and_audit_is_recorded(): void
     {
         [$owner,$event,$group] = $this->ownedEvent();
+        $event->update([
+            'plan_code'=>\App\Support\EventPlanCatalog::EVENT_PASS,
+            'plan_features_snapshot'=>\App\Support\EventPlanCatalog::features(\App\Support\EventPlanCatalog::EVENT_PASS),
+            'plan_limits_snapshot'=>\App\Support\EventPlanCatalog::limits(\App\Support\EventPlanCatalog::EVENT_PASS),
+        ]);
         $member = User::factory()->create();
         $registration = $this->registration($event,$group,$member);
 
@@ -238,6 +243,11 @@ class EventManagementWorkflowTest extends TestCase
     public function test_organizer_can_create_shared_target_station_and_submit_an_end_for_all_archers(): void
     {
         [$owner,$event,$group] = $this->ownedEvent();
+        $event->update([
+            'plan_code'=>\App\Support\EventPlanCatalog::EVENT_PASS,
+            'plan_features_snapshot'=>\App\Support\EventPlanCatalog::features(\App\Support\EventPlanCatalog::EVENT_PASS),
+            'plan_limits_snapshot'=>\App\Support\EventPlanCatalog::limits(\App\Support\EventPlanCatalog::EVENT_PASS),
+        ]);
         $group->update(['name'=>'反曲公開組','arrow_count'=>12,'arrows_per_end'=>6]);
         $members = User::factory()->count(2)->create();
         $registrations = $members->map(fn ($member) => $this->registration($event,$group,$member));

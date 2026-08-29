@@ -121,9 +121,10 @@ class EventController extends Controller
         $completionCheck = $officiallyCompleted
             ? ['ready'=>true, 'blockers'=>[]]
             : $completion->inspect($event);
+        $nextAction = $this->nextAction($request, $event, $officiallyCompleted, $completionCheck);
 
         return view('organizer.events.show', compact(
-            'event', 'statusCounts', 'auditLogs', 'staffInviteQrs', 'officiallyCompleted', 'completionCheck'
+            'event', 'statusCounts', 'auditLogs', 'staffInviteQrs', 'officiallyCompleted', 'completionCheck', 'nextAction'
         ));
     }
 
@@ -275,6 +276,49 @@ class EventController extends Controller
         }
 
         return $request->validate($rules);
+    }
+
+    /** @param array{ready:bool,blockers:array<int,string>} $completionCheck */
+    private function nextAction(Request $request, Event $event, bool $officiallyCompleted, array $completionCheck): ?array
+    {
+        if ($officiallyCompleted || $event->cancelled_at) return null;
+
+        if (! $event->isPublished() && $request->user()->can('update', $event)) {
+            if ($event->groups->isEmpty() && $request->user()->can('manageGroups', $event)) {
+                return ['title'=>'先建立參賽組別', 'description'=>'至少需要一個組別，才能發布賽事並讓選手報名。', 'label'=>'建立組別', 'url'=>route('events.groups.index', $event)];
+            }
+            return ['title'=>'發布賽事並開放報名', 'description'=>'資料確認完成後發布，選手即可從公開頁選擇組別報名。', 'label'=>'發布賽事', 'method'=>'POST', 'url'=>route('organizer.events.submit', $event)];
+        }
+
+        $hasScoring = $event->scoringSessions()->exists();
+        if (! $hasScoring) {
+            if ($event->active_registrations_count === 0 && $request->user()->can('manageRegistrations', $event)) {
+                return ['title'=>'先讓選手完成報名', 'description'=>'目前尚無有效報名；分享賽事或進入名單頁確認報名狀況。', 'label'=>'查看報名名單', 'url'=>route('organizer.events.registrations.index', $event)];
+            }
+            $hasUnreported = $event->registrations()->where('status', 'registered')->whereNull('checked_in_at')->exists();
+            if ($event->hasPlanFeature('check_in') && $hasUnreported && $request->user()->can('manageRegistrations', $event)) {
+                return ['title'=>'完成現場報到，再確認排靶', 'description'=>'尚未報到的選手會在排靶時標記為 DNS；先確認現場名單可避免誤判。', 'label'=>'前往現場報到', 'url'=>route('organizer.events.check-in.index', $event)];
+            }
+            if ($request->user()->can('manageScores', $event)) {
+                return ['title'=>'確認出賽名單並完成排靶', 'description'=>'勾選實際出賽選手後，系統會一次分配所有組別靶位並停止報名。', 'label'=>'確認名單與排靶', 'url'=>route('organizer.events.scoring.index', $event)];
+            }
+        }
+
+        $unfinishedTargets = $event->scoringSessions()->with('targets')->get()->flatMap->targets
+            ->whereNotIn('status', ['completed', 'dns'])->count();
+        if ($unfinishedTargets > 0 && $request->user()->can('manageScores', $event)) {
+            return ['title'=>'完成現場計分', 'description'=>'還有 '.$unfinishedTargets.' 個靶位尚未完成；可查看設備綁定與各靶進度。', 'label'=>'查看計分進度', 'url'=>route('organizer.events.scoring.index', $event)];
+        }
+
+        if (! $completionCheck['ready'] && $request->user()->can('viewResults', $event)) {
+            return ['title'=>'核對並發布各組成績', 'description'=>'計分結束後依序完成必要的裁判簽核、成績核准與正式發布。', 'label'=>'前往成績管理', 'url'=>route('organizer.events.results.index', $event)];
+        }
+
+        if ($completionCheck['ready'] && $request->user()->can('update', $event)) {
+            return ['title'=>'所有必要流程已完成', 'description'=>'正式結案後會停用所有計分設備，已發布成績仍會保留。', 'label'=>'完成整場賽事', 'method'=>'POST', 'url'=>route('organizer.events.complete', $event)];
+        }
+
+        return null;
     }
 
     private function audit(Event $event, Request $request, string $action, ?int $subjectId = null, array $metadata = []): void

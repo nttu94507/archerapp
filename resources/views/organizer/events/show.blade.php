@@ -30,7 +30,6 @@
                         <form method="POST" action="{{ route('organizer.events.unpublish',$event) }}" onsubmit="return confirm('下架後會員將無法查看與報名，確定下架？')">@csrf<button class="min-h-11 rounded-xl border border-amber-300 px-4 text-sm font-medium text-amber-700">下架</button></form>
                     @endif
                     @if(!$event->cancelled_at)<form method="POST" action="{{ route('organizer.events.cancel',$event) }}" onsubmit="return confirm('取消賽事後將停止公開報名，確定取消？')">@csrf<button class="min-h-11 rounded-xl border border-red-200 px-4 text-sm text-red-600">取消</button></form>@endif
-                    @if($event->isPublished() && $completionCheck['ready'])<form method="POST" action="{{ route('organizer.events.complete', $event) }}" onsubmit="return confirm('結案後所有計分 QR Code、PIN 與已綁定設備都會停用；正式成績仍會保留。確定完成整場賽事？')">@csrf<button class="min-h-11 rounded-xl bg-gray-900 px-5 text-sm font-semibold text-white">完成整場賽事</button></form>@endif
                 </div>
             @endcan
         </div>
@@ -42,6 +41,19 @@
             </details>
         @endif
     </section>
+
+    @if($nextAction)
+        <section class="rounded-2xl border border-indigo-200 bg-gradient-to-br from-indigo-50 to-white p-4 shadow-sm sm:p-5">
+            <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <div class="min-w-0"><p class="text-xs font-semibold uppercase tracking-widest text-indigo-600">建議下一步</p><h2 class="mt-1 text-lg font-bold text-indigo-950">{{ $nextAction['title'] }}</h2><p class="mt-1 text-sm leading-6 text-indigo-800">{{ $nextAction['description'] }}</p></div>
+                @if(($nextAction['method'] ?? 'GET') === 'POST')
+                    <form method="POST" action="{{ $nextAction['url'] }}" onsubmit="return confirm('{{ $nextAction['label'] }}？')">@csrf<button class="min-h-12 w-full whitespace-nowrap rounded-xl bg-indigo-600 px-5 text-sm font-semibold text-white sm:w-auto">{{ $nextAction['label'] }}</button></form>
+                @else
+                    <a href="{{ $nextAction['url'] }}" class="inline-flex min-h-12 w-full items-center justify-center whitespace-nowrap rounded-xl bg-indigo-600 px-5 text-sm font-semibold text-white sm:w-auto">{{ $nextAction['label'] }} →</a>
+                @endif
+            </div>
+        </section>
+    @endif
 
     @if(
         auth()->user()->can('manageGroups', $event)
@@ -66,9 +78,9 @@
 
             @if(auth()->user()->can('manageRegistrations', $event) || auth()->user()->can('manageScores', $event) || auth()->user()->can('manageJudging', $event))
             <div class="overflow-hidden rounded-2xl border border-emerald-100 bg-white shadow-sm">
-                <div class="flex items-center gap-3 bg-emerald-50 px-4 py-3 sm:px-5"><span class="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-600 text-sm font-bold text-white">2</span><div><h3 class="font-semibold text-emerald-950">現場執行</h3><p class="text-xs text-emerald-600">報到、排靶、計分與裁判核對</p></div></div>
+                <div class="flex items-center gap-3 bg-emerald-50 px-4 py-3 sm:px-5"><span class="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-600 text-sm font-bold text-white">2</span><div><h3 class="font-semibold text-emerald-950">現場執行</h3><p class="text-xs text-emerald-600">{{ $event->hasPlanFeature('check_in') ? '報到、排靶、計分與裁判核對' : '排靶、計分與裁判核對' }}</p></div></div>
                 <div class="divide-y px-4 sm:px-5">
-                    @can('manageRegistrations',$event)<a href="{{ route('organizer.events.check-in.index',$event) }}" class="group flex min-h-20 items-center justify-between gap-3 py-3"><div class="min-w-0"><p class="font-semibold group-hover:text-emerald-700">現場報到</p><p class="mt-0.5 text-xs text-gray-500">掃描 QR Code 或搜尋選手</p></div><div class="flex shrink-0 items-center gap-3"><span class="text-right"><strong class="block text-lg text-emerald-700">{{ $statusCounts['checked_in'] ?? 0 }}</strong><small class="text-gray-400">已報到</small></span><span class="text-gray-300 group-hover:text-emerald-500">›</span></div></a>@endcan
+                    @if($event->hasPlanFeature('check_in'))@can('manageRegistrations',$event)<a href="{{ route('organizer.events.check-in.index',$event) }}" class="group flex min-h-20 items-center justify-between gap-3 py-3"><div class="min-w-0"><p class="font-semibold group-hover:text-emerald-700">現場報到</p><p class="mt-0.5 text-xs text-gray-500">掃描 QR Code 或搜尋選手</p></div><div class="flex shrink-0 items-center gap-3"><span class="text-right"><strong class="block text-lg text-emerald-700">{{ $statusCounts['checked_in'] ?? 0 }}</strong><small class="text-gray-400">已報到</small></span><span class="text-gray-300 group-hover:text-emerald-500">›</span></div></a>@endcan @endif
                     @can('manageScores',$event)<a href="{{ route('organizer.events.scoring.index',$event) }}" class="group flex min-h-20 items-center justify-between gap-3 py-3"><div class="min-w-0"><p class="font-semibold group-hover:text-emerald-700">靶位與計分</p><p class="mt-0.5 text-xs text-gray-500">排靶、設備綁定與計分進度</p></div><span class="shrink-0 text-gray-300 group-hover:text-emerald-500">›</span></a>@endcan
                     @can('manageJudging',$event)<a href="{{ route('organizer.events.judging.index',$event) }}" class="group flex min-h-20 items-center justify-between gap-3 py-3"><div class="min-w-0"><p class="font-semibold group-hover:text-emerald-700">裁判工作台</p><p class="mt-0.5 text-xs text-gray-500">核對靶位、爭議與簽核</p></div><span class="shrink-0 text-gray-300 group-hover:text-emerald-500">›</span></a>@endcan
                 </div>

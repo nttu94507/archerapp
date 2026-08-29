@@ -11,6 +11,7 @@ use App\Models\EventScoreEntry;
 use App\Models\EventScoringSession;
 use App\Models\EventRankingSnapshot;
 use App\Services\EventBadgeAwardService;
+use App\Services\EventCompletionService;
 use App\Services\QualificationRankingSnapshotService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -19,7 +20,7 @@ use Illuminate\View\View;
 
 class EventResultController extends Controller
 {
-    public function index(Event $event): View
+    public function index(Event $event, EventCompletionService $completion): View
     {
         $this->authorize('viewResults', $event);
         $registrations = $event->registrations()->with(['event_group', 'scoreEntries', 'scoringAssignment.target'])->whereIn('status', ['registered','checked_in','no_show'])->get()->map(function ($registration) {
@@ -63,8 +64,10 @@ class EventResultController extends Controller
         $canManageResults = request()->user()->can('manageScores', $event);
         $canApproveResults = request()->user()->can('approveResults', $event);
         $canCorrectScores = request()->user()->can('manageScoreCorrections', $event);
+        $officiallyCompleted = $event->auditLogs()->where('action', 'event.completed')->exists();
+        $completionCheck = $officiallyCompleted ? ['ready'=>true, 'blockers'=>[]] : $completion->inspect($event);
 
-        return view('organizer.results.index', compact('event', 'registrations', 'groupStates', 'currentSnapshots', 'canManageResults', 'canApproveResults', 'canCorrectScores'));
+        return view('organizer.results.index', compact('event', 'registrations', 'groupStates', 'currentSnapshots', 'canManageResults', 'canApproveResults', 'canCorrectScores', 'officiallyCompleted', 'completionCheck'));
     }
 
     public function edit(Event $event, EventRegistration $registration): View
@@ -292,7 +295,8 @@ class EventResultController extends Controller
         Event $event,
         EventGroup $group,
         EventBadgeAwardService $badges,
-        QualificationRankingSnapshotService $rankingSnapshots
+        QualificationRankingSnapshotService $rankingSnapshots,
+        EventCompletionService $completion,
     ): RedirectResponse
     {
         $this->authorize('manageScores', $event);
@@ -354,8 +358,11 @@ class EventResultController extends Controller
         });
 
         $awarded = $badges->awardPlacementsFor($event, $group->id);
+        $completionCheck = $completion->inspect($event->fresh());
 
-        return back()->with('success', $group->name.'正式成績已發布（'.$publication['published_count'].' 人），排名種子快照 v'.$publication['snapshot_version'].' 已鎖定，已發放 '.$awarded.' 個名次 Badge。');
+        return back()
+            ->with('success', $group->name.'正式成績已發布（'.$publication['published_count'].' 人），排名種子快照 v'.$publication['snapshot_version'].' 已鎖定，已發放 '.$awarded.' 個名次 Badge。')
+            ->with('offer_event_completion', $completionCheck['ready']);
     }
 
     public function updateLiveVisibility(Request $request, Event $event, EventGroup $group): RedirectResponse

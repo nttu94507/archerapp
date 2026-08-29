@@ -61,6 +61,12 @@ class EventBadgeController extends Controller
             'volunteer' => 'volunteer',
             default => $validated['award_rule'] ?? 'manual',
         };
+        abort_if(
+            ! $event->hasPlanFeature('check_in')
+            && ($validated['award_rule'] === 'attendance' || ($validated['eligibility'] ?? null) === 'checked_in'),
+            422,
+            '免費方案不提供報到功能，不能建立以報到為條件的 Badge。'
+        );
         if ($validated['award_rule'] === 'staff') $validated['staff_roles'] ??= ['owner','manager','staff'];
         else $validated['staff_roles'] = null;
         $validated['eligibility'] = in_array($validated['award_rule'], ['staff', 'volunteer'], true)

@@ -47,6 +47,7 @@ final class EventPlanCatalog
     {
         $paid = [
             'qualification'=>true,
+            'check_in'=>true,
             'individual_elimination'=>true,
             'multiple_groups'=>true,
             'multiple_rounds'=>true,
@@ -63,6 +64,7 @@ final class EventPlanCatalog
         return match ($plan) {
             self::FREE => [
                 'qualification'=>true,
+                'check_in'=>false,
                 'individual_elimination'=>false,
                 'multiple_groups'=>false,
                 'multiple_rounds'=>false,

@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Event;
 use App\Models\EventGroup;
+use App\Models\EventRegistration;
 use App\Models\User;
 use App\Support\EventPlanCatalog;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -26,6 +27,7 @@ class EventPlanEntitlementTest extends TestCase
         $this->assertSame(36, $event->planLimit('arrows_per_phase'));
         $this->assertSame(1, $event->planLimit('badges'));
         $this->assertTrue($event->hasPlanFeature('qualification'));
+        $this->assertFalse($event->hasPlanFeature('check_in'));
         $this->assertFalse($event->hasPlanFeature('individual_elimination'));
         $this->assertTrue($event->hasPlanFeature('internal_visibility'));
     }
@@ -40,6 +42,7 @@ class EventPlanEntitlementTest extends TestCase
 
         $this->assertTrue($event->hasPlanFeature('individual_elimination'));
         $this->assertTrue($event->hasPlanFeature('multiple_rounds'));
+        $this->assertTrue($event->hasPlanFeature('check_in'));
         $this->assertNull($event->planLimit('groups'));
         $this->assertNull($event->planLimit('arrows_per_phase'));
     }
@@ -95,6 +98,64 @@ class EventPlanEntitlementTest extends TestCase
             ->post(route('events.groups.store', $paidEvent), ['groups'=>[$this->groupPayload('第二組', 72)]])
             ->assertSessionHas('success');
         $this->assertSame(2, $paidEvent->groups()->count());
+    }
+
+    public function test_free_event_hides_check_in_and_assigns_registered_archers_without_dns(): void
+    {
+        $owner = User::factory()->create();
+        $archer = User::factory()->create();
+        $event = Event::factory()->create();
+        $group = EventGroup::factory()->create(['event_id'=>$event->id, 'arrow_count'=>36, 'arrows_per_end'=>6]);
+        $event->staff()->create(['user_id'=>$owner->id, 'role'=>'owner', 'status'=>'active']);
+        $registration = EventRegistration::create([
+            'event_id'=>$event->id,
+            'event_group_id'=>$group->id,
+            'user_id'=>$archer->id,
+            'name'=>$archer->name,
+            'email'=>$archer->email,
+            'status'=>'registered',
+        ]);
+        $absent = User::factory()->create();
+        $absentRegistration = EventRegistration::create([
+            'event_id'=>$event->id,
+            'event_group_id'=>$group->id,
+            'user_id'=>$absent->id,
+            'name'=>$absent->name,
+            'email'=>$absent->email,
+            'status'=>'registered',
+        ]);
+
+        $this->actingAs($owner)
+            ->get(route('organizer.events.show', $event))
+            ->assertOk()
+            ->assertDontSee('現場報到');
+        $this->actingAs($owner)
+            ->get(route('organizer.events.check-in.index', $event))
+            ->assertNotFound();
+        $this->actingAs($owner)
+            ->post(route('organizer.events.registrations.check-in', $event), ['uuid'=>$archer->uuid])
+            ->assertNotFound();
+
+        $this->actingAs($owner)
+            ->get(route('organizer.events.scoring.index', $event))
+            ->assertOk()
+            ->assertSee('確認今天出賽名單')
+            ->assertSee($archer->name)
+            ->assertSee($absent->name);
+
+        $this->actingAs($owner)
+            ->post(route('organizer.events.scoring.store', $event), [
+                'name'=>'免費資格賽',
+                'athletes_per_target'=>2,
+                'participating_registration_ids'=>[$registration->id],
+            ])->assertSessionHas('success');
+
+        $registration->refresh();
+        $this->assertSame('registered', $registration->status);
+        $this->assertNull($registration->result_status);
+        $this->assertDatabaseHas('event_scoring_assignments', ['event_registration_id'=>$registration->id]);
+        $this->assertDatabaseHas('event_registrations', ['id'=>$absentRegistration->id, 'status'=>'no_show', 'result_status'=>'dns']);
+        $this->assertDatabaseMissing('event_scoring_assignments', ['event_registration_id'=>$absentRegistration->id]);
     }
 
     private function groupPayload(string $name, int $arrows = 36): array
