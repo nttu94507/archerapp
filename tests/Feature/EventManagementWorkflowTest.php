@@ -242,6 +242,9 @@ class EventManagementWorkflowTest extends TestCase
         $this->assertDatabaseHas('event_audit_logs', ['event_id'=>$event->id, 'action'=>'event.completed']);
         $this->assertNotSame($oldAccessToken, $target->fresh()->access_token);
         $this->get(route('scoring-stations.show', $target->fresh()->access_token))->assertStatus(410);
+        $this->actingAs($owner)->get(route('organizer.events.show', $event->fresh()))
+            ->assertOk()
+            ->assertDontSee(route('store.index'), false);
         $this->get(route('events.show', $event->fresh()))
             ->assertOk()
             ->assertSee('排名賽結果');
