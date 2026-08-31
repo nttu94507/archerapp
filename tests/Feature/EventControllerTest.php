@@ -125,4 +125,25 @@ class EventControllerTest extends TestCase
         $this->assertSame(1, substr_count($response->getContent(), '目前開放報名賽事'));
         $this->assertSame(1, substr_count($response->getContent(), '尚未開放預告賽事'));
     }
+
+    public function test_completed_event_management_button_opens_workspace_instead_of_locked_groups(): void
+    {
+        $owner = User::factory()->create();
+        $event = Event::factory()->create(['completed_at' => now()]);
+        $event->staff()->create([
+            'user_id' => $owner->id,
+            'role' => 'owner',
+            'status' => 'active',
+        ]);
+
+        $this->actingAs($owner)
+            ->get(route('events.show', $event))
+            ->assertOk()
+            ->assertSee(route('organizer.events.show', $event), false)
+            ->assertDontSee(route('events.groups.index', $event), false);
+
+        $this->actingAs($owner)
+            ->get(route('organizer.events.show', $event))
+            ->assertOk();
+    }
 }
