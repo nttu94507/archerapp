@@ -76,6 +76,18 @@
                         <div class="mt-2 rounded-xl bg-gray-50 px-4 py-3 text-sm text-gray-600">免費賽事會顯示於公開列表；升級後可設定為不公開。</div>
                     @endif
                 </div>
+                <div class="sm:col-span-2">
+                    <p class="text-sm font-medium">現場報到</p>
+                    <input type="hidden" name="check_in_enabled" value="0">
+                    @if($maxArrows > 36)
+                        <label for="check-in-enabled" class="mt-2 flex min-h-14 cursor-pointer items-center gap-3 rounded-xl border border-gray-200 bg-gray-50 px-4 py-3">
+                            <input id="check-in-enabled" type="checkbox" name="check_in_enabled" value="1" @checked(old('check_in_enabled', '1') === '1') class="h-6 w-6 shrink-0 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
+                            <span><span class="block text-sm font-semibold text-gray-800">使用選手報到流程</span><span class="mt-0.5 block text-xs text-gray-500">若不勾選，排靶時直接確認出賽名單並取消未到場選手。</span></span>
+                        </label>
+                    @else
+                        <div class="mt-2 rounded-xl bg-gray-50 px-4 py-3 text-sm text-gray-600">免費賽事略過報到，排靶時直接確認出賽名單。</div>
+                    @endif
+                </div>
             </div>
         </section>
 

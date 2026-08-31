@@ -10,7 +10,7 @@
     $isRoundBreak = $target->status === 'round_break';
     $isDnsTarget = $target->status === 'dns';
     $usesTwoRounds = $session->total_arrows === 72 && $session->arrows_per_end === 6;
-    $requiresCheckIn = $session->event->hasPlanFeature('check_in');
+    $requiresCheckIn = $session->event->requiresCheckIn();
     $roundNumber = $usesTwoRounds && $endNumber > 6 ? 2 : 1;
     $endInRound = $usesTwoRounds && $endNumber > 6 ? $endNumber - 6 : $endNumber;
 @endphp

@@ -109,9 +109,11 @@ class EventController extends Controller
             'lat'        => 'nullable|numeric|between:-90,90',
             'lng'        => 'nullable|numeric|between:-180,180',
             'visibility' => 'nullable|in:public,unlisted',
+            'check_in_enabled' => 'nullable|boolean',
         ]);
         // 正規化 checkbox（未勾不會送值）
         $validated['verified'] = $request->boolean('verified');
+        $validated['check_in_enabled'] = $request->boolean('check_in_enabled');
 
         $event = DB::transaction(function () use ($validated, $user) {
             $event = Event::create($validated);

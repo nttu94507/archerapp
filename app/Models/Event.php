@@ -36,13 +36,13 @@ class Event extends Model
         'name', 'start_date','end_date', 'mode', 'verified', 'level',
         'organizer', 'reg_start', 'reg_end',
         'venue', 'map_link', 'lat', 'lng', 'status', 'published_at',
-        'visibility',
+        'visibility', 'check_in_enabled',
         'cancelled_at', 'completed_at', 'review_note',
         'plan_code', 'plan_status', 'plan_limits_snapshot', 'plan_features_snapshot',
         'plan_activated_at', 'plan_expires_at', 'plan_order_reference',
     ];
     protected $casts = [
-        'verified' => 'boolean',
+        'verified' => 'boolean', 'check_in_enabled' => 'boolean',
         'start_date' => 'date', 'end_date' => 'date',
         'reg_start' => 'datetime', 'reg_end' => 'datetime',
         'published_at' => 'datetime', 'cancelled_at' => 'datetime', 'completed_at' => 'datetime',
@@ -126,6 +126,11 @@ class Event extends Model
         return (bool) ($this->plan_features_snapshot[$feature]
             ?? EventPlanCatalog::features($this->plan_code)[$feature]
             ?? false);
+    }
+
+    public function requiresCheckIn(): bool
+    {
+        return $this->hasPlanFeature('check_in') && $this->check_in_enabled;
     }
 
     public function planLimit(string $resource): ?int

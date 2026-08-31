@@ -262,6 +262,7 @@ class EventController extends Controller
                     }
                 },
             ],
+            'check_in_enabled' => ['nullable', 'boolean'],
         ];
 
         if ($creating) {
@@ -288,7 +289,13 @@ class EventController extends Controller
             ];
         }
 
-        return $request->validate($rules);
+        $validated = $request->validate($rules);
+        $canUseCheckIn = $creating
+            ? $request->user()->hasActiveOrganizerSubscription()
+            : $event instanceof Event && $event->hasPlanFeature('check_in');
+        $validated['check_in_enabled'] = $canUseCheckIn && $request->boolean('check_in_enabled');
+
+        return $validated;
     }
 
     /** @param array{ready:bool,blockers:array<int,string>} $completionCheck */
@@ -309,7 +316,7 @@ class EventController extends Controller
                 return ['title'=>'先讓選手完成報名', 'description'=>'目前尚無有效報名；分享賽事或進入名單頁確認報名狀況。', 'label'=>'查看報名名單', 'url'=>route('organizer.events.registrations.index', $event)];
             }
             $hasUnreported = $event->registrations()->where('status', 'registered')->whereNull('checked_in_at')->exists();
-            if ($event->hasPlanFeature('check_in') && $hasUnreported && $request->user()->can('manageRegistrations', $event)) {
+            if ($event->requiresCheckIn() && $hasUnreported && $request->user()->can('manageRegistrations', $event)) {
                 return ['title'=>'完成現場報到，再確認排靶', 'description'=>'尚未報到的選手會在排靶時標記為 DNS；先確認現場名單可避免誤判。', 'label'=>'前往現場報到', 'url'=>route('organizer.events.check-in.index', $event)];
             }
             if ($request->user()->can('manageScores', $event)) {

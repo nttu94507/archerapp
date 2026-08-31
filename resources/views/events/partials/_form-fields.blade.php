@@ -103,6 +103,21 @@
                     @error('visibility') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
                 </div>
 
+                @php($canUseCheckIn = auth()->user()?->isAdmin() || ($existing && $existing->hasPlanFeature('check_in')))
+                <div>
+                    <p class="block text-sm font-medium text-gray-700">現場報到</p>
+                    <input type="hidden" name="check_in_enabled" value="0">
+                    @if($canUseCheckIn)
+                        <label for="check-in-enabled" class="mt-2 flex min-h-14 cursor-pointer items-center gap-3 rounded-xl border border-gray-200 bg-gray-50 px-4 py-3">
+                            <input id="check-in-enabled" type="checkbox" name="check_in_enabled" value="1" @checked((string) old('check_in_enabled', $existing?->check_in_enabled ?? true) === '1') class="h-6 w-6 shrink-0 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
+                            <span><span class="block text-sm font-semibold text-gray-800">使用選手報到流程</span><span class="mt-0.5 block text-xs text-gray-500">取消勾選後，排靶頁會讓你直接取消未出賽選手。</span></span>
+                        </label>
+                    @else
+                        <div class="mt-2 rounded-xl bg-gray-50 px-4 py-3 text-sm text-gray-600">此賽事略過報到，排靶時直接確認出賽名單。</div>
+                    @endif
+                    @error('check_in_enabled') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
+                </div>
+
                 <div>
                     <label for="organizer" class="block text-sm font-medium text-gray-700 mb-1">主辦單位 *</label>
                     <input type="text" name="organizer" id="organizer" value="{{ old('organizer', $existing?->organizer) }}"

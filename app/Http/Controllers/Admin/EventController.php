@@ -84,9 +84,11 @@ class EventController extends Controller
             'lat'        => 'nullable|numeric|between:-90,90',
             'lng'        => 'nullable|numeric|between:-180,180',
             'visibility' => 'nullable|in:public,unlisted',
+            'check_in_enabled' => 'nullable|boolean',
         ]);
 
         $validated['verified'] = $request->boolean('verified');
+        $validated['check_in_enabled'] = $request->boolean('check_in_enabled');
         $validated['status'] = $validated['verified'] ? 'approved' : 'draft';
         $validated['published_at'] = $validated['verified'] ? now() : null;
 

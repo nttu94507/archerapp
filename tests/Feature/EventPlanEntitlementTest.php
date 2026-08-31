@@ -170,6 +170,42 @@ class EventPlanEntitlementTest extends TestCase
             ->assertSee('scores['.$registration->id.'][]', false);
     }
 
+    public function test_paid_event_can_disable_check_in_and_choose_participants_during_assignment(): void
+    {
+        $owner = User::factory()->create();
+        $event = Event::factory()->create([
+            'check_in_enabled' => false,
+            'plan_code' => EventPlanCatalog::EVENT_PASS,
+            'plan_features_snapshot' => EventPlanCatalog::features(EventPlanCatalog::EVENT_PASS),
+            'plan_limits_snapshot' => EventPlanCatalog::limits(EventPlanCatalog::EVENT_PASS),
+        ]);
+        $event->staff()->create(['user_id'=>$owner->id, 'role'=>'owner', 'status'=>'active']);
+        $group = EventGroup::factory()->create(['event_id'=>$event->id, 'arrow_count'=>72, 'arrows_per_end'=>6]);
+        $athletes = User::factory()->count(2)->create();
+        $registrations = $athletes->map(fn (User $athlete) => EventRegistration::create([
+            'event_id'=>$event->id, 'event_group_id'=>$group->id, 'user_id'=>$athlete->id,
+            'name'=>$athlete->name, 'email'=>$athlete->email, 'status'=>'registered',
+        ]));
+
+        $this->actingAs($owner)
+            ->get(route('organizer.events.show', $event))
+            ->assertOk()
+            ->assertDontSee('現場報到');
+        $this->actingAs($owner)
+            ->get(route('organizer.events.scoring.index', $event))
+            ->assertOk()
+            ->assertSee('確認今天出賽名單');
+
+        $this->actingAs($owner)->post(route('organizer.events.scoring.store', $event), [
+            'name'=>'免報到資格賽', 'athletes_per_target'=>2,
+            'participating_registration_ids'=>[$registrations[0]->id],
+        ])->assertSessionHas('success');
+
+        $this->assertDatabaseHas('event_scoring_assignments', ['event_registration_id'=>$registrations[0]->id]);
+        $this->assertDatabaseHas('event_registrations', ['id'=>$registrations[1]->id, 'status'=>'no_show', 'result_status'=>'dns']);
+        $this->assertDatabaseMissing('event_scoring_assignments', ['event_registration_id'=>$registrations[1]->id]);
+    }
+
     private function groupPayload(string $name, int $arrows = 36): array
     {
         return [

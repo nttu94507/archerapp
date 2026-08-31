@@ -3,6 +3,8 @@
 namespace Tests\Feature;
 
 use App\Models\Event;
+use App\Models\EventGroup;
+use App\Models\EventRegistration;
 use App\Models\OrganizerProfile;
 use App\Models\OrganizerSubscription;
 use App\Models\User;
@@ -55,6 +57,36 @@ class EventVisibilityTest extends TestCase
             'visibility' => 'unlisted',
             'plan_code' => EventPlanCatalog::SUBSCRIPTION,
         ]);
+    }
+
+    public function test_my_events_contains_registered_public_and_unlisted_events(): void
+    {
+        $member = User::factory()->create(['profile_completed_at' => now()]);
+        $publicEvent = Event::factory()->create(['name' => '公開參賽場次', 'visibility' => 'public']);
+        $unlistedEvent = Event::factory()->create(['name' => '連結限定參賽場次', 'visibility' => 'unlisted']);
+
+        foreach ([$publicEvent, $unlistedEvent] as $event) {
+            $group = EventGroup::factory()->create(['event_id' => $event->id]);
+            EventRegistration::create([
+                'event_id' => $event->id,
+                'event_group_id' => $group->id,
+                'user_id' => $member->id,
+                'name' => $member->name,
+                'email' => $member->email,
+                'status' => 'registered',
+            ]);
+        }
+
+        $this->actingAs($member)
+            ->get(route('my-events.index'))
+            ->assertOk()
+            ->assertSee('公開參賽場次')
+            ->assertSee('連結限定參賽場次');
+
+        $this->get(route('events.index'))
+            ->assertOk()
+            ->assertSee('公開參賽場次')
+            ->assertDontSee('連結限定參賽場次');
     }
 
     private function approvedOrganizer(): User

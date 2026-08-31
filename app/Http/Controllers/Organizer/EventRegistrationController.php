@@ -98,7 +98,7 @@ class EventRegistrationController extends Controller
     public function checkInDesk(Request $request, Event $event): View
     {
         $this->authorize('manageRegistrations', $event);
-        abort_unless($event->hasPlanFeature('check_in'), 404);
+        abort_unless($event->requiresCheckIn(), 404);
 
         $activeRegistrations = $event->registrations()
             ->whereIn('status', ['registered', 'checked_in']);
@@ -159,7 +159,7 @@ class EventRegistrationController extends Controller
     public function checkIn(Request $request, Event $event, EventBadgeAwardService $badges): RedirectResponse|JsonResponse
     {
         $this->authorize('manageRegistrations', $event);
-        abort_unless($event->hasPlanFeature('check_in'), 404);
+        abort_unless($event->requiresCheckIn(), 404);
         $validated = $request->validate(['uuid' => ['required', 'uuid']]);
         $user = User::where('uuid', $validated['uuid'])->first();
         $registrations = $user ? $event->registrations()

@@ -24,7 +24,7 @@ class EventScoringController extends Controller
     public function index(Event $event): View
     {
         $this->authorize('manageScores', $event);
-        $requiresCheckIn = $event->hasPlanFeature('check_in');
+        $requiresCheckIn = $event->requiresCheckIn();
         $event->load(['groups' => fn ($query) => $query->withCount([
             'registrations as active_registrations_count' => fn ($registration) => $registration->whereIn('status', ['registered', 'checked_in']),
             'registrations as checked_in_registrations_count' => fn ($registration) => $registration->where('status', 'checked_in')->whereNotNull('checked_in_at'),
@@ -63,7 +63,7 @@ class EventScoringController extends Controller
         try {
             $summary = DB::transaction(function () use ($event, $validated, $request): array {
                 $lockedEvent = Event::whereKey($event->id)->lockForUpdate()->firstOrFail();
-                $requiresCheckIn = $lockedEvent->hasPlanFeature('check_in');
+                $requiresCheckIn = $lockedEvent->requiresCheckIn();
 
                 if (EventScoringSession::where('event_id', $event->id)->exists()) {
                     abort(422, '此賽事已完成排靶，不能重複執行。');
