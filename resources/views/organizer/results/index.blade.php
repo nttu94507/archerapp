@@ -8,7 +8,7 @@
         <a href="{{ route('organizer.events.show', $event) }}" class="text-sm text-indigo-600">← 返回賽事工作台</a>
         <h1 class="mt-2 text-2xl font-bold">成績確認與分組發布</h1>
         <p class="mt-1 text-sm text-gray-500">已報到選手即使中途停止，也會依現有分數結算並參與排名；只有未報到選手會標記為棄賽（DNF）。</p>
-        <p class="mt-1 text-sm text-indigo-700">成績須由成績管理員或主裁判核准，核准完成後才能由主辦方正式發布。</p>
+        <p class="mt-1 text-sm text-indigo-700">成績須由賽事主辦、成績管理員或主裁判核准，核准完成後才能正式發布。</p>
     </div>
 
     @if(session('success'))<div class="rounded-xl bg-green-50 p-4 text-sm text-green-700">{{ session('success') }}</div>@endif

@@ -328,7 +328,7 @@ class EventResultController extends Controller
                 abort_if($unconfirmedTargets > 0, 422, '此組別還有 '.$unconfirmedTargets.' 個靶位尚未經主裁判簽核。');
             }
             $unverified = $registrations->whereNull('score_verified_at')->count();
-            abort_if($unverified > 0, 422, '此組別還有 '.$unverified.' 位選手尚未經成績管理員或主裁判核准。');
+            abort_if($unverified > 0, 422, '此組別還有 '.$unverified.' 位選手尚未經賽事主辦、成績管理員或主裁判核准。');
 
             $now = now();
             $unpublished = $registrations->whereNull('result_published_at');

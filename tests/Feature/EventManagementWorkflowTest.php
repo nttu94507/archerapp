@@ -192,8 +192,13 @@ class EventManagementWorkflowTest extends TestCase
 
         $scoreManager = User::factory()->create();
         EventStaff::create(['event_id'=>$event->id,'user_id'=>$scoreManager->id,'role'=>'score_manager','status'=>'active','invited_by'=>$owner->id]);
+        $staff = User::factory()->create();
+        EventStaff::create(['event_id'=>$event->id,'user_id'=>$staff->id,'role'=>'staff','status'=>'active','invited_by'=>$owner->id]);
 
-        $this->actingAs($owner)->post(route('organizer.events.results.verify',$event),['registration_ids'=>[$registration->id]])->assertForbidden();
+        $this->actingAs($staff)->post(route('organizer.events.results.verify',$event),['registration_ids'=>[$registration->id]])->assertForbidden();
+        $this->actingAs($owner)->post(route('organizer.events.results.verify',$event),['registration_ids'=>[$registration->id]])->assertSessionHas('success');
+        $this->assertNotNull($registration->fresh()->score_verified_at);
+        $registration->update(['score_verified_at'=>null, 'score_verified_by'=>null, 'result_status'=>null]);
         $this->actingAs($scoreManager)->post(route('organizer.events.results.verify',$event),['registration_ids'=>[$registration->id]])->assertSessionHas('success');
         $this->assertNotNull($registration->fresh()->score_verified_at);
         $this->createScoringTarget($event, $group, $owner);
