@@ -4,7 +4,7 @@
 
 @section('content')
 <style>
-    #quick-event-form input:not([type="hidden"]),
+    #quick-event-form input:not([type="hidden"]):not([type="checkbox"]),
     #quick-event-form select {
         border: 1px solid #cbd5e1;
         background-color: #fff;
@@ -14,11 +14,11 @@
         box-shadow: 0 1px 2px rgba(15, 23, 42, .05);
         transition: border-color .15s ease, box-shadow .15s ease, background-color .15s ease;
     }
-    #quick-event-form input:not([type="hidden"]):hover,
+    #quick-event-form input:not([type="hidden"]):not([type="checkbox"]):hover,
     #quick-event-form select:hover {
         border-color: #94a3b8;
     }
-    #quick-event-form input:not([type="hidden"]):focus,
+    #quick-event-form input:not([type="hidden"]):not([type="checkbox"]):focus,
     #quick-event-form select:focus {
         border-color: #6366f1;
         outline: none;
@@ -65,17 +65,15 @@
                 <div><label class="text-sm font-medium">報名截止 *</label><input id="reg-end" type="datetime-local" name="reg_end" required value="{{ old('reg_end') }}" class="mt-1 min-h-12 w-full rounded-xl border-gray-300"></div>
                 <div class="sm:col-span-2"><label class="text-sm font-medium">主辦單位 *</label><input name="organizer" required value="{{ old('organizer', $organizerName) }}" class="mt-1 min-h-12 w-full rounded-xl border-gray-300"></div>
                 <div class="sm:col-span-2">
-                    <label class="text-sm font-medium" for="event-visibility">賽事可見度</label>
-                    <select id="event-visibility" name="visibility" class="mt-1 min-h-12 w-full rounded-xl border-gray-300">
-                        <option value="public" @selected(old('visibility', 'public') === 'public')>公開－顯示於賽事列表與搜尋</option>
-                        @if($canUseUnlisted)
-                            <option value="unlisted" @selected(old('visibility') === 'unlisted')>不公開－僅持連結者可進入</option>
-                        @endif
-                    </select>
+                    <p class="text-sm font-medium">賽事可見度</p>
+                    <input type="hidden" name="visibility" value="public">
                     @if($canUseUnlisted)
-                        <p class="mt-1 text-xs text-gray-500">不公開賽事仍可使用 UUID 網址或 QR Code 分享、報名及查看戰況。</p>
+                        <label for="event-unlisted" class="mt-2 flex min-h-14 cursor-pointer items-center gap-3 rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 transition hover:border-indigo-300 hover:bg-indigo-50">
+                            <input id="event-unlisted" type="checkbox" name="visibility" value="unlisted" @checked(old('visibility') === 'unlisted') class="h-6 w-6 shrink-0 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
+                            <span><span class="block text-sm font-semibold text-gray-800">不顯示於公開賽事列表</span><span class="mt-0.5 block text-xs text-gray-500">僅持 UUID 網址或 QR Code 的人可以進入、報名及查看戰況。</span></span>
+                        </label>
                     @else
-                        <p class="mt-1 text-xs text-gray-500">免費賽事會顯示於公開列表；升級後可使用不公開賽事。</p>
+                        <div class="mt-2 rounded-xl bg-gray-50 px-4 py-3 text-sm text-gray-600">免費賽事會顯示於公開列表；升級後可設定為不公開。</div>
                     @endif
                 </div>
             </div>
