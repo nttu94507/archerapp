@@ -63,12 +63,6 @@
         <section id="groups" class="rounded-2xl border bg-white p-4 shadow-sm">
             <h2 class="text-lg font-semibold text-gray-900 mb-3">賽事組別</h2>
 
-            @if($registrationLocked)
-                <div class="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-800">
-                    本賽事已完成排靶，所有組別報名均已截止。
-                </div>
-            @endif
-
             @auth
                 @if($myRegistrations->isNotEmpty())
                     <div class="mb-4 rounded-xl bg-indigo-50 border border-indigo-100 p-4">
