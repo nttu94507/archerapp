@@ -27,6 +27,11 @@ class EventController extends Controller
     public function index(Request $request)
     {
         $events = Event::query()->published()->with('groups')
+            ->withExists([
+                'groups as has_live_qualification' => fn ($query) => $query->where('live_results_visible', true),
+                'eliminationBrackets as has_live_elimination' => fn ($query) => $query->whereNotNull('published_at'),
+                'registrations as has_published_results' => fn ($query) => $query->whereNotNull('result_published_at'),
+            ])
             ->when($request->filled('q'), fn ($query) => $query->where(function ($q) use ($request) {
                 $q->where('name', 'like', '%'.$request->q.'%')->orWhere('organizer', 'like', '%'.$request->q.'%')->orWhere('venue', 'like', '%'.$request->q.'%');
             }))
@@ -35,40 +40,6 @@ class EventController extends Controller
             ->get();
 
         $now = Carbon::now();
-
-        $ongoingEvents = $events
-            ->filter(function ($event) use ($now) {
-                if (!$event->start_date) {
-                    return false;
-                }
-
-                $start = Carbon::parse($event->start_date)->startOfDay();
-                $end   = $event->end_date
-                    ? Carbon::parse($event->end_date)->endOfDay()
-                    : Carbon::parse($event->start_date)->endOfDay();
-
-                return $now->between($start, $end);
-            })
-            ->sortBy(function ($event) {
-                return Carbon::parse($event->start_date);
-            })
-            ->values();
-
-        $openEvents = $events
-            ->filter(fn ($event) => $event->registrationStatus($now) === 'open')
-            ->sortBy(function ($event) {
-                return $event->registrationClosesAt() ?? Carbon::parse($event->start_date);
-            })
-            ->values();
-
-        $upcomingEvents = $events
-            ->filter(function ($event) use ($now) {
-                return $event->start_date && Carbon::parse($event->start_date)->isFuture();
-            })
-            ->sortBy(function ($event) {
-                return Carbon::parse($event->start_date);
-            })
-            ->values();
 
         $pastEvents = $events
             ->filter(function ($event) use ($now) {
@@ -86,11 +57,34 @@ class EventController extends Controller
             })
             ->values();
 
+        $featuredEvents = $events
+            ->reject(fn ($event) => $pastEvents->contains('id', $event->id))
+            ->map(function ($event) use ($now) {
+                $start = Carbon::parse($event->start_date)->startOfDay();
+                $end = Carbon::parse($event->end_date ?? $event->start_date)->endOfDay();
+                $ongoing = $now->between($start, $end);
+                $registrationOpen = ! $ongoing && $event->registrationStatus($now) === 'open';
+
+                $event->listing_status = $ongoing ? 'ongoing' : ($registrationOpen ? 'registration_open' : 'upcoming');
+                $event->listing_sort_key = match ($event->listing_status) {
+                    'ongoing' => '0-'.$end->format('YmdHis'),
+                    'registration_open' => '1-'.($event->registrationClosesAt() ?? $start)->format('YmdHis'),
+                    default => '2-'.$start->format('YmdHis'),
+                };
+
+                return $event;
+            })
+            ->sortBy('listing_sort_key')
+            ->values();
+
+        $historyPreview = $pastEvents->take(6);
+        $historyRemaining = $pastEvents->skip(6)->values();
+
         return view('events.index', [
-            'ongoingEvents'  => $ongoingEvents,
-            'openEvents'     => $openEvents,
-            'upcomingEvents' => $upcomingEvents,
+            'featuredEvents' => $featuredEvents,
             'pastEvents'     => $pastEvents,
+            'historyPreview' => $historyPreview,
+            'historyRemaining' => $historyRemaining,
         ]);
     }
     /**

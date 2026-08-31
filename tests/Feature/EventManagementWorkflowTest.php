@@ -78,9 +78,10 @@ class EventManagementWorkflowTest extends TestCase
 
         $this->actingAs($owner)->get(route('organizer.events.edit',$event))->assertOk();
         $this->actingAs($staffUser)->get(route('organizer.events.registrations.index',$event))->assertOk();
+        $this->actingAs($staffUser)->get(route('organizer.events.results.index',$event))->assertForbidden();
         $this->actingAs($viewer)->get(route('organizer.events.registrations.index',$event))->assertForbidden();
         $this->actingAs($owner)->get(route('organizer.events.show',$event))->assertOk()->assertSee('最近操作紀錄');
-        $this->actingAs($staffUser)->get(route('organizer.events.show',$event))->assertOk()->assertDontSee('最近操作紀錄');
+        $this->actingAs($staffUser)->get(route('organizer.events.show',$event))->assertOk()->assertDontSee('最近操作紀錄')->assertDontSee('成績核對與發布');
         $this->actingAs($viewer)->get(route('organizer.events.show',$event))->assertOk()->assertDontSee('最近操作紀錄');
         $this->actingAs($outsider)->get(route('organizer.events.show',$event))->assertForbidden();
     }
@@ -196,6 +197,7 @@ class EventManagementWorkflowTest extends TestCase
         EventStaff::create(['event_id'=>$event->id,'user_id'=>$staff->id,'role'=>'staff','status'=>'active','invited_by'=>$owner->id]);
 
         $this->actingAs($staff)->post(route('organizer.events.results.verify',$event),['registration_ids'=>[$registration->id]])->assertForbidden();
+        $this->actingAs($staff)->post(route('organizer.events.results.publish',[$event,$group]))->assertForbidden();
         $this->actingAs($owner)->post(route('organizer.events.results.verify',$event),['registration_ids'=>[$registration->id]])->assertSessionHas('success');
         $this->assertNotNull($registration->fresh()->score_verified_at);
         $registration->update(['score_verified_at'=>null, 'score_verified_by'=>null, 'result_status'=>null]);

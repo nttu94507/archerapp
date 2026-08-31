@@ -9,6 +9,11 @@
 @section('content')
     <div class="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 py-8">
         <div class="mb-6">
+            <a href="{{ route('events.index') }}"
+               onclick="if (document.referrer && new URL(document.referrer).origin === window.location.origin) { event.preventDefault(); history.back(); }"
+               class="mb-3 inline-flex min-h-11 items-center gap-2 text-sm font-medium text-indigo-600 hover:text-indigo-500">
+                <span aria-hidden="true">←</span><span>返回上一頁</span>
+            </a>
             <h1 class="text-2xl font-bold text-gray-900">{{ $event->name }}</h1>
             <p class="text-sm text-gray-500">
                 {{ $event->start_date }} ~ {{ $event->end_date }} · {{ $event->organizer }}

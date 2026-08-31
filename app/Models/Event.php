@@ -96,7 +96,24 @@ class Event extends Model
 
     public function isOfficiallyCompleted(): bool
     {
-        return $this->auditLogs()->where('action', 'event.completed')->exists();
+        return $this->completed_at !== null
+            || $this->auditLogs()->where('action', 'event.completed')->exists();
+    }
+
+    public function canUpgradeToEventPass(): bool
+    {
+        return $this->isFreePlan()
+            && $this->cancelled_at === null
+            && ! $this->isOfficiallyCompleted();
+    }
+
+    public function eventPassUpgradeBlockReason(): ?string
+    {
+        if (! $this->isFreePlan()) return '這場賽事已啟用進階功能。';
+        if ($this->cancelled_at !== null) return '賽事已取消，無法購買單場升級。';
+        if ($this->isOfficiallyCompleted()) return '賽事已正式完成，無法再套用執行中的進階功能。';
+
+        return null;
     }
 
     public function hasPlanFeature(string $feature): bool

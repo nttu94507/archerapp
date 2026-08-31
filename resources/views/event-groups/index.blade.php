@@ -19,11 +19,13 @@
                         class="cursor-not-allowed rounded-xl bg-gray-200 px-4 py-2 text-sm font-medium text-gray-400">
                     新增組別
                 </button>
-            @elseif($groupLimitReached)
+            @elseif($groupLimitReached && $event->canUpgradeToEventPass())
                 <a href="{{ route('store.index', ['event' => $event->uuid]) }}" title="免費方案最多 1 個組別"
                    class="rounded-xl border border-amber-300 bg-amber-50 px-4 py-2 text-sm font-semibold text-amber-800 hover:bg-amber-100">
                     升級以新增組別
                 </a>
+            @elseif($groupLimitReached)
+                <button type="button" disabled title="{{ $event->eventPassUpgradeBlockReason() }}" class="cursor-not-allowed rounded-xl bg-gray-200 px-4 py-2 text-sm font-medium text-gray-400">無法新增組別</button>
             @else
                 <a href="{{ route('events.groups.create', $event) }}"
                    class="rounded-xl bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-500">
@@ -40,7 +42,7 @@
         @if(session('error'))
             <div class="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
                 <span>{{ session('error') }}</span>
-                @if($groupLimitReached && !$groupCreationLocked)<a href="{{ route('store.index', ['event' => $event->uuid]) }}" class="font-semibold underline">前往商店</a>@endif
+                @if($groupLimitReached && !$groupCreationLocked && $event->canUpgradeToEventPass())<a href="{{ route('store.index', ['event' => $event->uuid]) }}" class="font-semibold underline">前往商店</a>@endif
             </div>
         @endif
 

@@ -39,7 +39,13 @@ class EventPolicy
 
     public function viewResults(User $user, Event $event): bool
     {
-        return $this->canOperate($user) && $this->hasRole($user, $event, ['owner', 'manager', 'staff', 'score_manager', 'chief_judge']);
+        return $this->canOperate($user) && $this->hasRole($user, $event, ['owner', 'manager', 'score_manager', 'chief_judge']);
+    }
+
+    public function publishResults(User $user, Event $event): bool
+    {
+        return $this->canOperate($user) && ! $event->isOfficiallyCompleted()
+            && $this->hasRole($user, $event, ['owner', 'manager']);
     }
 
     public function manageScoreCorrections(User $user, Event $event): bool

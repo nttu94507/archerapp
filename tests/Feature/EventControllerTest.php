@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Event;
+use App\Models\EventGroup;
 use App\Models\User;
 use App\Models\OrganizerProfile;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -23,7 +24,7 @@ class EventControllerTest extends TestCase
         );
         $this->assertSame(url('/events/'.$event->uuid), route('events.show', $event));
 
-        $this->get(route('events.show', $event))->assertOk();
+        $this->get(route('events.show', $event))->assertOk()->assertSee('返回上一頁');
         $this->get('/events/'.$event->id)->assertNotFound();
     }
 
@@ -95,5 +96,33 @@ class EventControllerTest extends TestCase
             'role' => 'owner',
             'status' => 'active',
         ]);
+    }
+
+    public function test_index_uses_one_featured_stream_then_history_without_duplicates(): void
+    {
+        $ongoing = Event::factory()->create(['name'=>'今日進行中賽事', 'start_date'=>today(), 'end_date'=>today()]);
+        $open = Event::factory()->create([
+            'name'=>'目前開放報名賽事', 'start_date'=>today()->addDays(10), 'end_date'=>today()->addDays(10),
+            'reg_start'=>now()->subDay(), 'reg_end'=>now()->addDays(3),
+        ]);
+        $upcoming = Event::factory()->create([
+            'name'=>'尚未開放預告賽事', 'start_date'=>today()->addDays(5), 'end_date'=>today()->addDays(5),
+            'reg_start'=>now()->addDay(), 'reg_end'=>now()->addDays(3),
+        ]);
+        $past = Event::factory()->create(['name'=>'最近歷史賽事', 'start_date'=>today()->subDays(3), 'end_date'=>today()->subDays(2)]);
+        foreach ([$ongoing, $open, $upcoming, $past] as $event) {
+            EventGroup::factory()->create(['event_id'=>$event->id]);
+        }
+
+        $response = $this->get(route('events.index'));
+        $response->assertOk()
+            ->assertSeeInOrder(['現在值得關注', '今日進行中賽事', '目前開放報名賽事', '尚未開放預告賽事', '歷史賽事', '最近歷史賽事'])
+            ->assertSee('現正進行')
+            ->assertSee('報名中')
+            ->assertSee('即將開始');
+
+        $this->assertSame(1, substr_count($response->getContent(), '今日進行中賽事'));
+        $this->assertSame(1, substr_count($response->getContent(), '目前開放報名賽事'));
+        $this->assertSame(1, substr_count($response->getContent(), '尚未開放預告賽事'));
     }
 }

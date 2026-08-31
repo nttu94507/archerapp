@@ -42,4 +42,35 @@ class StorefrontTest extends TestCase
             ->assertOk()
             ->assertSee('找不到可由你管理的賽事');
     }
+
+    public function test_completed_or_cancelled_event_cannot_be_selected_for_single_event_upgrade(): void
+    {
+        $user = User::factory()->create();
+        $pastButOpen = Event::factory()->create([
+            'name'=>'日期已過但尚未結案',
+            'start_date'=>now()->subDays(2),
+            'end_date'=>now()->subDay(),
+        ]);
+        $completed = Event::factory()->create(['name'=>'已正式完成賽事', 'completed_at'=>now()]);
+        $cancelled = Event::factory()->create(['name'=>'已取消賽事', 'cancelled_at'=>now()]);
+        foreach ([$pastButOpen, $completed, $cancelled] as $event) {
+            $event->staff()->create(['user_id'=>$user->id, 'role'=>'owner', 'status'=>'active']);
+        }
+
+        $this->actingAs($user)->get(route('store.index'))
+            ->assertOk()
+            ->assertSee('日期已過但尚未結案')
+            ->assertSee('不可升級的賽事')
+            ->assertSee('已正式完成賽事')
+            ->assertSee('已取消賽事');
+
+        $this->actingAs($user)->get(route('store.index', ['event'=>$completed->uuid]))
+            ->assertOk()
+            ->assertSee('賽事已正式完成，無法再套用執行中的進階功能。')
+            ->assertDontSee('<option value="'.$completed->uuid.'"', false);
+
+        $this->assertTrue($pastButOpen->canUpgradeToEventPass());
+        $this->assertFalse($completed->canUpgradeToEventPass());
+        $this->assertFalse($cancelled->canUpgradeToEventPass());
+    }
 }

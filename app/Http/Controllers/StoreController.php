@@ -19,8 +19,12 @@ class StoreController extends Controller
             ->get();
 
         $selectedEvent = $events->firstWhere('uuid', $request->string('event')->toString());
+        $upgradeableEvents = $events->filter->canUpgradeToEventPass()->values();
+        $unavailableFreeEvents = $events->filter(
+            fn (Event $event) => $event->isFreePlan() && ! $event->canUpgradeToEventPass()
+        )->values();
         $subscription = $request->user()->activeOrganizerSubscription();
 
-        return view('store.index', compact('events', 'selectedEvent', 'subscription'));
+        return view('store.index', compact('events', 'selectedEvent', 'upgradeableEvents', 'unavailableFreeEvents', 'subscription'));
     }
 }

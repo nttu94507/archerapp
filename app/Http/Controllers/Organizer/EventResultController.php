@@ -61,7 +61,7 @@ class EventResultController extends Controller
             ]];
         });
 
-        $canManageResults = request()->user()->can('manageScores', $event);
+        $canManageResults = request()->user()->can('publishResults', $event);
         $canApproveResults = request()->user()->can('approveResults', $event);
         $canCorrectScores = request()->user()->can('manageScoreCorrections', $event);
         $officiallyCompleted = $event->auditLogs()->where('action', 'event.completed')->exists();
@@ -299,7 +299,7 @@ class EventResultController extends Controller
         EventCompletionService $completion,
     ): RedirectResponse
     {
-        $this->authorize('manageScores', $event);
+        $this->authorize('publishResults', $event);
         abort_unless($group->event_id === $event->id, 404);
 
         $publication = DB::transaction(function () use ($event, $group, $request, $rankingSnapshots): array {
@@ -367,7 +367,7 @@ class EventResultController extends Controller
 
     public function updateLiveVisibility(Request $request, Event $event, EventGroup $group): RedirectResponse
     {
-        $this->authorize('manageScores', $event);
+        $this->authorize('publishResults', $event);
         abort_unless($group->event_id === $event->id, 404);
         $validated = $request->validate(['visible' => ['required', 'boolean']]);
 
@@ -393,7 +393,7 @@ class EventResultController extends Controller
         EventGroup $group,
         QualificationRankingSnapshotService $rankingSnapshots,
     ): RedirectResponse {
-        $this->authorize('manageScores', $event);
+        $this->authorize('publishResults', $event);
         abort_unless($group->event_id === $event->id, 404);
 
         $snapshot = DB::transaction(function () use ($request, $event, $group, $rankingSnapshots) {
