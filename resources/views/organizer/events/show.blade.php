@@ -16,6 +16,7 @@
                 <p class="text-xs text-gray-500">賽事狀態</p>
                 <div class="mt-1 flex flex-wrap items-center gap-2">
                     <p class="font-bold {{ $officiallyCompleted ? 'text-emerald-800' : 'text-gray-900' }}">{{ $officiallyCompleted ? '已正式完成' : (['draft'=>'草稿（尚未公開）','pending'=>'舊審核資料（可直接發布）','approved'=>'已發布','rejected'=>'已下架','archived'=>'已封存'][$event->status] ?? $event->status) }}</p>
+                    @if($event->isPublished())<span class="rounded-full px-2.5 py-1 text-xs font-medium {{ $event->visibility === 'unlisted' ? 'bg-slate-200 text-slate-700' : 'bg-emerald-100 text-emerald-700' }}">{{ $event->visibility === 'unlisted' ? '不公開・持連結可進入' : '公開列表顯示' }}</span>@endif
                     @if(!$officiallyCompleted && $event->isPublished())<span class="rounded-full px-2.5 py-1 text-xs font-medium {{ $completionCheck['ready'] ? 'bg-indigo-100 text-indigo-700' : 'bg-amber-100 text-amber-700' }}">{{ $completionCheck['ready'] ? '可結案' : '尚有未完成項目' }}</span>@endif
                 </div>
                 @if($officiallyCompleted)<p class="mt-1 text-sm text-emerald-700">完成時間：{{ $event->completed_at?->format('Y-m-d H:i') }}・計分裝置已停用，正式成績仍可查詢。</p>@elseif($event->isPublished())<p class="mt-1 text-sm text-gray-500">{{ $completionCheck['ready'] ? '所有排名與對抗賽條件皆已完成。' : '完成所有排名與對抗賽流程後，即可正式結案。' }}</p>@endif
@@ -25,7 +26,7 @@
             @can('update', $event)
                 <div class="flex w-full flex-wrap gap-2 sm:w-auto sm:justify-end">
                     @if(!$event->isPublished() && !$event->cancelled_at)
-                        <form method="POST" action="{{ route('organizer.events.submit',$event) }}" onsubmit="return confirm('發布後所有會員都能查看此賽事，確定發布？')">@csrf<button class="min-h-11 rounded-xl bg-indigo-600 px-4 text-sm font-medium text-white">發布</button></form>
+                        <form method="POST" action="{{ route('organizer.events.submit',$event) }}" onsubmit="return confirm('{{ $event->visibility === 'unlisted' ? '發布後不會顯示於賽事列表，僅持連結者可進入。確定發布？' : '發布後所有會員都能從賽事列表查看，確定發布？' }}')">@csrf<button class="min-h-11 rounded-xl bg-indigo-600 px-4 text-sm font-medium text-white">發布</button></form>
                     @elseif($event->isPublished())
                         <form method="POST" action="{{ route('organizer.events.unpublish',$event) }}" onsubmit="return confirm('下架後會員將無法查看與報名，確定下架？')">@csrf<button class="min-h-11 rounded-xl border border-amber-300 px-4 text-sm font-medium text-amber-700">下架</button></form>
                     @endif

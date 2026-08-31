@@ -36,16 +36,14 @@
                         $meta = $statusMeta[$event->listing_status];
                         $hasLive = $event->has_live_qualification || $event->has_live_elimination;
                         $actionUrl = $event->listing_status === 'ongoing' && $hasLive ? route('events.live', $event) : route('events.show', $event).($event->listing_status === 'registration_open' ? '#groups' : '');
-                        $actionLabel = $event->listing_status === 'ongoing' && $hasLive ? '查看戰況' : ($event->listing_status === 'registration_open' ? '立即報名' : '查看詳情');
                     @endphp
-                    <article class="flex min-h-48 flex-col rounded-2xl border bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-indigo-200 hover:shadow-md">
+                    <a href="{{ $actionUrl }}" class="flex min-h-48 flex-col rounded-2xl border bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-indigo-200 hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2">
                         <div class="flex items-start justify-between gap-3"><span class="rounded-full px-2.5 py-1 text-xs font-semibold {{ $meta['class'] }}">{{ $meta['label'] }}</span><span class="rounded-full bg-gray-100 px-2.5 py-1 text-xs text-gray-600">{{ $event->mode === 'indoor' ? '室內' : '室外' }}</span></div>
                         <div class="mt-3 min-w-0 flex-1"><h3 class="break-words text-lg font-bold text-gray-900">{{ $event->name }}</h3><p class="mt-1 text-sm text-gray-600">{{ $dateRange($event) }}</p><p class="mt-1 truncate text-sm text-gray-500">{{ $event->venue ?: '場地待公布' }}・{{ $event->organizer }}</p>
                             @if($event->listing_status === 'registration_open')<p class="mt-2 text-xs font-medium text-indigo-700">報名截止：{{ $event->registrationClosesAt()?->format('Y-m-d H:i') ?? '依組別公告' }}</p>
                             @elseif($event->listing_status === 'upcoming')<p class="mt-2 text-xs text-gray-500">{{ ['upcoming'=>'尚未開放報名','closed'=>'報名已截止','unset'=>'報名時間待公布'][$event->registrationStatus()] ?? '查看賽事資訊' }}</p>@endif
                         </div>
-                        <a href="{{ $actionUrl }}" class="mt-4 inline-flex min-h-11 items-center justify-center rounded-xl {{ $event->listing_status === 'registration_open' ? 'bg-indigo-600 text-white' : 'border border-gray-200 text-gray-700' }} px-4 text-sm font-semibold">{{ $actionLabel }}</a>
-                    </article>
+                    </a>
                 @endforeach
             </div>
         @endif
@@ -58,7 +56,7 @@
         @else
             <div class="grid gap-3 md:grid-cols-2">
                 @foreach($historyPreview as $event)
-                    <a href="{{ route('events.show', $event) }}" class="flex min-h-28 items-center justify-between gap-4 rounded-2xl border bg-white p-4 shadow-sm hover:border-indigo-200"><div class="min-w-0"><div class="flex flex-wrap items-center gap-2"><span class="rounded-full {{ $event->has_published_results ? 'bg-violet-100 text-violet-700' : 'bg-gray-100 text-gray-600' }} px-2 py-1 text-xs font-medium">{{ $event->has_published_results ? '正式成績' : '成績整理中' }}</span><span class="text-xs text-gray-400">{{ $event->mode === 'indoor' ? '室內' : '室外' }}</span></div><h3 class="mt-2 truncate font-semibold text-gray-900">{{ $event->name }}</h3><p class="mt-1 text-xs text-gray-500">{{ $dateRange($event) }}・{{ $event->venue ?: '場地待公布' }}</p></div><span class="shrink-0 text-sm font-medium text-indigo-600">{{ $event->has_published_results ? '查看成績' : '查看賽事' }} ›</span></a>
+                    <a href="{{ route('events.show', $event) }}" class="flex min-h-28 items-center rounded-2xl border bg-white p-4 shadow-sm transition hover:border-indigo-200 hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2"><div class="min-w-0"><div class="flex flex-wrap items-center gap-2"><span class="rounded-full {{ $event->has_published_results ? 'bg-violet-100 text-violet-700' : 'bg-gray-100 text-gray-600' }} px-2 py-1 text-xs font-medium">{{ $event->has_published_results ? '正式成績' : '成績整理中' }}</span><span class="text-xs text-gray-400">{{ $event->mode === 'indoor' ? '室內' : '室外' }}</span></div><h3 class="mt-2 truncate font-semibold text-gray-900">{{ $event->name }}</h3><p class="mt-1 text-xs text-gray-500">{{ $dateRange($event) }}・{{ $event->venue ?: '場地待公布' }}</p></div></a>
                 @endforeach
             </div>
             @if($historyRemaining->isNotEmpty())

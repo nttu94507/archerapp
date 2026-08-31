@@ -41,6 +41,7 @@ class EventController extends Controller
         return view('organizer.events.create', [
             'organizerName' => request()->user()->organizerProfile?->organization_name,
             'maxArrows' => request()->user()->hasActiveOrganizerSubscription() ? 180 : 36,
+            'canUseUnlisted' => request()->user()->hasActiveOrganizerSubscription(),
         ]);
     }
 
@@ -242,6 +243,10 @@ class EventController extends Controller
     {
         $maxArrows = $request->user()->hasActiveOrganizerSubscription() ? 180 : 36;
         $maxGroups = $request->user()->hasActiveOrganizerSubscription() ? null : 1;
+        $event = $request->route('event');
+        $canUseUnlisted = $creating
+            ? $request->user()->hasActiveOrganizerSubscription()
+            : $event instanceof Event && $event->hasPlanFeature('unlisted_visibility');
         $rules = [
             'name' => ['required', 'string', 'max:120'], 'start_date' => ['required', 'date'],
             'end_date' => ['required', 'date', 'after_or_equal:start_date'], 'mode' => ['required', 'in:indoor,outdoor'],
@@ -249,6 +254,14 @@ class EventController extends Controller
             'reg_start' => ['nullable', 'date', 'required_with:reg_end'], 'reg_end' => ['nullable', 'date', 'required_with:reg_start', 'after_or_equal:reg_start'],
             'venue' => ['nullable', 'string', 'max:255'], 'map_link' => ['nullable', 'url'],
             'lat' => ['nullable', 'numeric', 'between:-90,90'], 'lng' => ['nullable', 'numeric', 'between:-180,180'],
+            'visibility' => [
+                'nullable', 'in:public,unlisted',
+                function (string $attribute, mixed $value, \Closure $fail) use ($canUseUnlisted): void {
+                    if ($value === 'unlisted' && ! $canUseUnlisted) {
+                        $fail('不公開賽事為單場升級或訂閱方案功能。');
+                    }
+                },
+            ],
         ];
 
         if ($creating) {

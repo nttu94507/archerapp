@@ -88,6 +88,20 @@
                     @error('level') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
                 </div>
 
+                @php($canUseUnlisted = auth()->user()?->isAdmin() || ($existing && $existing->hasPlanFeature('unlisted_visibility')))
+                <div>
+                    <label for="visibility" class="block text-sm font-medium text-gray-700 mb-1">賽事可見度</label>
+                    <select name="visibility" id="visibility"
+                            class="block min-h-12 w-full rounded-xl border border-gray-300 bg-gray-50 px-3 text-base focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+                        <option value="public" @selected(old('visibility', $existing?->visibility ?? 'public') === 'public')>公開－顯示於賽事列表與搜尋</option>
+                        @if($canUseUnlisted)
+                            <option value="unlisted" @selected(old('visibility', $existing?->visibility) === 'unlisted')>不公開－僅持連結者可進入</option>
+                        @endif
+                    </select>
+                    @error('visibility') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
+                    <p class="mt-1 text-xs text-gray-500">不公開賽事不會出現在公開列表，但分享連結仍可正常使用。</p>
+                </div>
+
                 <div>
                     <label for="organizer" class="block text-sm font-medium text-gray-700 mb-1">主辦單位 *</label>
                     <input type="text" name="organizer" id="organizer" value="{{ old('organizer', $existing?->organizer) }}"

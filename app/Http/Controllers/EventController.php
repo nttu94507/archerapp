@@ -26,7 +26,7 @@ class EventController extends Controller
 
     public function index(Request $request)
     {
-        $events = Event::query()->published()->with('groups')
+        $events = Event::query()->published()->where('visibility', 'public')->with('groups')
             ->withExists([
                 'groups as has_live_qualification' => fn ($query) => $query->where('live_results_visible', true),
                 'eliminationBrackets as has_live_elimination' => fn ($query) => $query->whereNotNull('published_at'),
@@ -108,6 +108,7 @@ class EventController extends Controller
             'map_link'   => 'nullable|url',
             'lat'        => 'nullable|numeric|between:-90,90',
             'lng'        => 'nullable|numeric|between:-180,180',
+            'visibility' => 'nullable|in:public,unlisted',
         ]);
         // 正規化 checkbox（未勾不會送值）
         $validated['verified'] = $request->boolean('verified');

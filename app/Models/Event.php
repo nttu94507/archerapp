@@ -36,6 +36,7 @@ class Event extends Model
         'name', 'start_date','end_date', 'mode', 'verified', 'level',
         'organizer', 'reg_start', 'reg_end',
         'venue', 'map_link', 'lat', 'lng', 'status', 'published_at',
+        'visibility',
         'cancelled_at', 'completed_at', 'review_note',
         'plan_code', 'plan_status', 'plan_limits_snapshot', 'plan_features_snapshot',
         'plan_activated_at', 'plan_expires_at', 'plan_order_reference',

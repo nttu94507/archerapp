@@ -83,6 +83,7 @@ class EventController extends Controller
             'map_link'   => 'nullable|url',
             'lat'        => 'nullable|numeric|between:-90,90',
             'lng'        => 'nullable|numeric|between:-180,180',
+            'visibility' => 'nullable|in:public,unlisted',
         ]);
 
         $validated['verified'] = $request->boolean('verified');

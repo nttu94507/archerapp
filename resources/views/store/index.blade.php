@@ -7,7 +7,7 @@
     <section class="overflow-hidden rounded-3xl bg-gradient-to-br from-indigo-700 via-violet-700 to-purple-800 px-6 py-8 text-white shadow-lg sm:px-10 sm:py-10">
         <span class="inline-flex rounded-full bg-white/15 px-3 py-1 text-xs font-semibold ring-1 ring-white/20">ArrowTrack 方案商店</span>
         <h1 class="mt-4 text-3xl font-bold tracking-tight sm:text-4xl">依照賽事規模選擇功能</h1>
-        <p class="mt-3 max-w-2xl text-sm leading-6 text-indigo-100 sm:text-base">免費方案適合社團排名賽；需要多組別、第二局或個人對抗賽時，可為單場賽事升級進階方案。</p>
+        <p class="mt-3 max-w-2xl text-sm leading-6 text-indigo-100 sm:text-base">免費方案適合公開的社團排名賽；需要不公開分享、多組別、第二局或個人對抗賽時，可為單場賽事升級進階方案。</p>
     </section>
 
     @if($events->isNotEmpty())
@@ -60,6 +60,7 @@
                 <li>✓ 最多 2 位工作人員、8 個靶位</li>
                 <li>✓ 1 枚賽事 Badge</li>
                 <li>✓ 排名賽與即時戰況</li>
+                <li>✓ 公開顯示於賽事列表</li>
             </ul>
             <div class="mt-7 min-h-11 rounded-xl bg-gray-100 px-4 py-3 text-center text-sm font-semibold text-gray-600">建立賽事即可使用</div>
         </article>
@@ -75,6 +76,7 @@
                 <li>✓ 個人對抗表與設備鎖定計分</li>
                 <li>✓ 反曲弓局分制、複合弓累計制</li>
                 <li>✓ 加射判定、完整成績稽核與進階 Badge</li>
+                <li>✓ 可設為不公開，僅持連結者可進入</li>
             </ul>
             @if($selectedEvent && !$selectedEvent->isFreePlan())
                 <div class="mt-7 min-h-11 rounded-xl bg-emerald-100 px-4 py-3 text-center text-sm font-semibold text-emerald-700">這場賽事已啟用</div>
@@ -93,6 +95,7 @@
             <ul class="mt-6 space-y-3 text-sm text-gray-700">
                 <li>✓ 不必逐場購買方案</li>
                 <li>✓ 新賽事自動套用進階功能</li>
+                <li>✓ 可建立不公開的校內賽或社團賽</li>
                 <li>✓ 訂閱到期不影響既有賽事</li>
                 <li>✓ 適合社團、俱樂部與協會</li>
             </ul>
