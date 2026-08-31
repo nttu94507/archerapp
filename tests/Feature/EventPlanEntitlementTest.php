@@ -156,6 +156,18 @@ class EventPlanEntitlementTest extends TestCase
         $this->assertDatabaseHas('event_scoring_assignments', ['event_registration_id'=>$registration->id]);
         $this->assertDatabaseHas('event_registrations', ['id'=>$absentRegistration->id, 'status'=>'no_show', 'result_status'=>'dns']);
         $this->assertDatabaseMissing('event_scoring_assignments', ['event_registration_id'=>$absentRegistration->id]);
+
+        $target = $registration->scoringAssignment()->with('target')->firstOrFail()->target;
+        $deviceToken = 'free-single-archer-device';
+        $target->update([
+            'device_token_hash'=>hash('sha256', $deviceToken),
+            'device_bound_at'=>now(),
+        ]);
+        $this->withCookie('scoring_device_'.$target->id, $deviceToken)
+            ->get(route('scoring-stations.show', $target->access_token).'#scoring')
+            ->assertOk()
+            ->assertSee('data-registration="'.$registration->id.'"', false)
+            ->assertSee('scores['.$registration->id.'][]', false);
     }
 
     private function groupPayload(string $name, int $arrows = 36): array

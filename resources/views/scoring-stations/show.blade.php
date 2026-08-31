@@ -10,6 +10,7 @@
     $isRoundBreak = $target->status === 'round_break';
     $isDnsTarget = $target->status === 'dns';
     $usesTwoRounds = $session->total_arrows === 72 && $session->arrows_per_end === 6;
+    $requiresCheckIn = $session->event->hasPlanFeature('check_in');
     $roundNumber = $usesTwoRounds && $endNumber > 6 ? 2 : 1;
     $endInRound = $usesTwoRounds && $endNumber > 6 ? $endNumber - 6 : $endNumber;
 @endphp
@@ -107,7 +108,14 @@
                     <div class="rounded-2xl border bg-white p-3 shadow-sm">
                         <div class="divide-y rounded-xl border">
                             @foreach($target->assignments as $assignment)
-                                @continue($assignment->registration?->result_status === 'dns' || $assignment->registration?->status !== 'checked_in')
+                                @continue(
+                                    $assignment->registration?->result_status === 'dns'
+                                    || !in_array(
+                                        $assignment->registration?->status,
+                                        $requiresCheckIn ? ['checked_in'] : ['registered', 'checked_in'],
+                                        true
+                                    )
+                                )
                                 <div class="athlete-card grid grid-cols-[2rem_4.5rem_minmax(0,1fr)_2.5rem] items-center gap-1.5 px-2 py-1.5 sm:grid-cols-[3rem_8rem_minmax(0,1fr)_3.5rem] sm:gap-2" data-registration="{{ $assignment->registration->id }}">
                                     <span class="font-bold text-indigo-600">{{ $target->target_number.$assignment->position }}</span>
                                     <div class="min-w-0">
