@@ -25,13 +25,16 @@ class EventTeamWorkflowTest extends TestCase
     {
         [$event,$group,$users,$registrations]=$this->teamEvent(3);
 
-        $this->actingAs($users[0])->post(route('events.teams.store',[$event,$group]), ['name'=>'團體 A'])->assertSessionHas('success');
+        $this->actingAs($users[0])->post(route('events.teams.store',[$event,$group]), ['name'=>'團體 A','recruitment_note'=>'尋找同校隊友'])->assertSessionHas('success');
         $team=EventTeam::firstOrFail();
         $this->assertSame($registrations[0]->id,$team->captain_registration_id);
+        $this->assertTrue($team->is_open);
+        $this->assertSame('尋找同校隊友',$team->recruitment_note);
         $this->assertDatabaseHas('event_team_members',['event_team_id'=>$team->id,'event_registration_id'=>$registrations[0]->id,'role'=>'captain','status'=>'active']);
 
         $this->actingAs($users[1])->post(route('events.teams.apply',[$event,$group,$team]))->assertSessionHas('success');
         $application=EventTeamMember::where('event_registration_id',$registrations[1]->id)->firstOrFail();
+        $this->actingAs($users[0])->get(route('events.teams.index',[$event,$group]))->assertOk()->assertSee('待審核申請')->assertSee('同意加入');
         $this->actingAs($users[0])->patch(route('events.teams.review',[$event,$group,$team,$application]),['decision'=>'approve'])->assertSessionHas('success');
 
         $this->actingAs($users[0])->post(route('events.teams.invite',[$event,$group,$team]),['registration_id'=>$registrations[2]->id])->assertSessionHas('success');

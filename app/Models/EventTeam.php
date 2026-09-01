@@ -7,8 +7,8 @@ use Illuminate\Support\Str;
 
 class EventTeam extends Model
 {
-    protected $fillable = ['uuid', 'event_id', 'event_group_id', 'captain_registration_id', 'name', 'status', 'locked_at'];
-    protected $casts = ['locked_at'=>'datetime'];
+    protected $fillable = ['uuid', 'event_id', 'event_group_id', 'captain_registration_id', 'name', 'is_open', 'recruitment_note', 'status', 'locked_at'];
+    protected $casts = ['is_open'=>'boolean', 'locked_at'=>'datetime'];
 
     protected static function booted(): void
     {

@@ -63,24 +63,34 @@ class EventTeamController extends Controller
         $this->assertOpen($event, $group);
         $registration = $this->registrationFor($request, $event, $group);
         if ($group->team_type==='mixed') abort_unless($registration->athlete_gender,422,'混雙選手必須先在報名資料設定性別。');
-        $data = $request->validate(['name'=>['required','string','max:100']]);
+        $data = $request->validate([
+            'name'=>['required','string','max:100'],
+            'recruitment_note'=>['nullable','string','max:300'],
+        ]);
 
         DB::transaction(function () use ($event, $group, $registration, $data, $request): void {
             abort_if(EventTeamMember::where('event_group_id', $group->id)->where('event_registration_id', $registration->id)->exists(), 422, '你已經有組隊申請或隊伍。');
             $team = EventTeam::create(['event_id'=>$event->id, 'event_group_id'=>$group->id,
-                'captain_registration_id'=>$registration->id, 'name'=>$data['name'], 'status'=>'recruiting']);
+                'captain_registration_id'=>$registration->id, 'name'=>$data['name'], 'is_open'=>true,
+                'recruitment_note'=>$data['recruitment_note'] ?? null, 'status'=>'recruiting']);
             $team->memberships()->create(['event_group_id'=>$group->id, 'event_registration_id'=>$registration->id,
                 'role'=>'captain', 'status'=>'active', 'requested_by'=>$request->user()->id, 'responded_at'=>now()]);
         });
-        return back()->with('success', '隊伍已建立，現在可以邀請隊友。');
+        return back()->with('success', '公開招募隊伍已建立，其他選手現在可以申請加入。');
     }
 
     public function apply(Request $request, Event $event, EventGroup $group, EventTeam $team): RedirectResponse
     {
         $this->assertTeam($event, $group, $team); $this->assertOpen($event, $group);
         $registration = $this->registrationFor($request, $event, $group);
-        abort_unless($team->status === 'recruiting', 422, '此隊伍目前不接受申請。');
+        abort_unless($team->status === 'recruiting' && $team->is_open, 422, '此隊伍目前不接受申請。');
         abort_if(EventTeamMember::where('event_group_id',$group->id)->where('event_registration_id',$registration->id)->exists(), 422, '你已經有組隊申請或隊伍。');
+        if ($group->team_type === 'mixed') {
+            abort_unless($registration->athlete_gender, 422, '混雙選手必須先設定性別。');
+            abort_if($team->competingMemberships()->with('registration')->get()
+                ->contains(fn (EventTeamMember $member) => $member->registration?->athlete_gender === $registration->athlete_gender),
+                422, '此混雙隊伍目前需要另一性別的選手。');
+        }
         $team->memberships()->create(['event_group_id'=>$group->id, 'event_registration_id'=>$registration->id,
             'role'=>'member', 'status'=>'pending', 'requested_by'=>$request->user()->id]);
         return back()->with('success', '已送出加入申請。');
