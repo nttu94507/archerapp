@@ -193,11 +193,14 @@ class ScoringStationController extends Controller
             ]);
         });
 
-        $message = $session->total_arrows === 72 && $session->arrows_per_end === 6 && $expectedEnd === 6
+        $roundBreakCompleted = $session->total_arrows === 72 && $session->arrows_per_end === 6 && $expectedEnd === 6;
+        $message = $roundBreakCompleted
             ? '上半局 36 箭已完成並保存。'
             : '第 '.$expectedEnd.' 趟已完成同步。';
 
-        return redirect()->route('scoring-stations.show', $token)->with('success', $message);
+        $returnUrl = route('scoring-stations.show', $token).($roundBreakCompleted ? '#scoring' : '');
+
+        return redirect()->to($returnUrl)->with('success', $message);
     }
 
     public function startSecondRound(Request $request, string $token): RedirectResponse
@@ -232,7 +235,7 @@ class ScoringStationController extends Controller
             ]);
         });
 
-        return redirect()->route('scoring-stations.show', $token)
+        return redirect()->to(route('scoring-stations.show', $token).'#scoring')
             ->with('success', '下半局已開始，接續記錄第 7～12 趟。');
     }
 
