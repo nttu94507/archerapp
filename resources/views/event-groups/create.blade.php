@@ -28,7 +28,7 @@
                     ])
                     @foreach($presetGroups as [$bow,$distance,$gender,$name])
                         @continue(in_array($bow.'|'.mb_strtolower(trim($distance)).'|'.$gender, $existingGroupKeys, true))
-                        <label class="flex min-h-12 cursor-pointer items-center gap-3 rounded-xl border border-indigo-100 bg-white px-3 text-sm transition has-[:checked]:border-indigo-500 has-[:checked]:bg-indigo-100"><input type="checkbox" class="preset-choice h-5 w-5 rounded text-indigo-600" data-bow="{{ $bow }}" data-distance="{{ $distance }}" data-gender="{{ $gender }}" data-name="{{ $name }}" data-arrows="{{ $distance === '30m' ? 36 : ($maxArrows > 36 ? 72 : 36) }}">{{ $name }}</label>
+                        <label class="preset-choice-card flex min-h-12 cursor-pointer items-center gap-3 rounded-xl border border-indigo-100 bg-white px-3 text-sm transition has-[:checked]:border-indigo-500 has-[:checked]:bg-indigo-100"><input type="checkbox" class="preset-choice h-5 w-5 rounded text-indigo-600" data-bow="{{ $bow }}" data-distance="{{ $distance }}" data-gender="{{ $gender }}" data-key="{{ $bow }}|{{ mb_strtolower(trim($distance)) }}|{{ $gender }}" data-name="{{ $name }}" data-arrows="{{ $distance === '30m' ? 36 : ($maxArrows > 36 ? 72 : 36) }}">{{ $name }}</label>
                     @endforeach
                 </div>
                 @if(count($existingGroupKeys))<p class="mt-3 text-xs text-indigo-700">已建立的相同弓種、距離與性別組別，已從快速選項中隱藏。</p>@endif
@@ -90,13 +90,13 @@
 
                 <div>
                     <label class="block text-xs text-gray-600 mb-1">年齡組</label>
-                    <input type="text" class="group-distance-field w-full rounded-lg border px-3 py-2 text-sm"
+                    <input type="text" class="w-full rounded-lg border px-3 py-2 text-sm"
                            name="groups[__INDEX__][age_class]" placeholder="U18 / OPEN">
                 </div>
 
                 <div>
                     <label class="block text-xs text-gray-600 mb-1">距離</label>
-                    <input type="text" class="w-full rounded-lg border px-3 py-2 text-sm"
+                    <input type="text" class="group-distance-input w-full rounded-lg border px-3 py-2 text-sm"
                            name="groups[__INDEX__][distance]" placeholder="70m / 50m">
                 </div>
 
@@ -140,6 +140,22 @@
             const addBtn = document.getElementById('add-group');
             const maxNewGroups = @js($maxNewGroups);
 
+            function groupKey(node) {
+                const bow = node.querySelector('.group-bow-field')?.value ?? '';
+                const distance = (node.querySelector('.group-distance-input')?.value ?? '').trim().toLowerCase();
+                const gender = node.querySelector('.group-gender-field')?.value ?? 'open';
+                return `${bow}|${distance}|${gender}`;
+            }
+
+            function syncPresetAvailability() {
+                const usedKeys = new Set([...list.querySelectorAll('.group-item')].map(groupKey));
+                document.querySelectorAll('.preset-choice').forEach(choice => {
+                    const used = usedKeys.has(choice.dataset.key);
+                    choice.closest('.preset-choice-card')?.classList.toggle('hidden', used);
+                    if (used) choice.checked = false;
+                });
+            }
+
             function syncGroupFees() {
                 const feeFields = [...list.querySelectorAll('.group-fee-field')];
                 const firstFee = feeFields[0]?.value ?? '';
@@ -175,6 +191,10 @@
                     // 重新索引 name 屬性（確保連續 0..n-1）
                     rebuildIndexes();
                 });
+                node.querySelectorAll('.group-bow-field, .group-gender-field, .group-distance-input').forEach(field => {
+                    field.addEventListener('change', syncPresetAvailability);
+                    field.addEventListener('input', syncPresetAvailability);
+                });
 
                 const roundFormat = node.querySelector('.round-format-select');
                 const arrowHidden = node.querySelector('.arrow-count-field');
@@ -207,13 +227,14 @@
                     node.querySelector('.group-name-field').value = preset.name;
                     node.querySelector('.group-bow-field').value = preset.bow;
                     node.querySelector('.group-gender-field').value = preset.gender;
-                    node.querySelector('.group-distance-field').value = preset.distance;
+                    node.querySelector('.group-distance-input').value = preset.distance;
                     syncArrowCount();
                 }
 
                 list.appendChild(node);
                 renumber();
                 syncGroupFees();
+                syncPresetAvailability();
             }
 
             function rebuildIndexes() {
@@ -227,6 +248,7 @@
                 });
                 renumber();
                 syncGroupFees();
+                syncPresetAvailability();
             }
 
             list.addEventListener('input', event => {
