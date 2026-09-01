@@ -15,7 +15,7 @@
             <div class="flex justify-between gap-4 py-3"><dt class="text-sm text-gray-500">報名組別</dt><dd class="text-right text-sm font-semibold">{{ $group->name }}</dd></div>
             <div class="flex justify-between gap-4 py-3"><dt class="text-sm text-gray-500">賽制</dt><dd class="text-right text-sm font-semibold">{{ $group->distance ?: '距離未指定' }} · {{ $group->arrow_count }} 箭</dd></div>
             <div class="flex justify-between gap-4 py-3"><dt class="text-sm text-gray-500">報名費</dt><dd class="text-right text-sm font-semibold">{{ (int) $group->fee > 0 ? 'NT$ '.number_format($group->fee) : '免費' }}</dd></div>
-            <div class="flex justify-between gap-4 py-3"><dt class="text-sm text-gray-500">目前名額</dt><dd class="text-right text-sm font-semibold">{{ $registered }}{{ $group->quota ? ' / '.$group->quota : ' 人' }}</dd></div>
+            <div class="flex justify-between gap-4 py-3"><dt class="text-sm text-gray-500">目前名額</dt><dd class="text-right text-sm font-semibold">{{ $group->quota ? $registered.' / '.$group->quota.' 人' : '無上限' }}</dd></div>
             <div class="flex justify-between gap-4 py-3"><dt class="text-sm text-gray-500">選手</dt><dd class="text-right text-sm font-semibold">{{ auth()->user()->display_name }}<br><span class="font-normal text-gray-500">{{ auth()->user()->email }}</span></dd></div>
         </dl>
 

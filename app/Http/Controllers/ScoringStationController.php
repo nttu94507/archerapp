@@ -114,7 +114,7 @@ class ScoringStationController extends Controller
             'scores'=>['nullable', 'array'],
         ]);
 
-        $requiresCheckIn = $session->event->hasPlanFeature('check_in');
+        $requiresCheckIn = $session->event->requiresCheckIn();
         $assignments = $target->assignments->filter(fn ($assignment) =>
             in_array(
                 $assignment->registration?->status,

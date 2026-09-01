@@ -48,7 +48,7 @@
                     <a href="{{ route('organizer.events.registrations.index',[$event,'event_group_id'=>$group->id]) }}" class="group rounded-2xl border bg-white p-5 shadow-sm transition hover:border-indigo-300 hover:shadow-md">
                         <div class="flex items-start justify-between gap-3">
                             <div class="min-w-0"><h3 class="break-words text-lg font-semibold group-hover:text-indigo-700">{{ $group->name }}</h3><p class="mt-1 text-sm text-gray-500">{{ $group->distance ?: '距離未定' }} · {{ $group->arrow_count }} 箭 · {{ $fee > 0 ? 'NT$ '.number_format($fee) : '免費' }}</p></div>
-                            <span class="shrink-0 rounded-full bg-gray-100 px-3 py-1 text-xs font-medium">{{ $active }}{{ $group->quota ? ' / '.$group->quota : ' 人' }}</span>
+                            <span class="shrink-0 rounded-full bg-gray-100 px-3 py-1 text-xs font-medium">{{ $group->quota ? $active.' / '.$group->quota : $active.' / 無上限' }}</span>
                         </div>
                         <div class="mt-5 grid grid-cols-3 gap-2 text-center">
                             <div class="rounded-xl bg-emerald-50 p-3"><p class="text-lg font-semibold text-emerald-700">{{ $settled }}</p><p class="text-xs text-emerald-700">已處理</p></div>
@@ -87,7 +87,7 @@
 
         <section class="rounded-2xl border bg-white p-4 shadow-sm sm:p-5">
             <div class="grid grid-cols-2 gap-3 sm:grid-cols-5">
-                <div><p class="text-xs text-gray-500">名額</p><p class="mt-1 text-xl font-semibold">{{ $active }}{{ $selectedGroup->quota ? ' / '.$selectedGroup->quota : ' 人' }}</p></div>
+                <div><p class="text-xs text-gray-500">名額</p><p class="mt-1 text-xl font-semibold">{{ $selectedGroup->quota ? $active.' / '.$selectedGroup->quota : $active.' / 無上限' }}</p></div>
                 <div><p class="text-xs text-gray-500">報名費</p><p class="mt-1 text-xl font-semibold">{{ $fee > 0 ? 'NT$ '.number_format($fee) : '免費' }}</p></div>
                 <div><p class="text-xs text-gray-500">已處理</p><p class="mt-1 text-xl font-semibold text-emerald-700">{{ $settled }}</p></div>
                 <div><p class="text-xs text-gray-500">待繳費</p><p class="mt-1 text-xl font-semibold text-amber-700">{{ $pending }}</p></div>

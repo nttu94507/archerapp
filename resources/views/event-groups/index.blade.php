@@ -81,7 +81,7 @@
 
                         <td class="px-3 py-2 hidden lg:table-cell">
                             {{-- 已報名 / 名額上限 --}}
-                            {{ $g->registrations_count ?? 0 }} / {{ $g->quota}}
+                            {{ $g->registrations_count ?? 0 }} / {{ $g->quota ?: '無上限' }}
                         </td>
 
                         <td class="px-3 py-2 hidden xl:table-cell">

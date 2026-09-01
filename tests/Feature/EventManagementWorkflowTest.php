@@ -352,6 +352,40 @@ class EventManagementWorkflowTest extends TestCase
         return ['name'=>'測試公開賽','start_date'=>now()->addMonth()->toDateString(),'end_date'=>now()->addMonth()->addDay()->toDateString(),'mode'=>'outdoor','organizer'=>'測試主辦方','reg_start'=>now()->toDateTimeString(),'reg_end'=>now()->addWeeks(2)->toDateTimeString()];
     }
 
+    public function test_paid_event_without_check_in_accepts_scores_from_registered_archer(): void
+    {
+        [$owner, $event, $group] = $this->ownedEvent();
+        $event->update([
+            'check_in_enabled'=>false,
+            'plan_code'=>\App\Support\EventPlanCatalog::EVENT_PASS,
+            'plan_features_snapshot'=>\App\Support\EventPlanCatalog::features(\App\Support\EventPlanCatalog::EVENT_PASS),
+            'plan_limits_snapshot'=>\App\Support\EventPlanCatalog::limits(\App\Support\EventPlanCatalog::EVENT_PASS),
+        ]);
+        $group->update(['arrow_count'=>36, 'arrows_per_end'=>6]);
+        $registration = $this->registration($event, $group, User::factory()->create());
+        $session = EventScoringSession::create([
+            'event_id'=>$event->id, 'event_group_id'=>$group->id,
+            'event_phase_id'=>$group->qualificationPhase()->firstOrFail()->id,
+            'name'=>'免報到排名賽', 'total_arrows'=>36, 'arrows_per_end'=>6,
+            'athletes_per_target'=>1, 'status'=>'ready', 'created_by'=>$owner->id,
+        ]);
+        $target = $session->targets()->create([
+            'target_number'=>1, 'access_token'=>(string) \Illuminate\Support\Str::uuid(),
+            'device_pin'=>'123456', 'device_token_hash'=>hash('sha256', 'device-token'), 'status'=>'ready',
+        ]);
+        $target->assignments()->create(['event_registration_id'=>$registration->id, 'position'=>'A']);
+
+        $this->withCookie('scoring_device_'.$target->id, 'device-token')
+            ->post(route('scoring-stations.ends.store', $target->access_token), [
+                'end_number'=>1,
+                'scores'=>[$registration->id=>['10','10','9','9','8','8']],
+            ])->assertSessionHas('success');
+
+        $this->assertDatabaseHas('event_score_entries', [
+            'event_registration_id'=>$registration->id, 'end_number'=>1, 'end_total'=>54,
+        ]);
+    }
+
     private function ownedEvent(): array
     {
         $owner=User::factory()->create(); $event=Event::factory()->create(); $group=EventGroup::factory()->create(['event_id'=>$event->id]);
