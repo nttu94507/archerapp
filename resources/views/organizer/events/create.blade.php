@@ -114,11 +114,14 @@
                         'r70o'=>'反曲弓 70 公尺公開組','r70m'=>'反曲弓 70 公尺男子組','r70f'=>'反曲弓 70 公尺女子組',
                         'r30o'=>'反曲弓 30 公尺公開組','r30m'=>'反曲弓 30 公尺男子組','r30f'=>'反曲弓 30 公尺女子組',
                         'c50o'=>'複合弓 50 公尺公開組','c50m'=>'複合弓 50 公尺男子組','c50f'=>'複合弓 50 公尺女子組',
-                    ] as $value=>$label)<option value="{{ $value }}">{{ $label }}</option>@endforeach
-                    <option value="indoor18">室內 18m／{{ $maxArrows > 36 ? 60 : 30 }} 箭</option>
-                    <option value="custom">自訂</option>
+                    ] as $value=>$label)<option value="{{ $value }}" data-mode="outdoor">{{ $label }}</option>@endforeach
+                    @foreach([
+                        'i18ro'=>'反曲弓 18 公尺公開組','i18rm'=>'反曲弓 18 公尺男子組','i18rf'=>'反曲弓 18 公尺女子組',
+                        'i18co'=>'複合弓 18 公尺公開組','i18cm'=>'複合弓 18 公尺男子組','i18cf'=>'複合弓 18 公尺女子組',
+                    ] as $value=>$label)<option value="{{ $value }}" data-mode="indoor">{{ $label }}</option>@endforeach
+                    <option value="custom" data-mode="all">自訂</option>
                 </select>
-                <p class="mt-1 text-xs text-gray-500">室外 70m／{{ $maxArrows > 36 ? 72 : 36 }} 箭・室外 30m／36 箭・室內 18m／{{ $maxArrows > 36 ? 60 : 30 }} 箭</p>
+                <p id="preset-mode-help" class="mt-1 text-xs text-gray-500">預設組別會依步驟 1 選擇的室內／室外賽事切換。室外 70m／{{ $maxArrows > 36 ? 72 : 36 }} 箭・室內 18m／{{ $maxArrows > 36 ? 60 : 30 }} 箭</p>
             </div>
             <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 <div class="sm:col-span-2 lg:col-span-1"><label class="text-sm font-medium">組別名稱 *</label><input id="group-name" name="groups[0][name]" required value="{{ old('groups.0.name','反曲弓 70 公尺公開組') }}" class="mt-1 min-h-12 w-full rounded-xl border-gray-300"></div>
@@ -187,26 +190,45 @@ document.addEventListener('DOMContentLoaded', () => {
         c50o: { name:'複合弓 50 公尺公開組', bow:'compound', gender:'open', mode:'outdoor', distance:'50m' },
         c50m: { name:'複合弓 50 公尺男子組', bow:'compound', gender:'male', mode:'outdoor', distance:'50m' },
         c50f: { name:'複合弓 50 公尺女子組', bow:'compound', gender:'female', mode:'outdoor', distance:'50m' },
-        indoor18: { mode: 'indoor', distance: '18m' },
+        i18ro: { name:'反曲弓 18 公尺公開組', bow:'recurve', gender:'open', mode:'indoor', distance:'18m' },
+        i18rm: { name:'反曲弓 18 公尺男子組', bow:'recurve', gender:'male', mode:'indoor', distance:'18m' },
+        i18rf: { name:'反曲弓 18 公尺女子組', bow:'recurve', gender:'female', mode:'indoor', distance:'18m' },
+        i18co: { name:'複合弓 18 公尺公開組', bow:'compound', gender:'open', mode:'indoor', distance:'18m' },
+        i18cm: { name:'複合弓 18 公尺男子組', bow:'compound', gender:'male', mode:'indoor', distance:'18m' },
+        i18cf: { name:'複合弓 18 公尺女子組', bow:'compound', gender:'female', mode:'indoor', distance:'18m' },
     };
     const syncArrowCount = () => {
         const singleArrows = mode.value === 'indoor' ? 30 : 36;
         arrows.value = roundFormat.value === 'double' ? singleArrows * 2 : singleArrows;
         arrowsPerEnd.value = mode.value === 'indoor' ? 3 : 6;
     };
-    preset.addEventListener('change', () => {
+    const applySelectedPreset = () => {
         const selected = presets[preset.value];
         if (!selected) return;
-        mode.value = selected.mode;
         if(selected.name) groupName.value=selected.name;
         if(selected.bow) groupBow.value=selected.bow;
         if(selected.gender) groupGender.value=selected.gender;
         distance.value = selected.distance;
         syncArrowCount();
-    });
+    };
+    const syncPresetOptions = (applyFirst = false) => {
+        const available = [...preset.options].filter(option => option.dataset.mode === mode.value || option.dataset.mode === 'all');
+        [...preset.options].forEach(option => {
+            const visible = option.dataset.mode === mode.value || option.dataset.mode === 'all';
+            option.hidden = !visible;
+            option.disabled = !visible;
+        });
+        if (!available.includes(preset.selectedOptions[0])) preset.value = available[0]?.value ?? 'custom';
+        if (applyFirst) applySelectedPreset();
+    };
+    preset.addEventListener('change', applySelectedPreset);
     roundFormat.addEventListener('change', syncArrowCount);
-    mode.addEventListener('change', syncArrowCount);
+    mode.addEventListener('change', () => {
+        syncPresetOptions(true);
+        syncArrowCount();
+    });
     roundFormat.value = Number(arrows.value) > (mode.value === 'indoor' ? 30 : 36) ? 'double' : 'single';
+    syncPresetOptions();
     syncArrowCount();
 
     const renderCompetition = () => {
