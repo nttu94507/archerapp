@@ -51,7 +51,7 @@ class IndividualEliminationBracketService
             if (! $snapshot) {
                 throw ValidationException::withMessages(['event_group_id'=>'此組別尚未正式發布排名，沒有可用的種子快照。']);
             }
-            if (EventEliminationBracket::where('event_group_id', $group->id)->exists()) {
+            if (EventEliminationBracket::where('event_group_id', $group->id)->where('category', 'individual')->exists()) {
                 throw ValidationException::withMessages(['event_group_id'=>'此組別已建立個人對抗表，不能重複生成。']);
             }
 
@@ -90,6 +90,7 @@ class IndividualEliminationBracketService
                 'event_phase_id'=>$phase->id,
                 'event_ranking_snapshot_id'=>$snapshot->id,
                 'name'=>$group->name.' 個人對抗表',
+                'category'=>'individual',
                 'scoring_mode'=>$scoringMode,
                 'bracket_size'=>$bracketSize,
                 'status'=>'ready',

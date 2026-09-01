@@ -91,6 +91,27 @@ class EventEliminationBracketTest extends TestCase
         app(IndividualEliminationBracketService::class)->create($event, $group, 4);
     }
 
+    public function test_individual_bracket_can_be_created_after_team_bracket(): void
+    {
+        [$event, $group] = $this->publishedRanking([40, 30, 20, 10], 'recurve', true);
+        $snapshot = $event->rankingSnapshots()->where('event_group_id', $group->id)->firstOrFail();
+        $teamPhase = $event->phases()->create([
+            'event_group_id'=>$group->id, 'name'=>$group->name.' 團體對抗賽',
+            'type'=>'elimination', 'sequence'=>2, 'scoring_mode'=>'set', 'status'=>'ready',
+        ]);
+        \App\Models\EventEliminationBracket::create([
+            'event_id'=>$event->id, 'event_group_id'=>$group->id,
+            'event_phase_id'=>$teamPhase->id, 'event_ranking_snapshot_id'=>$snapshot->id,
+            'name'=>$group->name.' 團體對抗表', 'category'=>'team',
+            'scoring_mode'=>'set', 'bracket_size'=>4, 'status'=>'ready', 'locked_at'=>now(),
+        ]);
+
+        $individual = app(IndividualEliminationBracketService::class)->create($event, $group, 4, true);
+
+        $this->assertSame('individual', $individual->fresh()->category);
+        $this->assertSame(2, $group->eliminationBrackets()->count());
+    }
+
     public function test_recurve_match_awards_two_one_zero_set_points_and_stops_at_six(): void
     {
         [$event, $group] = $this->publishedRanking([80, 70, 60, 50], 'recurve', true);
