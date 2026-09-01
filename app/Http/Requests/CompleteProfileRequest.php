@@ -30,6 +30,7 @@ class CompleteProfileRequest extends FormRequest
             'emergency_contact_name'  => ['required','string','max:100'],
             'emergency_contact_phone' => ['required','string','max:30'],
             'birthdate'  => ['required','date','before:today'],
+            'gender' => ['required','in:male,female'],
             'handedness' => ['nullable','in:left,right,both'],
             'bow_type'   => ['nullable','in:recurve,compound,barebow,traditional'],
 //            'club_name'  => ['nullable','string','max:255'],
@@ -41,6 +42,7 @@ class CompleteProfileRequest extends FormRequest
     {
         return [
             'nickname.required' => '請設定暱稱。',
+            'gender.required' => '請選擇競賽性別。',
             'agree_terms.accepted' => '請勾選同意條款與個資告知。',
         ];
     }

@@ -19,6 +19,9 @@ class EventRegistrationController extends Controller
         }
 
         $group->setRelation('event', $event);
+        if ($message = $this->genderEligibilityMessage($request, $group)) {
+            return redirect()->route('events.show', $event)->with('error', $message);
+        }
         if (! $group->isRegistrationOpen()) {
             return redirect()->route('events.show', $event)->with('error', '目前非報名期間。');
         }
@@ -51,7 +54,8 @@ class EventRegistrationController extends Controller
     public function quickRegister(Event $event,EventGroup $group, Request $request)
     {
         $user = $request->user();
-        $gender = $request->validate(['athlete_gender'=>[$group->is_team && $group->team_type === 'mixed' ? 'required' : 'nullable','in:male,female']])['athlete_gender'] ?? null;
+        $user->loadMissing('profile');
+        $gender = $user->profile?->gender;
 
         if (! $event->isPublished() || $event->cancelled_at) {
             return back()->with('error', '此賽事目前未開放報名。');
@@ -60,6 +64,10 @@ class EventRegistrationController extends Controller
         // 檢查 group 是否屬於該 event
         if ($group->event_id !== $event->id) {
             return back()->with('error', '組別不屬於此賽事。');
+        }
+
+        if ($message = $this->genderEligibilityMessage($request, $group)) {
+            return back()->with('error', $message);
         }
 
         // 檢查報名期間
@@ -104,6 +112,24 @@ class EventRegistrationController extends Controller
         }
 
         return redirect()->route('events.show', $event)->with('success', '報名成功！');
+    }
+
+    private function genderEligibilityMessage(Request $request, EventGroup $group): ?string
+    {
+        if ($group->gender === 'open' && ! ($group->is_team && $group->team_type === 'mixed')) {
+            return null;
+        }
+
+        $request->user()->loadMissing('profile');
+        $gender = $request->user()->profile?->gender;
+        if (! $gender) {
+            return '請先到會員資料設定競賽性別，再報名此組別。';
+        }
+        if ($group->gender !== 'open' && $group->gender !== $gender) {
+            return '性別不符合此組別的報名資格。';
+        }
+
+        return null;
     }
 
     public function withdraw(EventRegistration $registration, Request $request)

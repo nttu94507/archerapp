@@ -192,6 +192,25 @@ class OrganizerSubscriptionTest extends TestCase
         $this->assertDatabaseHas('event_groups', ['event_id' => $event->id, 'arrow_count' => 72]);
     }
 
+    public function test_create_event_shows_team_format_preview_and_persists_mixed_team_group(): void
+    {
+        $subscriber=$this->approvedOrganizer('混雙主辦方');
+        OrganizerSubscription::create(['user_id'=>$subscriber->id,'plan_code'=>EventPlanCatalog::SUBSCRIPTION,'status'=>OrganizerSubscription::STATUS_ACTIVE,'starts_at'=>now()]);
+
+        $this->actingAs($subscriber)->get(route('organizer.events.create'))
+            ->assertOk()->assertSee('賽事內容')->assertSee('3 人團體賽')->assertSee('男女混雙')->assertSee('建立架構預覽');
+
+        $payload=array_merge($this->eventPayload('混雙快速賽事'),['submit_mode'=>'publish','groups'=>[0=>[
+            'name'=>'反曲弓公開組','bow_type'=>'recurve','gender'=>'open','distance'=>'70m','arrow_count'=>72,
+            'arrows_per_end'=>6,'fee'=>0,'is_team'=>1,'team_type'=>'mixed','team_size'=>2,
+            'team_substitute_limit'=>1,
+        ]]]);
+        $this->actingAs($subscriber)->post(route('organizer.events.store'),$payload)->assertRedirect();
+
+        $event=Event::where('name','混雙快速賽事')->firstOrFail();
+        $this->assertDatabaseHas('event_groups',['event_id'=>$event->id,'is_team'=>1,'team_type'=>'mixed','team_size'=>2,'team_substitute_limit'=>1]);
+    }
+
     private function approvedOrganizer(string $organizationName): User
     {
         $user = User::factory()->create();

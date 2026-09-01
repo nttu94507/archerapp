@@ -182,7 +182,10 @@ class EventController extends Controller
         // 目前登入者已經報名哪些 group（有效狀態）
         $myGroupIds = [];
         $myRegistrations = collect();
+        $memberGender = null;
         if (auth()->check()) {
+            auth()->user()->loadMissing('profile');
+            $memberGender = auth()->user()->profile?->gender;
             $myGroupIds = \App\Models\EventRegistration::query()
                 ->where('event_id', $event->id)
                 ->where('user_id', auth()->id())
@@ -218,6 +221,7 @@ class EventController extends Controller
             'canManage'  => $canManage,
             'myGroupIds' => $myGroupIds,
             'myRegistrations' => $myRegistrations,
+            'memberGender' => $memberGender,
             'isEventFinished' => $isEventFinished,
             'registrationLocked' => $registrationLocked,
             'hasPublicQualificationLive' => $hasPublicQualificationLive,

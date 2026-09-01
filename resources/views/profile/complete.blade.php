@@ -103,6 +103,17 @@
                     </div>
 
                     <div>
+                        <label for="gender" class="block text-sm font-medium text-gray-700 mb-1">競賽性別 *</label>
+                        <select id="gender" name="gender" required
+                                class="block w-full rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-indigo-500">
+                            <option value="">請選擇</option>
+                            <option value="male" @selected(old('gender', optional($profile)->gender) === 'male')>男子</option>
+                            <option value="female" @selected(old('gender', optional($profile)->gender) === 'female')>女子</option>
+                        </select>
+                        @error('gender') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
+                    </div>
+
+                    <div>
                         <label for="handedness" class="block text-sm font-medium text-gray-700 mb-1">慣用手</label>
                         <select id="handedness" name="handedness"
                                 class="block w-full rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-indigo-500">

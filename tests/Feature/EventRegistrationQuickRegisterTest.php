@@ -7,6 +7,7 @@ use App\Models\EventGroup;
 use App\Models\EventRegistration;
 use App\Models\EventStaff;
 use App\Models\User;
+use App\Models\UserProfile;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -163,5 +164,30 @@ class EventRegistrationQuickRegisterTest extends TestCase
         ])->assertSessionHasErrors('groups.0.reg_end');
 
         $this->assertDatabaseCount('event_groups',0);
+    }
+
+    public function test_male_member_sees_gender_mismatch_and_cannot_register_female_group(): void
+    {
+        $user=User::factory()->create(['profile_completed_at'=>now()]);
+        UserProfile::create(['user_id'=>$user->id,'gender'=>'male']);
+        $event=Event::factory()->create(['reg_start'=>now()->subDay(),'reg_end'=>now()->addDay()]);
+        $group=EventGroup::factory()->create(['event_id'=>$event->id,'name'=>'女子組','gender'=>'female']);
+
+        $this->actingAs($user)->get(route('events.show',$event))
+            ->assertOk()->assertSee('女子組')->assertSee('性別不符合')->assertDontSee('立即報名');
+        $this->actingAs($user)->post(route('events.quick_register',[$event,$group]))
+            ->assertSessionHas('error','性別不符合此組別的報名資格。');
+        $this->assertDatabaseCount('event_registrations',0);
+    }
+
+    public function test_matching_gender_member_can_register_gender_specific_group(): void
+    {
+        $user=User::factory()->create(['profile_completed_at'=>now()]);
+        UserProfile::create(['user_id'=>$user->id,'gender'=>'female']);
+        $event=Event::factory()->create(['reg_start'=>now()->subDay(),'reg_end'=>now()->addDay()]);
+        $group=EventGroup::factory()->create(['event_id'=>$event->id,'gender'=>'female']);
+
+        $this->actingAs($user)->post(route('events.quick_register',[$event,$group]))->assertSessionHas('success');
+        $this->assertDatabaseHas('event_registrations',['user_id'=>$user->id,'event_group_id'=>$group->id,'athlete_gender'=>'female']);
     }
 }

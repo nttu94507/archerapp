@@ -19,7 +19,9 @@ class EventGroupFactory extends Factory
             'event_id' => Event::factory(),
             'name' => $this->faker->randomElement(['男子反曲弓', '女子反曲弓', '公開複合弓']) . ' ' . $this->faker->numberBetween(30, 70) . 'm',
             'bow_type' => $this->faker->randomElement(['recurve', 'compound', 'barebow']),
-            'gender' => $this->faker->randomElement(['male', 'female', 'open']),
+            // Gender-specific scenarios should opt in explicitly so unrelated
+            // registration tests do not randomly become eligibility tests.
+            'gender' => 'open',
             'age_class' => $this->faker->randomElement(['U15', 'U18', 'Open']),
             'distance' => $this->faker->randomElement(['30m', '50m', '70m']),
             'quota' => $this->faker->numberBetween(8, 64),

@@ -11,7 +11,7 @@ class UserProfile extends Model
         'user_id',
         'phone', 'city',
         'emergency_contact_name', 'emergency_contact_phone',
-        'birthdate', 'handedness', 'bow_type', 'club_name',
+        'birthdate', 'gender', 'handedness', 'bow_type', 'club_name',
         'consent_signed_at', 'consent_version',
     ];
 

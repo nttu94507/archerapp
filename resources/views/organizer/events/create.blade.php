@@ -4,7 +4,7 @@
 
 @section('content')
 <style>
-    #quick-event-form input:not([type="hidden"]):not([type="checkbox"]),
+    #quick-event-form input:not([type="hidden"]):not([type="checkbox"]):not([type="radio"]),
     #quick-event-form select {
         border: 1px solid #cbd5e1;
         background-color: #fff;
@@ -14,11 +14,11 @@
         box-shadow: 0 1px 2px rgba(15, 23, 42, .05);
         transition: border-color .15s ease, box-shadow .15s ease, background-color .15s ease;
     }
-    #quick-event-form input:not([type="hidden"]):not([type="checkbox"]):hover,
+    #quick-event-form input:not([type="hidden"]):not([type="checkbox"]):not([type="radio"]):hover,
     #quick-event-form select:hover {
         border-color: #94a3b8;
     }
-    #quick-event-form input:not([type="hidden"]):not([type="checkbox"]):focus,
+    #quick-event-form input:not([type="hidden"]):not([type="checkbox"]):not([type="radio"]):focus,
     #quick-event-form select:focus {
         border-color: #6366f1;
         outline: none;
@@ -94,6 +94,19 @@
         <section class="rounded-2xl border bg-white p-4 shadow-sm sm:p-6">
             <div class="mb-5"><p class="text-xs font-semibold text-indigo-600">步驟 2</p><h2 class="text-lg font-semibold">第一個報名組別</h2><p class="mt-1 text-xs text-gray-500">先建立主要組別，發布後仍可新增更多組別。</p></div>
             @if($maxArrows === 36)<div class="mb-4 flex items-center justify-between gap-3 rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-800"><span>免費方案僅支援單局最多 36 箭。</span><a href="{{ route('store.index') }}" class="shrink-0 font-semibold underline">查看方案</a></div>@endif
+            <div class="mb-5 rounded-2xl border border-slate-200 bg-slate-50 p-4 sm:p-5">
+                <div class="flex flex-wrap items-start justify-between gap-3">
+                    <div><h3 class="font-semibold text-slate-950">賽事內容</h3><p class="mt-1 text-xs text-slate-600">選擇這個組別除了個人排名賽，還要開放哪一種團體賽。</p></div>
+                    @if($maxArrows === 36)<a href="{{ route('store.index') }}" class="text-xs font-semibold text-indigo-600">團體賽需升級 →</a>@endif
+                </div>
+                <div class="mt-4 grid gap-3 md:grid-cols-3">
+                    <div class="rounded-xl border border-emerald-200 bg-emerald-50 p-4"><span class="inline-flex rounded-full bg-emerald-600 px-2 py-0.5 text-[10px] font-bold text-white">固定包含</span><p class="mt-2 font-semibold text-emerald-950">個人排名賽</p><p class="mt-1 text-xs text-emerald-700">所有選手先完成個人報名與排名計分。</p></div>
+                    <label class="team-format-card cursor-pointer rounded-xl border bg-white p-4 transition has-[:checked]:border-violet-500 has-[:checked]:bg-violet-50 {{ $maxArrows === 36 ? 'opacity-60' : '' }}"><span class="flex items-start gap-3"><input type="radio" name="team_format_selector" value="standard" @checked(old('groups.0.is_team') && old('groups.0.team_type','standard') === 'standard') @disabled($maxArrows === 36) class="mt-0.5 h-5 w-5 text-violet-600"><span><strong class="block text-sm text-slate-950">3 人團體賽</strong><span class="mt-1 block text-xs text-slate-600">依組別性別招募 3 名正式選手，每局／趟共 6 箭。</span></span></span></label>
+                    <label class="team-format-card cursor-pointer rounded-xl border bg-white p-4 transition has-[:checked]:border-violet-500 has-[:checked]:bg-violet-50 {{ $maxArrows === 36 ? 'opacity-60' : '' }}"><span class="flex items-start gap-3"><input type="radio" name="team_format_selector" value="mixed" @checked(old('groups.0.is_team') && old('groups.0.team_type') === 'mixed') @disabled($maxArrows === 36) class="mt-0.5 h-5 w-5 text-violet-600"><span><strong class="block text-sm text-slate-950">男女混雙</strong><span class="mt-1 block text-xs text-slate-600">固定一男一女，每局／趟共 4 箭。</span></span></span></label>
+                </div>
+                @if($maxArrows > 36)<button id="clear-team-format" type="button" class="mt-3 min-h-9 text-xs font-semibold text-slate-500 underline">此組別不開放團體賽</button>@endif
+                <div class="mt-4 rounded-xl border border-indigo-100 bg-white px-4 py-3" aria-live="polite"><p class="text-xs font-semibold text-indigo-600">建立架構預覽</p><div id="competition-summary" class="mt-2 flex flex-wrap gap-2"></div><p id="competition-note" class="mt-2 text-xs text-slate-500"></p></div>
+            </div>
             <div class="mb-4">
                 <label class="text-sm font-medium">快速套用賽制</label>
                 <select id="group-preset" class="mt-1 min-h-12 w-full rounded-xl border-indigo-200 bg-indigo-50">
@@ -113,9 +126,11 @@
                 <div><label class="text-sm font-medium">每趟箭數 *</label><select name="groups[0][arrows_per_end]" class="mt-1 min-h-12 w-full rounded-xl border-gray-300"><option value="6">6 箭</option><option value="3">3 箭</option></select></div>
                 <div><label class="text-sm font-medium">名額</label><input type="number" min="1" name="groups[0][quota]" value="{{ old('groups.0.quota') }}" placeholder="不填表示不限" class="mt-1 min-h-12 w-full rounded-xl border-gray-300"></div>
                 <div><label class="text-sm font-medium">報名費</label><input type="number" min="0" name="groups[0][fee]" value="{{ old('groups.0.fee',0) }}" class="mt-1 min-h-12 w-full rounded-xl border-gray-300"></div>
-                <input type="hidden" name="groups[0][is_team]" value="0">
+                <input id="group-is-team" type="hidden" name="groups[0][is_team]" value="{{ old('groups.0.is_team', 0) ? 1 : 0 }}">
+                <input id="group-team-type" type="hidden" name="groups[0][team_type]" value="{{ old('groups.0.team_type', 'standard') }}">
+                <input id="group-team-size" type="hidden" name="groups[0][team_size]" value="{{ old('groups.0.team_size', 3) }}">
                 @if($maxArrows > 36)
-                    <div class="sm:col-span-2 lg:col-span-3 rounded-xl border border-violet-200 bg-violet-50 p-4"><label class="flex min-h-11 cursor-pointer items-center gap-3 text-sm font-semibold text-violet-950"><input type="checkbox" name="groups[0][is_team]" value="1" @checked(old('groups.0.is_team')) class="h-5 w-5 rounded text-violet-600">開放3人團體組隊</label><input type="hidden" name="groups[0][team_size]" value="3"><label class="mt-3 block text-sm text-violet-900">組隊截止<input type="datetime-local" name="groups[0][team_formation_end]" value="{{ old('groups.0.team_formation_end') }}" class="mt-1 min-h-12 w-full rounded-xl border-violet-200 bg-white"></label><p class="mt-1 text-xs text-violet-700">未設定時沿用報名截止；選手仍須先完成個人報名。</p></div>
+                    <div id="team-settings" class="sm:col-span-2 lg:col-span-3 hidden rounded-xl border border-violet-200 bg-violet-50 p-4"><div class="grid gap-4 sm:grid-cols-2"><label class="block text-sm text-violet-900">組隊截止<input type="datetime-local" name="groups[0][team_formation_end]" value="{{ old('groups.0.team_formation_end') }}" class="mt-1 min-h-12 w-full rounded-xl border-violet-200 bg-white"></label><label class="block text-sm text-violet-900">候補名額<select name="groups[0][team_substitute_limit]" class="mt-1 min-h-12 w-full rounded-xl border-violet-200 bg-white"><option value="0">不設候補</option><option value="1" @selected(old('groups.0.team_substitute_limit') == 1)>每隊 1 名候補</option></select></label></div><p class="mt-2 text-xs text-violet-700">未設定組隊截止時沿用報名截止；選手仍須先完成個人報名。</p></div>
                 @endif
             </div>
         </section>
@@ -136,6 +151,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const distance = document.getElementById('group-distance');
     const arrows = document.getElementById('group-arrows');
     const mode = document.getElementById('event-mode');
+    const teamFormatInputs = [...document.querySelectorAll('input[name="team_format_selector"]')];
+    const isTeam = document.getElementById('group-is-team');
+    const teamType = document.getElementById('group-team-type');
+    const teamSize = document.getElementById('group-team-size');
+    const teamSettings = document.getElementById('team-settings');
+    const summary = document.getElementById('competition-summary');
+    const summaryNote = document.getElementById('competition-note');
 
     start.addEventListener('change', () => {
         if (!end.value) end.value = start.value;
@@ -155,6 +177,22 @@ document.addEventListener('DOMContentLoaded', () => {
         distance.value = selected.distance;
         arrows.value = selected.arrows;
     });
+
+    const renderCompetition = () => {
+        const selected = teamFormatInputs.find(input => input.checked)?.value || null;
+        isTeam.value = selected ? '1' : '0';
+        teamType.value = selected === 'mixed' ? 'mixed' : 'standard';
+        teamSize.value = selected === 'mixed' ? '2' : '3';
+        teamSettings?.classList.toggle('hidden', !selected);
+        const badges = ['<span class="rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-800">✓ 個人排名賽</span>'];
+        if (selected === 'standard') badges.push('<span class="rounded-full bg-violet-100 px-3 py-1 text-xs font-semibold text-violet-800">✓ 3 人團體賽</span>');
+        if (selected === 'mixed') badges.push('<span class="rounded-full bg-violet-100 px-3 py-1 text-xs font-semibold text-violet-800">✓ 男女混雙</span>');
+        summary.innerHTML = badges.join('');
+        summaryNote.textContent = selected ? '選手只需先報名這個個人組別，之後再進行組隊。' : '目前為純個人排名賽；建立後仍可編輯組別開啟團體功能。';
+    };
+    teamFormatInputs.forEach(input => input.addEventListener('change', renderCompetition));
+    document.getElementById('clear-team-format')?.addEventListener('click', () => { teamFormatInputs.forEach(input => input.checked = false); renderCompetition(); });
+    renderCompetition();
 });
 </script>
 @endsection

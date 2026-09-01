@@ -122,6 +122,9 @@
                             $full = $cap !== null && $registered >= $cap;
 
                             $already = auth()->check() && in_array($g->id, $myGroupIds ?? [], true);
+                            $requiresGender = $g->gender !== 'open' || ($g->is_team && $g->team_type === 'mixed');
+                            $genderMissing = auth()->check() && $requiresGender && empty($memberGender);
+                            $genderMismatch = auth()->check() && $g->gender !== 'open' && !empty($memberGender) && $g->gender !== $memberGender;
                             $groupRegStart = $g->reg_start ?: $regStartAt;
                             $groupRegEnd = $g->reg_end ?: $regEndAt;
                             $groupIsBetween = !$registrationLocked && $groupRegStart && $groupRegEnd && now()->between($groupRegStart, $groupRegEnd);
@@ -137,7 +140,7 @@
                         <li class="py-3 flex items-center justify-between">
                             <div class="min-w-0">
                                 <div class="font-medium text-gray-900 truncate">{{ $g->name }}</div>
-                                <div class="text-sm text-gray-700">{{ ['recurve'=>'反曲弓','compound'=>'複合弓','barebow'=>'光弓'][$g->bow_type] ?? '弓種不限' }} · {{ $g->distance ?: '距離未定' }} · {{ $g->arrow_count }} 箭</div>
+                                <div class="text-sm text-gray-700">{{ ['recurve'=>'反曲弓','compound'=>'複合弓','barebow'=>'光弓'][$g->bow_type] ?? '弓種不限' }} · {{ ['male'=>'男子組','female'=>'女子組','open'=>'性別不限'][$g->gender] ?? '性別不限' }} · {{ $g->distance ?: '距離未定' }} · {{ $g->arrow_count }} 箭</div>
                                 <div class="mt-1 text-xs text-gray-500">
                                     {{ (int) $g->fee > 0 ? 'NT$ '.number_format($g->fee) : '免費' }} ·
                                     @if($cap)剩餘 {{ max(0, $cap - $registered) }} / {{ $cap }} 名@else已報名 {{ $registered }} 人@endif
@@ -151,6 +154,10 @@
                                     <span class="inline-flex items-center rounded-xl bg-gray-100 px-3 py-1.5 text-xs font-medium text-gray-600">
                                 已報名
                             </span>
+                                @elseif($genderMismatch)
+                                    <span class="inline-flex min-h-10 items-center rounded-xl bg-red-50 px-3 text-xs font-semibold text-red-700">性別不符合</span>
+                                @elseif($genderMissing)
+                                    <a href="{{ route('member-profile.edit') }}" class="inline-flex min-h-10 items-center rounded-xl bg-amber-50 px-3 text-xs font-semibold text-amber-700">請先設定性別</a>
                                 @elseif(!$groupIsBetween)
                                     <span class="text-xs text-gray-400">{{ $registrationUnavailableLabel }}</span>
                                 @elseif($full)
