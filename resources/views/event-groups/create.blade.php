@@ -103,10 +103,7 @@
                     @if($maxArrows === 36)<p class="text-xs text-amber-700 mt-1">免費方案僅支援單局。</p>@endif
                 </div>
 
-                <div>
-                    <label class="block text-xs text-gray-600 mb-1">每趟箭數</label>
-                    <select name="groups[__INDEX__][arrows_per_end]" class="w-full rounded-lg border px-3 py-2 text-sm"><option value="6">6 箭</option><option value="3">3 箭</option></select>
-                </div>
+                <input type="hidden" name="groups[__INDEX__][arrows_per_end]" value="{{ $event->mode === 'indoor' ? 3 : 6 }}">
 
                 <div>
                     <label class="block text-xs text-gray-600 mb-1">名額</label>

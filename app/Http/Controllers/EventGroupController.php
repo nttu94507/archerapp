@@ -122,6 +122,7 @@ class EventGroupController extends Controller
             }
             foreach ($data['groups'] as $g) {
                 unset($g['use_custom_reg_window']);
+                $g['arrows_per_end'] = $event->mode === 'indoor' ? 3 : 6;
                 $g['standard_team_enabled'] = ! empty($g['standard_team_enabled']);
                 $g['mixed_team_enabled'] = ! empty($g['mixed_team_enabled']);
                 $g['is_team'] = $g['standard_team_enabled'] || $g['mixed_team_enabled'] || ! empty($g['is_team']);
@@ -177,6 +178,7 @@ class EventGroupController extends Controller
         ]);
         $standardEnabled=$req->boolean('standard_team_enabled');
         $mixedEnabled=$req->boolean('mixed_team_enabled');
+        $g['arrows_per_end'] = $event->mode === 'indoor' ? 3 : 6;
         if (($standardEnabled || $mixedEnabled) && ! $event->hasPlanFeature('team_competition')) {
             throw ValidationException::withMessages(['is_team'=>'團體賽為單場升級或訂閱方案功能。']);
         }

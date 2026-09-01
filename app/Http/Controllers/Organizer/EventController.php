@@ -297,7 +297,8 @@ class EventController extends Controller
 
         $validated = $request->validate($rules);
         if ($creating) {
-            $validated['groups'] = collect($validated['groups'] ?? [])->map(function (array $group): array {
+            $validated['groups'] = collect($validated['groups'] ?? [])->map(function (array $group) use ($validated): array {
+                $group['arrows_per_end'] = $validated['mode'] === 'indoor' ? 3 : 6;
                 $group['standard_team_enabled'] = ! empty($group['standard_team_enabled']);
                 $group['mixed_team_enabled'] = ! empty($group['mixed_team_enabled']);
                 $group['is_team'] = $group['standard_team_enabled'] || $group['mixed_team_enabled'] || ! empty($group['is_team']);

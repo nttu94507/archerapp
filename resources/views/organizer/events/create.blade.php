@@ -126,7 +126,7 @@
                 <div><label class="text-sm font-medium">性別</label><select id="group-gender" name="groups[0][gender]" class="mt-1 min-h-12 w-full rounded-xl border-gray-300"><option value="open">公開／不限</option><option value="male">男子</option><option value="female">女子</option></select></div>
                 <div><label class="text-sm font-medium">距離</label><input id="group-distance" name="groups[0][distance]" value="{{ old('groups.0.distance','70m') }}" class="mt-1 min-h-12 w-full rounded-xl border-gray-300"></div>
                 <div><label class="text-sm font-medium">排名賽局數 *</label><select id="group-round-format" class="mt-1 min-h-12 w-full rounded-xl border-gray-300"><option value="single">單局（室外 36 箭／室內 30 箭）</option>@if($maxArrows > 36)<option value="double">雙局（室外 72 箭／室內 60 箭）</option>@endif</select>@if($maxArrows === 36)<p class="mt-1 text-xs text-amber-700">免費方案僅支援單局。</p>@endif<input id="group-arrows" type="hidden" name="groups[0][arrow_count]" value="{{ old('groups.0.arrow_count', 36) }}"></div>
-                <div><label class="text-sm font-medium">每趟箭數 *</label><select name="groups[0][arrows_per_end]" class="mt-1 min-h-12 w-full rounded-xl border-gray-300"><option value="6">6 箭</option><option value="3">3 箭</option></select></div>
+                <input id="group-arrows-per-end" type="hidden" name="groups[0][arrows_per_end]" value="{{ old('groups.0.arrows_per_end', old('mode') === 'indoor' ? 3 : 6) }}">
                 <div><label class="text-sm font-medium">名額</label><input type="number" min="1" name="groups[0][quota]" value="{{ old('groups.0.quota') }}" placeholder="不填表示不限" class="mt-1 min-h-12 w-full rounded-xl border-gray-300"></div>
                 <div><label class="text-sm font-medium">報名費</label><input type="number" min="0" name="groups[0][fee]" value="{{ old('groups.0.fee',0) }}" class="mt-1 min-h-12 w-full rounded-xl border-gray-300"></div>
                 <input id="group-is-team" type="hidden" name="groups[0][is_team]" value="{{ old('groups.0.is_team', 0) ? 1 : 0 }}">
@@ -156,6 +156,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const distance = document.getElementById('group-distance');
     const arrows = document.getElementById('group-arrows');
     const roundFormat = document.getElementById('group-round-format');
+    const arrowsPerEnd = document.getElementById('group-arrows-per-end');
     const mode = document.getElementById('event-mode');
     const groupName = document.getElementById('group-name');
     const groupBow = document.getElementById('group-bow');
@@ -191,6 +192,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const syncArrowCount = () => {
         const singleArrows = mode.value === 'indoor' ? 30 : 36;
         arrows.value = roundFormat.value === 'double' ? singleArrows * 2 : singleArrows;
+        arrowsPerEnd.value = mode.value === 'indoor' ? 3 : 6;
     };
     preset.addEventListener('change', () => {
         const selected = presets[preset.value];
