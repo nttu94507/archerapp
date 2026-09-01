@@ -16,11 +16,12 @@ use Illuminate\Validation\ValidationException;
 class SeedDemoEvent extends Command
 {
     protected $signature = 'demo:seed-event
-        {--owner=demo.organizer@example.test : 主辦方帳號 Email；不存在時自動建立}
+        {--owner= : 已存在的 Google 登入帳號 Email；未指定時使用最新會員}
         {--athletes=8 : 每個組別建立的選手與報名數}
         {--groups=3 : 建立組別數，最多 6 組；免費版固定 1 組}
         {--mode=outdoor : outdoor 或 indoor}
         {--free : 建立免費版賽事，否則預設為單場付費版}
+        {--unlisted : 不顯示於公開賽事列表}
         {--check-in : 啟用報到，並將所有測試選手標記為已報到}';
 
     protected $description = '建立可立即測試報名、排靶與計分的 Demo 賽事及選手資料';
@@ -37,6 +38,7 @@ class SeedDemoEvent extends Command
         $athletesPerGroup = (int) $this->option('athletes');
         $requestedGroups = (int) $this->option('groups');
         $free = (bool) $this->option('free');
+        $unlisted = (bool) $this->option('unlisted');
         $checkIn = (bool) $this->option('check-in') && ! $free;
 
         if (! in_array($mode, ['outdoor', 'indoor'], true)) {
@@ -59,22 +61,30 @@ class SeedDemoEvent extends Command
 
             return self::INVALID;
         }
+        if ($free && $unlisted) {
+            $this->error('免費版不支援不公開賽事，請移除 --unlisted 或不要使用 --free。');
+
+            return self::INVALID;
+        }
 
         $groupCount = $free ? 1 : $requestedGroups;
         $batch = now()->format('YmdHis').'-'.Str::lower(Str::random(4));
-        $password = 'password';
         $ownerEmail = mb_strtolower(trim((string) $this->option('owner')));
+        $owner = $ownerEmail !== ''
+            ? User::whereRaw('LOWER(email) = ?', [$ownerEmail])->first()
+            : User::whereNotNull('google_id')->latest('id')->first();
+        if (! $owner) {
+            $this->error($ownerEmail !== ''
+                ? '找不到主辦帳號 '.$ownerEmail.'，請先使用此 Google 帳號登入網站。'
+                : '目前沒有會員帳號，請先使用 Google 登入網站一次，或使用 --owner 指定既有帳號。');
+
+            return self::FAILURE;
+        }
 
         try {
-            [$event, $owner, $ownerCreated, $groups, $createdUsers] = DB::transaction(function () use (
-                $mode, $athletesPerGroup, $groupCount, $free, $checkIn, $batch, $password, $ownerEmail
+            [$event, $groups, $createdUsers] = DB::transaction(function () use (
+                $mode, $athletesPerGroup, $groupCount, $free, $unlisted, $checkIn, $batch, $owner
             ): array {
-                $owner = User::where('email', $ownerEmail)->first();
-                $ownerCreated = $owner === null;
-                $owner ??= User::create([
-                    'name'=>'Demo 主辦方', 'email'=>$ownerEmail, 'password'=>$password,
-                    'email_verified_at'=>now(),
-                ]);
                 $owner->forceFill(['profile_completed_at'=>$owner->profile_completed_at ?: now()])->save();
 
                 $plan = $free ? EventPlanCatalog::FREE : EventPlanCatalog::EVENT_PASS;
@@ -84,7 +94,7 @@ class SeedDemoEvent extends Command
                     'mode'=>$mode, 'verified'=>true, 'level'=>'local',
                     'organizer'=>'Demo 測試主辦方', 'venue'=>'Demo 測試射箭場',
                     'reg_start'=>now()->subDay(), 'reg_end'=>now()->addDays(6),
-                    'status'=>'approved', 'published_at'=>now(), 'visibility'=>$free ? 'public' : 'unlisted',
+                    'status'=>'approved', 'published_at'=>now(), 'visibility'=>$unlisted ? 'unlisted' : 'public',
                     'check_in_enabled'=>$checkIn,
                     'plan_code'=>$plan, 'plan_status'=>EventPlanCatalog::STATUS_ACTIVE,
                     'plan_limits_snapshot'=>EventPlanCatalog::limits($plan),
@@ -114,7 +124,7 @@ class SeedDemoEvent extends Command
                         $email = sprintf('demo.%s.g%02d.a%03d@example.test', $batch, $groupIndex + 1, $index);
                         $user = User::create([
                             'name'=>sprintf('Demo 選手 G%02d-%03d', $groupIndex + 1, $index),
-                            'email'=>$email, 'password'=>$password, 'email_verified_at'=>now(),
+                            'email'=>$email, 'password'=>Str::random(40), 'email_verified_at'=>now(),
                         ]);
                         $user->forceFill(['profile_completed_at'=>now()])->save();
                         UserProfile::create([
@@ -136,7 +146,7 @@ class SeedDemoEvent extends Command
                     }
                 }
 
-                return [$event, $owner, $ownerCreated, $groups, $createdUsers];
+                return [$event, $groups, $createdUsers];
             });
         } catch (ValidationException $exception) {
             $this->error(collect($exception->errors())->flatten()->join(' '));
@@ -150,6 +160,7 @@ class SeedDemoEvent extends Command
             ['批次代碼', $batch],
             ['賽事', $event->name],
             ['方案', $free ? '免費版' : '單場付費版'],
+            ['可見度', $unlisted ? '不公開（持連結進入）' : '公開賽事列表'],
             ['模式', $mode === 'indoor' ? '室內' : '室外'],
             ['組別', $groups->count().' 組'],
             ['報名', $createdUsers->count().' 人'],
@@ -158,11 +169,7 @@ class SeedDemoEvent extends Command
             ['賽事管理', route('organizer.events.show', $event)],
             ['公開頁面', route('events.show', $event)],
         ]);
-        if ($ownerCreated) {
-            $this->warn('新建主辦帳號密碼：'.$password);
-        }
-        $this->line('測試選手密碼皆為：'.$password);
-        $this->line('選手帳號範例：'.($createdUsers->first()?->email ?? '—'));
+        $this->line('測試選手僅作為假資料，不提供登入；管理請使用上方既有 Google 帳號。');
 
         return self::SUCCESS;
     }
