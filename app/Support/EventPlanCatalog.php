@@ -60,6 +60,7 @@ final class EventPlanCatalog
             'advanced_badges'=>true,
             'custom_branding'=>true,
             'unlisted_visibility'=>true,
+            'team_competition'=>true,
         ];
 
         return match ($plan) {
@@ -78,6 +79,7 @@ final class EventPlanCatalog
                 'advanced_badges'=>false,
                 'custom_branding'=>false,
                 'unlisted_visibility'=>false,
+                'team_competition'=>false,
             ],
             self::EVENT_PASS, self::SUBSCRIPTION, self::LEGACY => $paid,
             default => throw new InvalidArgumentException('Unknown event plan: '.$plan),

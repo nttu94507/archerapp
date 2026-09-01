@@ -6,6 +6,7 @@ use App\Http\Controllers\Admin\UserController as AdminUserController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\EventController;
 use App\Http\Controllers\EventRegistrationController;
+use App\Http\Controllers\EventTeamController;
 use App\Http\Controllers\MyEventController;
 use App\Http\Controllers\GoogleController;
 use App\Http\Controllers\LeaderBoardController;
@@ -246,3 +247,13 @@ Route::get('events/{event}/groups/{group}/confirm-registration', [EventRegistrat
     ->name('events.registration.confirm');
 Route::patch('event-registrations/{registration}/withdraw', [EventRegistrationController::class, 'withdraw'])
     ->middleware('auth')->name('event-registrations.withdraw');
+Route::middleware(['auth', 'profile.completed'])->group(function () {
+    Route::get('events/{event}/groups/{group}/teams', [EventTeamController::class, 'index'])->name('events.teams.index');
+    Route::post('events/{event}/groups/{group}/teams', [EventTeamController::class, 'store'])->name('events.teams.store');
+    Route::post('events/{event}/groups/{group}/teams-auto-match', [EventTeamController::class, 'autoMatch'])->name('events.teams.auto-match');
+    Route::post('events/{event}/groups/{group}/teams/{team}/apply', [EventTeamController::class, 'apply'])->name('events.teams.apply');
+    Route::post('events/{event}/groups/{group}/teams/{team}/invite', [EventTeamController::class, 'invite'])->name('events.teams.invite');
+    Route::patch('events/{event}/groups/{group}/team-memberships/{membership}/respond', [EventTeamController::class, 'respond'])->name('events.teams.respond');
+    Route::patch('events/{event}/groups/{group}/teams/{team}/memberships/{membership}/review', [EventTeamController::class, 'review'])->name('events.teams.review');
+    Route::delete('events/{event}/groups/{group}/team-memberships/{membership}', [EventTeamController::class, 'leave'])->name('events.teams.leave');
+});

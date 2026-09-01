@@ -10,10 +10,10 @@ class EventEliminationShootOff extends Model
         'event_elimination_match_id', 'attempt_number',
         'participant_one_arrow', 'participant_two_arrow',
         'participant_one_value', 'participant_two_value', 'status', 'decision_type',
-        'winner_registration_id', 'decision_note', 'recorded_by', 'judged_by', 'judged_at',
+        'winner_registration_id', 'winner_team_id', 'participant_one_arrows', 'participant_two_arrows', 'decision_note', 'recorded_by', 'judged_by', 'judged_at',
     ];
 
-    protected $casts = ['judged_at'=>'datetime'];
+    protected $casts = ['judged_at'=>'datetime', 'participant_one_arrows'=>'array', 'participant_two_arrows'=>'array'];
 
     public function match() { return $this->belongsTo(EventEliminationMatch::class, 'event_elimination_match_id'); }
     public function winner() { return $this->belongsTo(EventRegistration::class, 'winner_registration_id'); }

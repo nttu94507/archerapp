@@ -142,6 +142,7 @@
                                     {{ (int) $g->fee > 0 ? 'NT$ '.number_format($g->fee) : '免費' }} ·
                                     @if($cap)剩餘 {{ max(0, $cap - $registered) }} / {{ $cap }} 名@else已報名 {{ $registered }} 人@endif
                                 </div>
+                                @if($g->is_team)<a href="{{ route('events.teams.index',[$event,$g]) }}" class="mt-2 inline-flex min-h-10 items-center rounded-xl bg-violet-50 px-3 text-xs font-semibold text-violet-700">團體組隊・{{ $g->active_teams_count }} 隊 →</a>@endif
                             </div>
 
                             {{-- 右側按鈕區 --}}

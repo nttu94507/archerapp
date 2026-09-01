@@ -13,8 +13,9 @@ class CompoundCumulativeMatchService
 
     public function recordEnd(EventEliminationMatch $match, array $oneArrows, array $twoArrows, ?int $actorId): EventEliminationMatch
     {
-        $oneArrows = $this->normalizeArrows($oneArrows, 'participant_one_arrows');
-        $twoArrows = $this->normalizeArrows($twoArrows, 'participant_two_arrows');
+        $arrowCount = in_array($match->bracket->category, ['team','mixed_team'], true) ? (($match->bracket->category==='mixed_team') ? 4 : 6) : 3;
+        $oneArrows = $this->normalizeArrows($oneArrows, 'participant_one_arrows', $arrowCount);
+        $twoArrows = $this->normalizeArrows($twoArrows, 'participant_two_arrows', $arrowCount);
 
         return DB::transaction(function () use ($match, $oneArrows, $twoArrows, $actorId): EventEliminationMatch {
             $match = EventEliminationMatch::query()->with('bracket.event')->lockForUpdate()->findOrFail($match->id);
@@ -24,13 +25,18 @@ class CompoundCumulativeMatchService
             if (! in_array($match->status, ['ready', 'in_progress'], true)) {
                 throw ValidationException::withMessages(['match'=>'此場目前不能輸入累計分數。']);
             }
-            if (! $match->participant_one_registration_id || ! $match->participant_two_registration_id) {
+            $hasParticipants=in_array($match->bracket->category,['team','mixed_team'],true)
+                ? ($match->participant_one_team_id && $match->participant_two_team_id)
+                : ($match->participant_one_registration_id && $match->participant_two_registration_id);
+            if (! $hasParticipants) {
                 throw ValidationException::withMessages(['match'=>'雙方選手尚未確定。']);
             }
 
+            $teamMatch=in_array($match->bracket->category,['team','mixed_team'],true);$maxEnds=$teamMatch?4:5;
+            $participantOneId=$teamMatch?$match->participant_one_team_id:$match->participant_one_registration_id;$participantTwoId=$teamMatch?$match->participant_two_team_id:$match->participant_two_registration_id;
             $endNumber = $match->ends()->count() + 1;
-            if ($endNumber > 5) {
-                throw ValidationException::withMessages(['match'=>'五趟已全部完成，請進行加射判定。']);
+            if ($endNumber > $maxEnds) {
+                throw ValidationException::withMessages(['match'=>$maxEnds.'趟已全部完成，請進行加射判定。']);
             }
             $oneEndTotal = $this->total($oneArrows);
             $twoEndTotal = $this->total($twoArrows);
@@ -48,17 +54,19 @@ class CompoundCumulativeMatchService
                 'recorded_by'=>$actorId,
             ]);
 
-            $status = $endNumber < 5 ? 'in_progress' : ($oneTotal === $twoTotal ? 'awaiting_shoot_off' : 'completed');
+            $status = $endNumber < $maxEnds ? 'in_progress' : ($oneTotal === $twoTotal ? 'awaiting_shoot_off' : 'completed');
             $winnerId = $status === 'completed'
-                ? ($oneTotal > $twoTotal ? $match->participant_one_registration_id : $match->participant_two_registration_id)
+                ? ($oneTotal > $twoTotal ? $participantOneId : $participantTwoId)
                 : null;
             $match->update([
                 'participant_one_total'=>$oneTotal,
                 'participant_two_total'=>$twoTotal,
-                'current_end'=>min($endNumber + 1, 5),
+                'current_end'=>min($endNumber + 1, $maxEnds),
                 'status'=>$status,
-                'winner_registration_id'=>$winnerId,
-                'loser_registration_id'=>$winnerId ? ($winnerId === $match->participant_one_registration_id ? $match->participant_two_registration_id : $match->participant_one_registration_id) : null,
+                'winner_registration_id'=>$teamMatch?null:$winnerId,
+                'loser_registration_id'=>$teamMatch?null:($winnerId ? ($winnerId === $participantOneId ? $participantTwoId : $participantOneId) : null),
+                'winner_team_id'=>$teamMatch?$winnerId:null,
+                'loser_team_id'=>$teamMatch&&$winnerId?($winnerId===$participantOneId?$participantTwoId:$participantOneId):null,
                 'completed_at'=>$winnerId ? now() : null,
             ]);
 
@@ -86,10 +94,10 @@ class CompoundCumulativeMatchService
         });
     }
 
-    private function normalizeArrows(array $arrows, string $field): array
+    private function normalizeArrows(array $arrows, string $field, int $required=3): array
     {
-        if (count($arrows) !== 3) {
-            throw ValidationException::withMessages([$field=>'每位選手每趟必須輸入 3 箭。']);
+        if (count($arrows) !== $required) {
+            throw ValidationException::withMessages([$field=>'每隊每趟必須輸入 '.$required.' 箭。']);
         }
         return collect($arrows)->map(function ($arrow) use ($field): string {
             $value = strtoupper(trim((string) $arrow));

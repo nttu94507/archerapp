@@ -286,10 +286,18 @@ class EventController extends Controller
                 'groups.*.quota' => ['nullable', 'integer', 'min:1'],
                 'groups.*.fee' => ['nullable', 'integer', 'min:0'],
                 'groups.*.is_team' => ['nullable', 'boolean'],
+                'groups.*.team_size' => ['nullable', 'integer', 'in:2,3'],
+                'groups.*.team_type' => ['nullable', 'in:standard,mixed'],
+                'groups.*.team_substitute_limit' => ['nullable', 'integer', 'between:0,1'],
+                'groups.*.team_formation_end' => ['nullable', 'date'],
             ];
         }
 
         $validated = $request->validate($rules);
+        if ($creating && collect($validated['groups'] ?? [])->contains(fn ($group) => ! empty($group['is_team']))
+            && ! $request->user()->hasActiveOrganizerSubscription()) {
+            throw \Illuminate\Validation\ValidationException::withMessages(['groups'=>'團體賽為訂閱或單場升級功能。']);
+        }
         $canUseCheckIn = $creating
             ? $request->user()->hasActiveOrganizerSubscription()
             : $event instanceof Event && $event->hasPlanFeature('check_in');

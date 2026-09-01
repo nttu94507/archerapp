@@ -8,6 +8,7 @@ use App\Models\EventGroup;
 use App\Models\EventEliminationMatch;
 use App\Models\EventRankingSnapshot;
 use App\Services\IndividualEliminationBracketService;
+use App\Services\TeamEliminationBracketService;
 use App\Services\EliminationShootOffService;
 use App\Services\EliminationMatchProgressionService;
 use Illuminate\Http\RedirectResponse;
@@ -28,7 +29,7 @@ class EventEliminationController extends Controller
 
         $event->load([
             'groups'=>fn ($query) => $query->with(['eliminationBrackets'=>fn ($brackets) => $brackets
-                ->with(['rankingSnapshot', 'matches.participantOneEntry', 'matches.participantTwoEntry', 'matches.sets', 'matches.ends', 'matches.shootOffs'])]),
+                ->with(['rankingSnapshot', 'matches.participantOneEntry', 'matches.participantTwoEntry', 'matches.participantOneTeam', 'matches.participantTwoTeam', 'matches.sets', 'matches.ends', 'matches.shootOffs'])]),
         ]);
         $snapshots = EventRankingSnapshot::query()
             ->where('event_id', $event->id)
@@ -49,18 +50,21 @@ class EventEliminationController extends Controller
         Request $request,
         Event $event,
         IndividualEliminationBracketService $service,
+        TeamEliminationBracketService $teamService,
     ): RedirectResponse {
         $this->authorize('manageScoreCorrections', $event);
         $data = $request->validate([
             'event_group_id'=>['required', 'integer'],
             'bracket_size'=>['required', 'integer', 'in:4,8,16,32,64,128'],
             'bronze_match_enabled'=>['nullable', 'boolean'],
+            'category'=>['nullable','in:individual,team'],
         ]);
         $group = EventGroup::query()
             ->where('event_id', $event->id)
             ->findOrFail($data['event_group_id']);
 
-        $service->create(
+        $category=$data['category']??'individual';
+        ($category==='team'?$teamService:$service)->create(
             $event,
             $group,
             (int) $data['bracket_size'],
@@ -69,14 +73,14 @@ class EventEliminationController extends Controller
         );
 
         return redirect()->route('organizer.events.elimination.index', $event)
-            ->with('success', $group->name.' 個人對抗表已依正式排名種子建立。');
+            ->with('success', $group->name.($category==='team'?' 團體':' 個人').'對抗表已依正式排名種子建立。');
     }
 
     public function showMatch(Event $event, EventEliminationMatch $match): View
     {
         $this->authorize('viewResults', $event);
         abort_unless($match->bracket()->where('event_id', $event->id)->exists(), 404);
-        $match->load(['bracket.group', 'sets', 'ends', 'shootOffs.recorder', 'shootOffs.judge', 'participantOneEntry', 'participantTwoEntry']);
+        $match->load(['bracket.group', 'sets', 'ends', 'shootOffs.recorder', 'shootOffs.judge', 'participantOneEntry', 'participantTwoEntry', 'participantOneTeam.memberships.registration', 'participantTwoTeam.memberships.registration']);
 
         return view($match->bracket->scoring_mode === 'cumulative'
             ? 'organizer.elimination.compound-match'

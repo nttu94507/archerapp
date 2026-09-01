@@ -28,6 +28,7 @@ class EventPlanEntitlementTest extends TestCase
         $this->assertSame(1, $event->planLimit('badges'));
         $this->assertTrue($event->hasPlanFeature('qualification'));
         $this->assertFalse($event->hasPlanFeature('check_in'));
+        $this->assertFalse($event->hasPlanFeature('team_competition'));
         $this->assertFalse($event->hasPlanFeature('individual_elimination'));
         $this->assertTrue($event->hasPlanFeature('internal_visibility'));
     }
@@ -43,6 +44,7 @@ class EventPlanEntitlementTest extends TestCase
         $this->assertTrue($event->hasPlanFeature('individual_elimination'));
         $this->assertTrue($event->hasPlanFeature('multiple_rounds'));
         $this->assertTrue($event->hasPlanFeature('check_in'));
+        $this->assertTrue($event->hasPlanFeature('team_competition'));
         $this->assertNull($event->planLimit('groups'));
         $this->assertNull($event->planLimit('arrows_per_phase'));
     }

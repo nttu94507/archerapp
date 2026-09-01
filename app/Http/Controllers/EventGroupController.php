@@ -98,10 +98,18 @@ class EventGroupController extends Controller
             'groups.*.quota'               => ['nullable','integer','min:1'],
             'groups.*.fee'                 => ['nullable','integer','min:0'],
             'groups.*.is_team'             => ['boolean'],
+            'groups.*.team_size'           => ['nullable','integer','in:3'],
+            'groups.*.team_type'           => ['nullable','in:standard,mixed'],
+            'groups.*.team_substitute_limit'=> ['nullable','integer','between:0,1'],
+            'groups.*.team_formation_end'  => ['nullable','date'],
             'groups.*.use_custom_reg_window' => ['nullable','boolean'],
             'groups.*.reg_start'           => ['nullable','date','required_if:groups.*.use_custom_reg_window,1','required_with:groups.*.reg_end'],
             'groups.*.reg_end'             => ['nullable','date','required_if:groups.*.use_custom_reg_window,1','required_with:groups.*.reg_start','after_or_equal:groups.*.reg_start'],
         ]);
+
+        if (collect($data['groups'])->contains(fn ($group) => ! empty($group['is_team'])) && ! $event->hasPlanFeature('team_competition')) {
+            throw ValidationException::withMessages(['groups'=>'團體賽為單場升級或訂閱方案功能。']);
+        }
 
         DB::transaction(function () use ($event, $data, $groupLimit) {
             Event::whereKey($event->id)->lockForUpdate()->firstOrFail();
@@ -152,10 +160,25 @@ class EventGroupController extends Controller
             'quota'     => ['nullable','integer','min:1'],
             'fee'       => ['nullable','integer','min:0'],
             'is_team'   => ['boolean'],
+            'team_size' => ['nullable','integer','in:3'],
+            'team_type' => ['nullable','in:standard,mixed'],
+            'team_substitute_limit' => ['nullable','integer','between:0,1'],
+            'team_formation_end' => ['nullable','date'],
             'use_custom_reg_window' => ['nullable','boolean'],
             'reg_start' => ['nullable','date','required_if:use_custom_reg_window,1','required_with:reg_end'],
             'reg_end'   => ['nullable','date','required_if:use_custom_reg_window,1','required_with:reg_start','after_or_equal:reg_start'],
         ]);
+        if ($req->boolean('is_team') && ! $event->hasPlanFeature('team_competition')) {
+            throw ValidationException::withMessages(['is_team'=>'團體賽為單場升級或訂閱方案功能。']);
+        }
+        if (! $req->boolean('is_team') && $group->eventTeams()->where('status','!=','disbanded')->exists()) {
+            throw ValidationException::withMessages(['is_team'=>'已有隊伍後不能關閉團體賽，請先處理現有隊伍。']);
+        }
+        $g['is_team'] = $req->boolean('is_team');
+        $g['team_type'] = $g['team_type'] ?? 'standard';
+        $g['team_size'] = $g['team_type'] === 'mixed' ? 2 : 3;
+        $g['team_substitute_limit'] = (int) ($g['team_substitute_limit'] ?? 0);
+        if (! $g['is_team']) $g['team_formation_end'] = null;
 
         if (! $req->boolean('use_custom_reg_window')) {
             $g['reg_start'] = null;

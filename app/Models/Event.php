@@ -87,6 +87,8 @@ class Event extends Model
         return $this->hasMany(EventAuditLog::class)->latest();
     }
 
+    public function eventTeams() { return $this->hasMany(EventTeam::class); }
+
     public function scopePublished($query) {
         return $query->where('status', 'approved')->whereNotNull('published_at')->whereNull('cancelled_at');
     }

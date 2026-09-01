@@ -110,14 +110,16 @@
                            name="groups[__INDEX__][fee]">
                 </div>
 
-                <div class="flex items-center gap-2">
+                @if($event->hasPlanFeature('team_competition'))<div class="flex items-center gap-2">
                     <div>
                         <label class="block text-xs text-gray-600 mb-1">隊制</label>
                         <input type="checkbox" class="rounded"
                                name="groups[__INDEX__][is_team]" value="1">
                     </div>
-                    <span class="text-xs text-gray-500 mt-5">此組別為隊際</span>
+                    <span class="text-xs text-gray-500 mt-5">開放3人團體組隊</span>
+                    <input type="hidden" name="groups[__INDEX__][team_size]" value="3">
                 </div>
+                <div><label class="block text-xs text-gray-600 mb-1">組隊截止</label><input type="datetime-local" name="groups[__INDEX__][team_formation_end]" class="w-full rounded-lg border px-3 py-2 text-sm"><p class="mt-1 text-xs text-gray-500">未填則沿用報名截止</p></div>@else<input type="hidden" name="groups[__INDEX__][is_team]" value="0">@endif
                 <div class="md:col-span-7"><label class="inline-flex min-h-11 items-center gap-2 text-sm"><input type="checkbox" name="groups[__INDEX__][use_custom_reg_window]" value="1" class="custom-reg-toggle h-5 w-5 rounded">自訂此組報名時間</label><p class="text-xs text-gray-500">未勾選時沿用賽事設定</p></div>
                 <div class="custom-reg-window hidden md:col-span-7 grid-cols-1 gap-3 sm:grid-cols-2"><div><label class="block text-xs text-gray-600 mb-1">報名開始</label><input type="datetime-local" name="groups[__INDEX__][reg_start]" class="custom-reg-input w-full rounded-lg border px-3 py-2 text-sm"></div><div><label class="block text-xs text-gray-600 mb-1">報名截止</label><input type="datetime-local" name="groups[__INDEX__][reg_end]" class="custom-reg-input w-full rounded-lg border px-3 py-2 text-sm"></div></div>
             </div>

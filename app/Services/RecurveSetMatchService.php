@@ -13,8 +13,9 @@ class RecurveSetMatchService
 
     public function recordSet(EventEliminationMatch $match, array $oneArrows, array $twoArrows, ?int $actorId): EventEliminationMatch
     {
-        $oneArrows = $this->normalizeArrows($oneArrows, 'participant_one_arrows');
-        $twoArrows = $this->normalizeArrows($twoArrows, 'participant_two_arrows');
+        $arrowCount = in_array($match->bracket->category, ['team','mixed_team'], true) ? (($match->bracket->category==='mixed_team') ? 4 : 6) : 3;
+        $oneArrows = $this->normalizeArrows($oneArrows, 'participant_one_arrows', $arrowCount);
+        $twoArrows = $this->normalizeArrows($twoArrows, 'participant_two_arrows', $arrowCount);
 
         return DB::transaction(function () use ($match, $oneArrows, $twoArrows, $actorId): EventEliminationMatch {
             $match = EventEliminationMatch::query()->with('bracket.event')->lockForUpdate()->findOrFail($match->id);
@@ -24,13 +25,18 @@ class RecurveSetMatchService
             if (! in_array($match->status, ['ready', 'in_progress'], true)) {
                 throw ValidationException::withMessages(['match'=>'此場目前不能輸入局分。']);
             }
-            if (! $match->participant_one_registration_id || ! $match->participant_two_registration_id) {
+            $hasParticipants=in_array($match->bracket->category,['team','mixed_team'],true)
+                ? ($match->participant_one_team_id && $match->participant_two_team_id)
+                : ($match->participant_one_registration_id && $match->participant_two_registration_id);
+            if (! $hasParticipants) {
                 throw ValidationException::withMessages(['match'=>'雙方選手尚未確定。']);
             }
 
+            $teamMatch=in_array($match->bracket->category,['team','mixed_team'],true);$maxSets=$teamMatch?4:5;$winPoints=$teamMatch?5:6;
+            $participantOneId=$teamMatch?$match->participant_one_team_id:$match->participant_one_registration_id;$participantTwoId=$teamMatch?$match->participant_two_team_id:$match->participant_two_registration_id;
             $setNumber = $match->sets()->count() + 1;
-            if ($setNumber > 5) {
-                throw ValidationException::withMessages(['match'=>'五局已全部完成，請進行加射判定。']);
+            if ($setNumber > $maxSets) {
+                throw ValidationException::withMessages(['match'=>$maxSets.'局已全部完成，請進行加射判定。']);
             }
             $oneTotal = $this->total($oneArrows);
             $twoTotal = $this->total($twoArrows);
@@ -51,20 +57,22 @@ class RecurveSetMatchService
             $twoScore = $match->participant_two_set_points + $twoPoints;
             $status = 'in_progress';
             $winnerId = null;
-            if ($oneScore >= 6 || $twoScore >= 6 || ($setNumber === 5 && $oneScore !== $twoScore)) {
-                $winnerId = $oneScore > $twoScore ? $match->participant_one_registration_id : $match->participant_two_registration_id;
+            if ($oneScore >= $winPoints || $twoScore >= $winPoints || ($setNumber === $maxSets && $oneScore !== $twoScore)) {
+                $winnerId = $oneScore > $twoScore ? $participantOneId : $participantTwoId;
                 $status = 'completed';
-            } elseif ($setNumber === 5) {
+            } elseif ($setNumber === $maxSets) {
                 $status = 'awaiting_shoot_off';
             }
 
             $match->update([
                 'participant_one_set_points'=>$oneScore,
                 'participant_two_set_points'=>$twoScore,
-                'current_set'=>min($setNumber + 1, 5),
+                'current_set'=>min($setNumber + 1, $maxSets),
                 'status'=>$status,
-                'winner_registration_id'=>$winnerId,
-                'loser_registration_id'=>$winnerId ? ($winnerId === $match->participant_one_registration_id ? $match->participant_two_registration_id : $match->participant_one_registration_id) : null,
+                'winner_registration_id'=>$teamMatch?null:$winnerId,
+                'loser_registration_id'=>$teamMatch?null:($winnerId ? ($winnerId === $participantOneId ? $participantTwoId : $participantOneId) : null),
+                'winner_team_id'=>$teamMatch?$winnerId:null,
+                'loser_team_id'=>$teamMatch&&$winnerId?($winnerId===$participantOneId?$participantTwoId:$participantOneId):null,
                 'completed_at'=>$winnerId ? now() : null,
             ]);
 
@@ -94,10 +102,10 @@ class RecurveSetMatchService
         });
     }
 
-    private function normalizeArrows(array $arrows, string $field): array
+    private function normalizeArrows(array $arrows, string $field, int $required=3): array
     {
-        if (count($arrows) !== 3) {
-            throw ValidationException::withMessages([$field=>'每位選手每局必須輸入 3 箭。']);
+        if (count($arrows) !== $required) {
+            throw ValidationException::withMessages([$field=>'每隊每局必須輸入 '.$required.' 箭。']);
         }
         return collect($arrows)->map(function ($arrow) use ($field): string {
             $value = strtoupper(trim((string) $arrow));

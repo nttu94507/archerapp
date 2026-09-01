@@ -51,6 +51,7 @@ class EventRegistrationController extends Controller
     public function quickRegister(Event $event,EventGroup $group, Request $request)
     {
         $user = $request->user();
+        $gender = $request->validate(['athlete_gender'=>[$group->is_team && $group->team_type === 'mixed' ? 'required' : 'nullable','in:male,female']])['athlete_gender'] ?? null;
 
         if (! $event->isPublished() || $event->cancelled_at) {
             return back()->with('error', '此賽事目前未開放報名。');
@@ -81,7 +82,7 @@ class EventRegistrationController extends Controller
         }
 
         try {
-            DB::transaction(function () use ($event, $group, $user) {
+            DB::transaction(function () use ($event, $group, $user, $gender) {
                 $lockedEvent = Event::whereKey($event->id)->lockForUpdate()->firstOrFail();
                 if ($lockedEvent->scoringSessions()->exists()) {
                     abort(422, '賽事已完成排靶，報名已截止。');
@@ -93,9 +94,9 @@ class EventRegistrationController extends Controller
 
                 $existing = EventRegistration::where('event_id',$event->id)->where('event_group_id',$group->id)->where('email',$user->email)->first();
                 if ($existing) {
-                    $existing->update(['user_id'=>$user->id,'name'=>$user->display_name,'status'=>'registered','withdraw_reason'=>null,'withdrawn_at'=>null,'withdrawn_by'=>null]);
+                    $existing->update(['user_id'=>$user->id,'name'=>$user->display_name,'athlete_gender'=>$gender,'status'=>'registered','withdraw_reason'=>null,'withdrawn_at'=>null,'withdrawn_by'=>null]);
                 } else {
-                    EventRegistration::create(['event_id'=>$event->id,'event_group_id'=>$group->id,'user_id'=>$user->id,'name'=>$user->display_name,'email'=>$user->email,'status'=>'registered']);
+                    EventRegistration::create(['event_id'=>$event->id,'event_group_id'=>$group->id,'user_id'=>$user->id,'name'=>$user->display_name,'email'=>$user->email,'athlete_gender'=>$gender,'status'=>'registered']);
                 }
             });
         } catch (\Symfony\Component\HttpKernel\Exception\HttpException $e) {
@@ -111,7 +112,18 @@ class EventRegistrationController extends Controller
         abort_unless(in_array($registration->status, ['registered'], true), 422);
         abort_if($registration->event()->whereHas('scoringSessions')->exists(), 422, '賽事已完成排靶，請聯絡主辦方處理退賽。');
         abort_if($registration->checked_in_at !== null, 422, '已完成報到，請聯絡主辦方處理退賽。');
-        $registration->update(['status'=>'withdrawn','withdraw_reason'=>$request->input('reason'),'withdrawn_at'=>now(),'withdrawn_by'=>$request->user()->id]);
+        DB::transaction(function () use ($registration, $request): void {
+            $membership = $registration->teamMembership()->with('team')->first();
+            if ($membership?->role === 'captain') {
+                $membership->team->update(['status'=>'disbanded']);
+                $membership->team->memberships()->delete();
+            } elseif ($membership) {
+                $team = $membership->team;
+                $membership->delete();
+                $team->refreshStatus();
+            }
+            $registration->update(['status'=>'withdrawn','withdraw_reason'=>$request->input('reason'),'withdrawn_at'=>now(),'withdrawn_by'=>$request->user()->id]);
+        });
         return back()->with('success', '已取消報名。');
     }
 

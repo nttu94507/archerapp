@@ -114,6 +114,9 @@
                 <div><label class="text-sm font-medium">名額</label><input type="number" min="1" name="groups[0][quota]" value="{{ old('groups.0.quota') }}" placeholder="不填表示不限" class="mt-1 min-h-12 w-full rounded-xl border-gray-300"></div>
                 <div><label class="text-sm font-medium">報名費</label><input type="number" min="0" name="groups[0][fee]" value="{{ old('groups.0.fee',0) }}" class="mt-1 min-h-12 w-full rounded-xl border-gray-300"></div>
                 <input type="hidden" name="groups[0][is_team]" value="0">
+                @if($maxArrows > 36)
+                    <div class="sm:col-span-2 lg:col-span-3 rounded-xl border border-violet-200 bg-violet-50 p-4"><label class="flex min-h-11 cursor-pointer items-center gap-3 text-sm font-semibold text-violet-950"><input type="checkbox" name="groups[0][is_team]" value="1" @checked(old('groups.0.is_team')) class="h-5 w-5 rounded text-violet-600">開放3人團體組隊</label><input type="hidden" name="groups[0][team_size]" value="3"><label class="mt-3 block text-sm text-violet-900">組隊截止<input type="datetime-local" name="groups[0][team_formation_end]" value="{{ old('groups.0.team_formation_end') }}" class="mt-1 min-h-12 w-full rounded-xl border-violet-200 bg-white"></label><p class="mt-1 text-xs text-violet-700">未設定時沿用報名截止；選手仍須先完成個人報名。</p></div>
+                @endif
             </div>
         </section>
 

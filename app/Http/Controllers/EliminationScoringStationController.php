@@ -23,7 +23,7 @@ class EliminationScoringStationController extends Controller
                 ? response()->view('elimination-stations.device-locked', [], 423)
                 : view('elimination-stations.claim', compact('match'));
         }
-        $match->load(['bracket.event', 'bracket.group', 'sets', 'ends', 'shootOffs.recorder', 'shootOffs.judge', 'participantOneEntry', 'participantTwoEntry']);
+        $match->load(['bracket.event', 'bracket.group', 'sets', 'ends', 'shootOffs.recorder', 'shootOffs.judge', 'participantOneEntry', 'participantTwoEntry', 'participantOneTeam.memberships.registration', 'participantTwoTeam.memberships.registration']);
         $event = $match->bracket->event;
         $deviceMode = true;
         $stationToken = $token;
@@ -78,16 +78,24 @@ class EliminationScoringStationController extends Controller
     public function storeShootOff(Request $request, string $token, EliminationShootOffService $service): RedirectResponse
     {
         $match = $this->authorizedMatch($request, $token);
-        $data = $request->validate(['participant_one_arrow'=>['required','string','max:2'], 'participant_two_arrow'=>['required','string','max:2']]);
-        $service->record($match, $data['participant_one_arrow'], $data['participant_two_arrow'], null);
+        if(in_array($match->bracket->category,['team','mixed_team'],true)){
+            $size=$match->bracket->category==='mixed_team'?2:3;
+            $data=$request->validate(['participant_one_arrows'=>['required','array','size:'.$size],'participant_one_arrows.*'=>['required','string','max:2'],'participant_two_arrows'=>['required','array','size:'.$size],'participant_two_arrows.*'=>['required','string','max:2']]);
+            $service->recordTeam($match,$data['participant_one_arrows'],$data['participant_two_arrows'],null);
+        }else{
+            $data = $request->validate(['participant_one_arrow'=>['required','string','max:2'], 'participant_two_arrow'=>['required','string','max:2']]);
+            $service->record($match, $data['participant_one_arrow'], $data['participant_two_arrow'], null);
+        }
         return back()->with('success', '加射箭值已保存。');
     }
 
     private function scores(Request $request): array
     {
+        $match=$request->route('token')?EventEliminationMatch::where('access_token',$request->route('token'))->with('bracket')->first():null;
+        $size=$match&&in_array($match->bracket->category,['team','mixed_team'],true)?($match->bracket->category==='mixed_team'?4:6):3;
         return $request->validate([
-            'participant_one_arrows'=>['required','array','size:3'], 'participant_one_arrows.*'=>['required','string','max:2'],
-            'participant_two_arrows'=>['required','array','size:3'], 'participant_two_arrows.*'=>['required','string','max:2'],
+            'participant_one_arrows'=>['required','array','size:'.$size], 'participant_one_arrows.*'=>['required','string','max:2'],
+            'participant_two_arrows'=>['required','array','size:'.$size], 'participant_two_arrows.*'=>['required','string','max:2'],
         ]);
     }
 

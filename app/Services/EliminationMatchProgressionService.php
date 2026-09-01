@@ -10,6 +10,10 @@ class EliminationMatchProgressionService
 {
     public function advance(EventEliminationMatch $match, int $winnerId): void
     {
+        if (in_array($match->bracket->category, ['team','mixed_team'], true)) {
+            $this->advanceTeam($match, $winnerId);
+            return;
+        }
         $winnerIsOne = $winnerId === $match->participant_one_registration_id;
         $winnerEntry = $winnerIsOne ? $match->participantOneEntry : $match->participantTwoEntry;
         $loserEntry = $winnerIsOne ? $match->participantTwoEntry : $match->participantOneEntry;
@@ -17,6 +21,22 @@ class EliminationMatchProgressionService
         $this->placeParticipant($match->nextMatch, $match->next_slot, $winnerEntry);
         $this->placeParticipant($match->loserNextMatch, $match->loser_next_slot, $loserEntry);
         $this->reconcileBronzeWalkover($match->loserNextMatch);
+    }
+
+    private function advanceTeam(EventEliminationMatch $match, int $winnerId): void
+    {
+        $winnerIsOne=$winnerId===$match->participant_one_team_id;
+        $this->placeTeam($match->nextMatch,$match->next_slot,$winnerId,$winnerIsOne?$match->participant_one_seed:$match->participant_two_seed);
+        $loserId=$winnerIsOne?$match->participant_two_team_id:$match->participant_one_team_id;
+        $this->placeTeam($match->loserNextMatch,$match->loser_next_slot,$loserId,$winnerIsOne?$match->participant_two_seed:$match->participant_one_seed);
+        $this->reconcileBronzeWalkover($match->loserNextMatch);
+    }
+
+    private function placeTeam(?EventEliminationMatch $destination, ?int $slot, ?int $teamId, ?int $seed): void
+    {
+        if(!$destination||!$slot||!$teamId)return;$word=$slot===1?'one':'two';
+        $destination->update(["participant_{$word}_team_id"=>$teamId,"participant_{$word}_seed"=>$seed]);$destination->refresh();
+        if($destination->participant_one_team_id&&$destination->participant_two_team_id)$destination->update(['status'=>'ready']);
     }
 
     private function placeParticipant(?EventEliminationMatch $destination, ?int $slot, ?EventRankingSnapshotEntry $entry): void
@@ -48,16 +68,17 @@ class EliminationMatchProgressionService
             fn (EventEliminationMatch $match) => ! in_array($match->status, ['completed', 'walkover'], true)
         )) return false;
 
-        $participants = collect([
-            $bronze->participant_one_registration_id,
-            $bronze->participant_two_registration_id,
+        $teamMatch=in_array($bronze->bracket->category,['team','mixed_team'],true);
+        $participants = collect($teamMatch ? [$bronze->participant_one_team_id,$bronze->participant_two_team_id] : [
+            $bronze->participant_one_registration_id,$bronze->participant_two_registration_id,
         ])->filter()->unique()->values();
         if ($participants->count() !== 1) return false;
 
         $winnerId = (int) $participants->first();
         $bronze->update([
             'status'=>'walkover',
-            'winner_registration_id'=>$winnerId,
+            'winner_registration_id'=>$teamMatch?null:$winnerId,
+            'winner_team_id'=>$teamMatch?$winnerId:null,
             'loser_registration_id'=>null,
             'completed_at'=>now(),
         ]);
@@ -68,7 +89,7 @@ class EliminationMatchProgressionService
             'subject_type'=>EventEliminationMatch::class,
             'subject_id'=>$bronze->id,
             'metadata'=>[
-                'winner_registration_id'=>$winnerId,
+                $teamMatch?'winner_team_id':'winner_registration_id'=>$winnerId,
                 'reason'=>'only_eligible_semifinal_loser',
             ],
         ]);

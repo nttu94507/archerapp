@@ -9,7 +9,7 @@ class EventRegistration extends Model
     //
     protected $fillable = [
         'event_id','event_group_id','user_id',
-        'name','email','phone','team_name',
+        'name','email','phone','team_name','athlete_gender',
         'status','withdraw_reason','withdrawn_at','withdrawn_by',
         'paid','payment_status','payment_confirmed_at','payment_confirmed_by','payment_amount','payment_method','payment_reference','payment_note','score_submitted_at','checked_in_at','checked_in_by',
         'score_verified_at','score_verified_by','result_published_at','result_status',
@@ -51,4 +51,6 @@ class EventRegistration extends Model
     {
         return $this->hasMany(EventRankingSnapshotEntry::class, 'event_registration_id');
     }
+
+    public function teamMembership() { return $this->hasOne(EventTeamMember::class, 'event_registration_id'); }
 }

@@ -32,11 +32,12 @@ class EventGroup extends Model
 
     protected $fillable = [
         'event_id','name','bow_type','gender','age_class','distance','arrow_count',
-        'arrows_per_end','quota','fee','is_team','reg_start','reg_end','live_results_visible',
+        'arrows_per_end','quota','fee','is_team','team_size','team_type','team_substitute_limit','team_formation_end','reg_start','reg_end','live_results_visible',
     ];
 
     protected $casts = [
         'is_team'   => 'boolean',
+        'team_formation_end' => 'datetime',
         'reg_start' => 'datetime', 'reg_end' => 'datetime',
         'live_results_visible' => 'boolean',
     ];
@@ -74,6 +75,15 @@ class EventGroup extends Model
     public function rankingSnapshots()
     {
         return $this->hasMany(EventRankingSnapshot::class, 'event_group_id')->latest('version');
+    }
+
+    public function eventTeams() { return $this->hasMany(EventTeam::class, 'event_group_id'); }
+
+    public function teamFormationIsOpen(): bool
+    {
+        if (! $this->is_team || $this->event?->scoringSessions()->exists()) return false;
+        $deadline = $this->team_formation_end ?? $this->effectiveRegEnd();
+        return $deadline !== null && now()->lte($deadline);
     }
 
     public function eliminationBrackets()

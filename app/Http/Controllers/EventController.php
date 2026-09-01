@@ -161,7 +161,7 @@ class EventController extends Controller
                     // 帶出「有效報名數量」（例如：registered / checked_in 視為占名額）
                     ->withCount(['registrations as registered_count' => function ($r) {
                         $r->whereIn('status', ['registered','checked_in']);
-                    }]);
+                    }, 'eventTeams as active_teams_count' => fn ($teams) => $teams->where('status', '!=', 'disbanded')]);
             },
         ]);
         $event->loadCount(['eliminationBrackets as public_elimination_brackets_count'=>fn ($query) => $query->where('visibility', 'public')->whereNotNull('published_at')]);
@@ -463,6 +463,7 @@ class EventController extends Controller
             ->with([
                 'group', 'rankingSnapshot',
                 'matches.participantOneEntry', 'matches.participantTwoEntry',
+                'matches.participantOneTeam', 'matches.participantTwoTeam',
                 'matches.sets', 'matches.ends', 'matches.shootOffs',
             ])->get();
         abort_if($allBrackets->isEmpty(), 404);
@@ -471,8 +472,8 @@ class EventController extends Controller
             $mainMatches = $bracket->matches->where('match_type', 'main');
             $final = $mainMatches->sortByDesc('round_number')->first();
             $bronze = $bracket->matches->firstWhere('match_type', 'bronze');
-            $completed = (bool) $final?->winner_registration_id
-                && (! $bronze || (bool) $bronze->winner_registration_id);
+            $completed = (bool) ($final?->winner_registration_id || $final?->winner_team_id)
+                && (! $bronze || (bool) ($bronze->winner_registration_id || $bronze->winner_team_id));
             $active = $bracket->matches->whereIn('status', [
                 'ready', 'in_progress', 'awaiting_shoot_off', 'awaiting_judge',
             ])->count();
