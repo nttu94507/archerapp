@@ -9,6 +9,10 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('event_elimination_brackets', function (Blueprint $table): void {
+            // MySQL may use the old unique index as the backing index for the
+            // ranking snapshot foreign key. Give that FK a dedicated index
+            // before replacing the uniqueness rule.
+            $table->index('event_ranking_snapshot_id', 'elimination_snapshot_fk_idx');
             $table->dropUnique('elimination_snapshot_unique');
             $table->unique(['event_ranking_snapshot_id','category'], 'elim_snapshot_category_uq');
         });
@@ -28,6 +32,11 @@ return new class extends Migration
     {
         Schema::table('event_elimination_shoot_offs', function (Blueprint $table): void { $table->dropConstrainedForeignId('winner_team_id'); $table->dropColumn(['participant_one_arrows','participant_two_arrows']); });
         Schema::table('event_elimination_matches', function (Blueprint $table): void { foreach(['participant_one_team_id','participant_two_team_id','winner_team_id','loser_team_id'] as $column) $table->dropConstrainedForeignId($column); });
-        Schema::table('event_elimination_brackets', function (Blueprint $table): void { $table->dropUnique('elim_snapshot_category_uq'); $table->unique('event_ranking_snapshot_id','elimination_snapshot_unique'); });
+        Schema::table('event_elimination_brackets', function (Blueprint $table): void {
+            $table->dropUnique('elim_snapshot_category_uq');
+            $table->unique('event_ranking_snapshot_id','elimination_snapshot_unique');
+            // Keep the dedicated FK index. It is harmless and avoids MySQL
+            // binding the foreign key to a uniqueness constraint again.
+        });
     }
 };
