@@ -29,10 +29,11 @@ class TeamEliminationBracketService
             $category=$format==='mixed'?'mixed_team':'team';
             if(EventEliminationBracket::where('event_group_id',$group->id)->where('category',$category)->exists()) throw ValidationException::withMessages(['event_group_id'=>'此組別已建立所選類型的團體對抗表。']);
 
-            $teams=$group->eventTeams()->where('team_format',$format)->whereIn('status',['full','locked'])->with(['memberships'=>fn($q)=>$q->where('status','active')->whereIn('role',['captain','member']),'memberships.registration.scoreEntries'])->get()->map(function(EventTeam $team){
+            $teams=$group->eventTeams()->where('team_format',$format)->whereIn('status',['full','locked'])->with(['memberships'=>fn($q)=>$q->where('status','active'),'memberships.registration.scoreEntries'])->get()->map(function(EventTeam $team){
                 $members=$team->memberships;
                 if($members->count()!==$team->requiredSize() || $members->contains(fn($m)=>!$m->registration?->result_published_at)) return null;
-                $entries=$members->flatMap(fn($m)=>$m->registration->scoreEntries); $arrows=$entries->flatMap(fn($e)=>$e->scores??[]);
+                $counted=$members->sortByDesc(fn($m)=>$m->registration->scoreEntries->sum('end_total'))->take($team->scoringSize());
+                $entries=$counted->flatMap(fn($m)=>$m->registration->scoreEntries); $arrows=$entries->flatMap(fn($e)=>$e->scores??[]);
                 return ['team'=>$team,'total'=>$entries->sum('end_total'),'ten'=>$arrows->where('10')->count(),'x'=>$arrows->filter(fn($v)=>strtoupper((string)$v)==='X')->count()];
             })->filter()->sort(fn($a,$b)=>[$b['total'],$b['ten'],$b['x']]<=>[$a['total'],$a['ten'],$a['x']])->take($size)->values();
             if($teams->count()<2) throw ValidationException::withMessages(['event_group_id'=>'至少需要2支完整且已發布成績的隊伍。']);

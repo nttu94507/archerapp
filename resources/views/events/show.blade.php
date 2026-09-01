@@ -122,7 +122,7 @@
                             $full = $cap !== null && $registered >= $cap;
 
                             $already = auth()->check() && in_array($g->id, $myGroupIds ?? [], true);
-                            $requiresGender = $g->gender !== 'open' || ($g->is_team && $g->team_type === 'mixed');
+                            $requiresGender = $g->gender !== 'open' || $g->hasTeamFormat('mixed');
                             $genderMissing = auth()->check() && $requiresGender && empty($memberGender);
                             $genderMismatch = auth()->check() && $g->gender !== 'open' && !empty($memberGender) && $g->gender !== $memberGender;
                             $groupRegStart = $g->reg_start ?: $regStartAt;

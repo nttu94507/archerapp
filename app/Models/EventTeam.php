@@ -22,11 +22,12 @@ class EventTeam extends Model
     public function memberships() { return $this->hasMany(EventTeamMember::class); }
     public function activeMemberships() { return $this->hasMany(EventTeamMember::class)->where('status', 'active'); }
     public function competingMemberships() { return $this->hasMany(EventTeamMember::class)->where('status', 'active')->whereIn('role', ['captain','member']); }
-    public function requiredSize(): int { return $this->team_format === 'mixed' ? 2 : 3; }
+    public function requiredSize(): int { return $this->team_format === 'mixed' ? 2 : 4; }
+    public function scoringSize(): int { return $this->team_format === 'mixed' ? 2 : 3; }
 
     public function refreshStatus(): void
     {
         if (in_array($this->status, ['locked', 'disbanded'], true)) return;
-        $this->update(['status'=>$this->competingMemberships()->count() >= $this->requiredSize() ? 'full' : 'recruiting']);
+        $this->update(['status'=>$this->activeMemberships()->count() >= $this->requiredSize() ? 'full' : 'recruiting']);
     }
 }

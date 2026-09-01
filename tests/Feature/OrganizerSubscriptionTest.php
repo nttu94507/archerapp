@@ -202,13 +202,12 @@ class OrganizerSubscriptionTest extends TestCase
 
         $payload=array_merge($this->eventPayload('混雙快速賽事'),['submit_mode'=>'publish','groups'=>[0=>[
             'name'=>'反曲弓公開組','bow_type'=>'recurve','gender'=>'open','distance'=>'70m','arrow_count'=>72,
-            'arrows_per_end'=>6,'fee'=>0,'is_team'=>1,'team_type'=>'mixed','team_size'=>2,
-            'team_substitute_limit'=>1,
+            'arrows_per_end'=>6,'fee'=>0,'is_team'=>1,'standard_team_enabled'=>1,'mixed_team_enabled'=>1,
         ]]]);
         $this->actingAs($subscriber)->post(route('organizer.events.store'),$payload)->assertRedirect();
 
         $event=Event::where('name','混雙快速賽事')->firstOrFail();
-        $this->assertDatabaseHas('event_groups',['event_id'=>$event->id,'is_team'=>1,'team_type'=>'mixed','team_size'=>2,'team_substitute_limit'=>1]);
+        $this->assertDatabaseHas('event_groups',['event_id'=>$event->id,'is_team'=>1,'standard_team_enabled'=>1,'mixed_team_enabled'=>1]);
     }
 
     private function approvedOrganizer(string $organizationName): User

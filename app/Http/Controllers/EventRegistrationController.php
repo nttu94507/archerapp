@@ -116,7 +116,7 @@ class EventRegistrationController extends Controller
 
     private function genderEligibilityMessage(Request $request, EventGroup $group): ?string
     {
-        if ($group->gender === 'open' && ! ($group->is_team && $group->team_type === 'mixed')) {
+        if ($group->gender === 'open' && ! $group->hasTeamFormat('mixed')) {
             return null;
         }
 

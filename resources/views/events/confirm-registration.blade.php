@@ -23,7 +23,7 @@
 
         <form method="POST" action="{{ route('events.quick_register', [$event, $group]) }}" class="mt-6">
             @csrf
-            @if($group->is_team && $group->team_type === 'mixed')<div class="mb-5 rounded-xl bg-violet-50 p-4 text-sm text-violet-800">混雙競賽性別：<strong>{{ auth()->user()->profile?->gender === 'male' ? '男子' : '女子' }}</strong>（依會員資料帶入）</div>@endif
+            @if($group->hasTeamFormat('mixed'))<div class="mb-5 rounded-xl bg-violet-50 p-4 text-sm text-violet-800">本組別開放男女混雙。競賽性別：<strong>{{ auth()->user()->profile?->gender === 'male' ? '男子' : '女子' }}</strong>（依會員資料帶入）</div>@endif
             <button class="min-h-12 w-full rounded-xl bg-indigo-600 px-5 text-sm font-semibold text-white hover:bg-indigo-500">確認並完成報名</button>
         </form>
     </div>

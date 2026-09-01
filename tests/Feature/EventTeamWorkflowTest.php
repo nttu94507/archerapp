@@ -23,7 +23,7 @@ class EventTeamWorkflowTest extends TestCase
 
     public function test_registered_archers_can_form_a_three_person_event_team(): void
     {
-        [$event,$group,$users,$registrations]=$this->teamEvent(3);
+        [$event,$group,$users,$registrations]=$this->teamEvent(4);
 
         $this->actingAs($users[0])->post(route('events.teams.store',[$event,$group]), ['name'=>'團體 A','recruitment_note'=>'尋找同校隊友'])->assertSessionHas('success');
         $team=EventTeam::firstOrFail();
@@ -40,10 +40,13 @@ class EventTeamWorkflowTest extends TestCase
         $this->actingAs($users[0])->post(route('events.teams.invite',[$event,$group,$team]),['registration_id'=>$registrations[2]->id])->assertSessionHas('success');
         $invitation=EventTeamMember::where('event_registration_id',$registrations[2]->id)->firstOrFail();
         $this->actingAs($users[2])->patch(route('events.teams.respond',[$event,$group,$invitation]),['decision'=>'accept'])->assertSessionHas('success');
+        $this->actingAs($users[0])->post(route('events.teams.invite',[$event,$group,$team]),['registration_id'=>$registrations[3]->id]);
+        $fourth=EventTeamMember::where('event_registration_id',$registrations[3]->id)->firstOrFail();
+        $this->actingAs($users[3])->patch(route('events.teams.respond',[$event,$group,$fourth]),['decision'=>'accept']);
 
         $this->assertSame('full',$team->fresh()->status);
-        $this->assertSame(3,$team->activeMemberships()->count());
-        $this->actingAs($users[0])->get(route('events.teams.index',[$event,$group]))->assertOk()->assertSee('3 / 3');
+        $this->assertSame(4,$team->activeMemberships()->count());
+        $this->actingAs($users[0])->get(route('events.teams.index',[$event,$group]))->assertOk()->assertSee('4 / 4');
     }
 
     public function test_only_registered_archer_can_create_team_and_one_archer_cannot_join_two(): void
@@ -60,10 +63,10 @@ class EventTeamWorkflowTest extends TestCase
 
     public function test_team_ranking_uses_published_individual_scores_and_registration_withdrawal_updates_team(): void
     {
-        [$event,$group,$users,$registrations]=$this->teamEvent(3);
+        [$event,$group,$users,$registrations]=$this->teamEvent(4);
         $this->actingAs($users[0])->post(route('events.teams.store',[$event,$group]),['name'=>'滿分隊']);
         $team=EventTeam::firstOrFail();
-        foreach ([1,2] as $index) {
+        foreach ([1,2,3] as $index) {
             $team->memberships()->create(['event_group_id'=>$group->id,'event_registration_id'=>$registrations[$index]->id,'role'=>'member','status'=>'active','requested_by'=>$users[0]->id,'responded_at'=>now()]);
         }
         $team->refreshStatus();
@@ -101,14 +104,14 @@ class EventTeamWorkflowTest extends TestCase
 
     public function test_team_bracket_uses_team_seeds_and_six_arrow_set_scoring(): void
     {
-        [$event,$group,$users,$registrations]=$this->teamEvent(12);
+        [$event,$group,$users,$registrations]=$this->teamEvent(16);
         foreach ($registrations as $index=>$registration) {
             $registration->update(['score_verified_at'=>now(),'result_published_at'=>now(),'result_status'=>'completed']);
             EventScoreEntry::create(['event_id'=>$event->id,'event_registration_id'=>$registration->id,'user_id'=>$users[$index]->id,'end_number'=>1,'scores'=>['10'],'end_total'=>60-$index]);
         }
-        foreach ([0,3,6,9] as $start) {
+        foreach ([0,4,8,12] as $start) {
             $team=EventTeam::create(['event_id'=>$event->id,'event_group_id'=>$group->id,'captain_registration_id'=>$registrations[$start]->id,'name'=>'團體 '.($start+1),'status'=>'full']);
-            foreach (range($start,$start+2) as $index) $team->memberships()->create(['event_group_id'=>$group->id,'event_registration_id'=>$registrations[$index]->id,'role'=>$index===$start?'captain':'member','status'=>'active','requested_by'=>$users[$start]->id,'responded_at'=>now()]);
+            foreach (range($start,$start+3) as $index) $team->memberships()->create(['event_group_id'=>$group->id,'event_registration_id'=>$registrations[$index]->id,'role'=>$index===$start?'captain':'member','status'=>'active','requested_by'=>$users[$start]->id,'responded_at'=>now()]);
         }
         $group->qualificationPhase()->firstOrFail()->update(['status'=>'published','locked_at'=>now(),'published_at'=>now()]);
         app(QualificationRankingSnapshotService::class)->capture($event,$group);
@@ -135,7 +138,7 @@ class EventTeamWorkflowTest extends TestCase
         $this->assertDatabaseHas('event_teams',['event_group_id'=>$group->id,'name'=>'三人隊','team_format'=>'standard']);
         $this->assertDatabaseHas('event_teams',['event_group_id'=>$group->id,'name'=>'混雙隊','team_format'=>'mixed']);
         $this->actingAs($users[2])->get(route('events.teams.index',[$event,$group]))
-            ->assertOk()->assertSee('3人團體')->assertSee('男女混雙');
+            ->assertOk()->assertSee('三人團體')->assertSee('男女混雙');
     }
 
     private function teamEvent(int $count): array
