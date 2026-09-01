@@ -64,24 +64,50 @@
     @can('manageScores', $event)
     @if($brackets->isNotEmpty())
     <section class="space-y-4">
-        <div><h2 class="text-xl font-bold">對戰列表</h2><p class="mt-1 text-sm text-gray-500">每場對戰使用獨立 QR Code 與 PIN 綁定唯一計分設備。</p></div>
-        <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-            @forelse($brackets->flatMap->matches->filter(fn ($item) => ($item->participant_one_registration_id && $item->participant_two_registration_id) || ($item->participant_one_team_id && $item->participant_two_team_id)) as $match)
-            @php
-                $teamMatch = in_array($match->bracket->category, ['team', 'mixed_team'], true);
-                $participantOneName = $teamMatch ? $match->participantOneTeam?->name : $match->participantOneEntry?->athlete_name;
-                $participantTwoName = $teamMatch ? $match->participantTwoTeam?->name : $match->participantTwoEntry?->athlete_name;
-            @endphp
-            <article class="overflow-hidden rounded-2xl border bg-white shadow-sm">
-                <div class="flex items-center justify-between bg-gray-50 px-4 py-3 text-xs"><span class="font-medium text-gray-600">{{ $match->bracket->group->name }}・{{ $match->match_type === 'bronze' ? '季軍賽' : $match->label }} #{{ $match->position }}</span><span class="rounded-full px-2 py-1 {{ $match->device_token_hash ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-200 text-gray-600' }}">{{ $match->device_token_hash ? '設備已綁定' : '等待綁定' }}</span></div>
-                <div class="grid grid-cols-[minmax(0,1fr)_6.5rem] gap-3 p-4">
-                    <div class="space-y-2"><div class="flex min-h-11 items-center gap-2 rounded-xl border px-3"><span class="text-xs font-bold text-gray-400">{{ $match->participant_one_seed }}</span><strong class="truncate">{{ $participantOneName }}</strong></div><div class="flex min-h-11 items-center gap-2 rounded-xl border px-3"><span class="text-xs font-bold text-gray-400">{{ $match->participant_two_seed }}</span><strong class="truncate">{{ $participantTwoName }}</strong></div><div><p class="text-xs text-gray-500">設備 PIN</p><p class="font-mono text-xl font-bold tracking-[.2em]">{{ $match->device_pin }}</p></div></div>
-                    <img src="{{ route('organizer.events.elimination.matches.qrcode', [$event, $match]) }}" class="h-24 w-24 self-start rounded-lg border bg-white p-1" alt="{{ $participantOneName }} 對 {{ $participantTwoName }} 計分 QR Code">
+        <div><h2 class="text-xl font-bold">各組別對戰計分</h2><p class="mt-1 text-sm text-gray-500">QR Code 依組別與對抗類型分區；每場對戰仍使用獨立 PIN 綁定唯一計分設備。</p></div>
+        @php
+            $matchIsReadyForDevice = fn ($match) => ($match->participant_one_registration_id && $match->participant_two_registration_id)
+                || ($match->participant_one_team_id && $match->participant_two_team_id);
+            $groupsWithMatches = $event->groups->filter(fn ($group) => $group->eliminationBrackets
+                ->contains(fn ($bracket) => $bracket->matches->contains($matchIsReadyForDevice)));
+            $categoryNames = ['individual'=>'個人對抗', 'team'=>'3 人團體對抗', 'mixed_team'=>'男女混雙對抗'];
+        @endphp
+        @forelse($groupsWithMatches as $group)
+            <section class="overflow-hidden rounded-2xl border border-indigo-200 bg-indigo-50/40 shadow-sm">
+                <header class="border-b border-indigo-200 bg-indigo-50 px-4 py-4 sm:px-5"><p class="text-xs font-semibold uppercase tracking-wider text-indigo-600">計分組別</p><h3 class="mt-1 text-lg font-bold text-indigo-950">{{ $group->name }}</h3><p class="mt-1 text-xs text-indigo-700">{{ $group->distance ?: '距離未設定' }}・{{ $group->bow_type === 'compound' ? '複合弓' : ($group->bow_type === 'recurve' ? '反曲弓' : '其他弓種') }}</p></header>
+                <div class="space-y-6 p-4 sm:p-5">
+                    @foreach($group->eliminationBrackets as $bracket)
+                        @php
+                            $deviceMatches = $bracket->matches->filter($matchIsReadyForDevice);
+                        @endphp
+                        @if($deviceMatches->isNotEmpty())
+                            <div>
+                                <div class="mb-3 flex flex-wrap items-center justify-between gap-2"><div><h4 class="font-semibold text-gray-900">{{ $categoryNames[$bracket->category] ?? $bracket->name }}</h4><p class="mt-0.5 text-xs text-gray-500">{{ $bracket->bracket_size }} {{ $bracket->category === 'individual' ? '人制' : '隊制' }}・{{ $deviceMatches->count() }} 場可綁定設備</p></div></div>
+                                <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                                    @foreach($deviceMatches as $match)
+                                        @php
+                                            $teamMatch = in_array($bracket->category, ['team', 'mixed_team'], true);
+                                            $participantOneName = $teamMatch ? $match->participantOneTeam?->name : $match->participantOneEntry?->athlete_name;
+                                            $participantTwoName = $teamMatch ? $match->participantTwoTeam?->name : $match->participantTwoEntry?->athlete_name;
+                                        @endphp
+                                        <article class="overflow-hidden rounded-2xl border bg-white shadow-sm">
+                                            <div class="flex items-center justify-between bg-gray-50 px-4 py-3 text-xs"><span class="font-medium text-gray-600">{{ $match->match_type === 'bronze' ? '季軍賽' : $match->label }} #{{ $match->position }}</span><span class="rounded-full px-2 py-1 {{ $match->device_token_hash ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-200 text-gray-600' }}">{{ $match->device_token_hash ? '設備已綁定' : '等待綁定' }}</span></div>
+                                            <div class="grid grid-cols-[minmax(0,1fr)_6.5rem] gap-3 p-4">
+                                                <div class="space-y-2"><div class="flex min-h-11 items-center gap-2 rounded-xl border px-3"><span class="text-xs font-bold text-gray-400">{{ $match->participant_one_seed }}</span><strong class="truncate">{{ $participantOneName }}</strong></div><div class="flex min-h-11 items-center gap-2 rounded-xl border px-3"><span class="text-xs font-bold text-gray-400">{{ $match->participant_two_seed }}</span><strong class="truncate">{{ $participantTwoName }}</strong></div><div><p class="text-xs text-gray-500">設備 PIN</p><p class="font-mono text-xl font-bold tracking-[.2em]">{{ $match->device_pin }}</p></div></div>
+                                                <img src="{{ route('organizer.events.elimination.matches.qrcode', [$event, $match]) }}" class="h-24 w-24 self-start rounded-lg border bg-white p-1" alt="{{ $group->name }} {{ $participantOneName }} 對 {{ $participantTwoName }} 計分 QR Code">
+                                            </div>
+                                            <div class="border-t p-3"><a href="{{ route('elimination-stations.show', $match->access_token) }}" class="inline-flex min-h-11 w-full items-center justify-center rounded-xl bg-indigo-600 px-3 text-sm font-semibold text-white">開啟計分網址</a>@if($match->device_token_hash)<form method="POST" action="{{ route('organizer.events.elimination.matches.device.destroy', [$event, $match]) }}" class="mt-2">@csrf @method('DELETE')<button class="min-h-11 w-full rounded-xl border border-red-200 text-sm text-red-600" onclick="return confirm('解除後舊設備與網址會立即失效，確定？')">解除設備</button></form>@endif</div>
+                                        </article>
+                                    @endforeach
+                                </div>
+                            </div>
+                        @endif
+                    @endforeach
                 </div>
-                <div class="border-t p-3"><a href="{{ route('elimination-stations.show', $match->access_token) }}" class="inline-flex min-h-11 w-full items-center justify-center rounded-xl bg-indigo-600 px-3 text-sm font-semibold text-white">開啟計分網址</a>@if($match->device_token_hash)<form method="POST" action="{{ route('organizer.events.elimination.matches.device.destroy', [$event, $match]) }}" class="mt-2">@csrf @method('DELETE')<button class="min-h-11 w-full rounded-xl border border-red-200 text-sm text-red-600" onclick="return confirm('解除後舊設備與網址會立即失效，確定？')">解除設備</button></form>@endif</div>
-            </article>
-            @empty<p class="col-span-full rounded-2xl border border-dashed bg-white p-6 text-center text-sm text-gray-500">目前尚無雙方選手都已確定的對戰。</p>@endforelse
-        </div>
+            </section>
+        @empty
+            <p class="rounded-2xl border border-dashed bg-white p-6 text-center text-sm text-gray-500">目前尚無雙方選手或隊伍都已確定的對戰。</p>
+        @endforelse
     </section>
     @endif
     @endcan
