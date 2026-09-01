@@ -47,10 +47,11 @@
         </div>
     @endif
 
+    @php($startAtStepTwo = collect($errors->keys())->contains(fn ($key) => str_starts_with($key, 'groups.')))
     <form method="POST" action="{{ route('organizer.events.store') }}" class="space-y-5" id="quick-event-form">
         @csrf
 
-        <section class="rounded-2xl border bg-white p-4 shadow-sm sm:p-6">
+        <section id="event-step-one" class="rounded-2xl border bg-white p-4 shadow-sm sm:p-6 {{ $startAtStepTwo ? 'hidden' : '' }}">
             <div class="mb-5"><p class="text-xs font-semibold text-indigo-600">步驟 1</p><h2 class="text-lg font-semibold">賽事基本資料</h2></div>
             <div class="grid gap-4 sm:grid-cols-2">
                 <div class="sm:col-span-2">
@@ -89,10 +90,11 @@
                     @endif
                 </div>
             </div>
+            <div class="mt-6 flex justify-end border-t pt-4"><button id="go-to-step-two" type="button" class="min-h-12 rounded-xl bg-indigo-600 px-6 text-sm font-semibold text-white hover:bg-indigo-500">下一步：選擇組別 →</button></div>
         </section>
 
-        <section class="rounded-2xl border bg-white p-4 shadow-sm sm:p-6">
-            <div class="mb-5"><p class="text-xs font-semibold text-indigo-600">步驟 2</p><h2 class="text-lg font-semibold">第一個報名組別</h2><p class="mt-1 text-xs text-gray-500">先建立主要組別，發布後仍可新增更多組別。</p></div>
+        <section id="event-step-two" class="rounded-2xl border bg-white p-4 shadow-sm sm:p-6 {{ $startAtStepTwo ? '' : 'hidden' }}">
+            <div class="mb-5 flex flex-wrap items-start justify-between gap-3"><div><p class="text-xs font-semibold text-indigo-600">步驟 2</p><h2 class="text-lg font-semibold">第一個報名組別</h2><p class="mt-1 text-xs text-gray-500">先建立主要組別，發布後仍可新增更多組別。</p></div><button id="back-to-step-one" type="button" class="min-h-10 rounded-xl border px-4 text-sm font-medium text-gray-700 hover:bg-gray-50">← 返回基本資料</button></div>
             @if($maxArrows === 36)<div class="mb-4 flex items-center justify-between gap-3 rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-800"><span>免費方案僅支援單局最多 36 箭。</span><a href="{{ route('store.index') }}" class="shrink-0 font-semibold underline">查看方案</a></div>@endif
             <div class="mb-5 rounded-2xl border border-slate-200 bg-slate-50 p-4 sm:p-5">
                 <div class="flex flex-wrap items-start justify-between gap-3">
@@ -143,7 +145,7 @@
             </div>
         </section>
 
-        <div class="sticky bottom-3 z-10 grid grid-cols-2 gap-3 rounded-2xl border bg-white/95 p-3 shadow-lg backdrop-blur sm:static sm:flex sm:justify-end sm:border-0 sm:bg-transparent sm:p-0 sm:shadow-none">
+        <div id="event-final-actions" class="sticky bottom-3 z-10 {{ $startAtStepTwo ? 'grid' : 'hidden' }} grid-cols-2 gap-3 rounded-2xl border bg-white/95 p-3 shadow-lg backdrop-blur sm:static sm:flex sm:justify-end sm:border-0 sm:bg-transparent sm:p-0 sm:shadow-none">
             <button name="submit_mode" value="draft" class="min-h-12 rounded-xl border px-4 text-sm font-medium text-gray-700">儲存草稿</button>
             <button name="submit_mode" value="publish" class="min-h-12 rounded-xl bg-indigo-600 px-5 text-sm font-semibold text-white hover:bg-indigo-500">建立並發布</button>
         </div>
@@ -152,6 +154,39 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', () => {
+    const form = document.getElementById('quick-event-form');
+    const stepOne = document.getElementById('event-step-one');
+    const stepTwo = document.getElementById('event-step-two');
+    const finalActions = document.getElementById('event-final-actions');
+    const nextButton = document.getElementById('go-to-step-two');
+    const backButton = document.getElementById('back-to-step-one');
+    let currentStep = stepTwo.classList.contains('hidden') ? 1 : 2;
+    const showStep = step => {
+        currentStep = step;
+        stepOne.classList.toggle('hidden', step !== 1);
+        stepTwo.classList.toggle('hidden', step !== 2);
+        finalActions.classList.toggle('hidden', step !== 2);
+        finalActions.classList.toggle('grid', step === 2);
+        window.scrollTo({ top: form.offsetTop, behavior: 'smooth' });
+    };
+    const advanceToStepTwo = () => {
+        const invalidField = stepOne.querySelector(':invalid');
+        if (invalidField) {
+            invalidField.reportValidity();
+            invalidField.focus();
+            return false;
+        }
+        showStep(2);
+        return true;
+    };
+    nextButton.addEventListener('click', advanceToStepTwo);
+    backButton.addEventListener('click', () => showStep(1));
+    form.addEventListener('submit', event => {
+        if (currentStep === 1) {
+            event.preventDefault();
+            advanceToStepTwo();
+        }
+    });
     const start = document.getElementById('event-start');
     const end = document.getElementById('event-end');
     const regEnd = document.getElementById('reg-end');
