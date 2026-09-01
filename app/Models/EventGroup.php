@@ -32,11 +32,11 @@ class EventGroup extends Model
 
     protected $fillable = [
         'event_id','name','bow_type','gender','age_class','distance','arrow_count',
-        'arrows_per_end','quota','fee','is_team','team_size','team_type','team_substitute_limit','team_formation_end','reg_start','reg_end','live_results_visible',
+        'arrows_per_end','quota','fee','is_team','standard_team_enabled','mixed_team_enabled','team_size','team_type','team_substitute_limit','team_formation_end','reg_start','reg_end','live_results_visible',
     ];
 
     protected $casts = [
-        'is_team'   => 'boolean',
+        'is_team'   => 'boolean', 'standard_team_enabled'=>'boolean', 'mixed_team_enabled'=>'boolean',
         'team_formation_end' => 'datetime',
         'reg_start' => 'datetime', 'reg_end' => 'datetime',
         'live_results_visible' => 'boolean',
@@ -78,6 +78,16 @@ class EventGroup extends Model
     }
 
     public function eventTeams() { return $this->hasMany(EventTeam::class, 'event_group_id'); }
+
+    public function hasTeamFormat(string $format): bool
+    {
+        if ($this->standard_team_enabled || $this->mixed_team_enabled) {
+            return $format === 'mixed' ? (bool) $this->mixed_team_enabled : (bool) $this->standard_team_enabled;
+        }
+        return (bool) $this->is_team && ($this->team_type ?: 'standard') === $format;
+    }
+
+    public function teamSizeFor(string $format): int { return $format === 'mixed' ? 2 : 3; }
 
     public function teamFormationIsOpen(): bool
     {

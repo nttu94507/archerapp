@@ -57,20 +57,18 @@ class EventEliminationController extends Controller
             'event_group_id'=>['required', 'integer'],
             'bracket_size'=>['required', 'integer', 'in:4,8,16,32,64,128'],
             'bronze_match_enabled'=>['nullable', 'boolean'],
-            'category'=>['nullable','in:individual,team'],
+            'category'=>['nullable','in:individual,team,mixed_team'],
         ]);
         $group = EventGroup::query()
             ->where('event_id', $event->id)
             ->findOrFail($data['event_group_id']);
 
         $category=$data['category']??'individual';
-        ($category==='team'?$teamService:$service)->create(
-            $event,
-            $group,
-            (int) $data['bracket_size'],
-            $request->boolean('bronze_match_enabled'),
-            $request->user()->id,
-        );
+        if ($category === 'individual') {
+            $service->create($event,$group,(int)$data['bracket_size'],$request->boolean('bronze_match_enabled'),$request->user()->id);
+        } else {
+            $teamService->create($event,$group,(int)$data['bracket_size'],$request->boolean('bronze_match_enabled'),$request->user()->id,$category==='mixed_team'?'mixed':'standard');
+        }
 
         return redirect()->route('organizer.events.elimination.index', $event)
             ->with('success', $group->name.($category==='team'?' 團體':' 個人').'對抗表已依正式排名種子建立。');

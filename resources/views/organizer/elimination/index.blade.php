@@ -23,7 +23,7 @@
     <section class="rounded-2xl border bg-white p-4 shadow-sm sm:p-5">
         <div><h2 class="font-semibold">建立對抗表</h2><p class="mt-1 text-sm text-gray-500">建立後會鎖定本次籤表；如有同分待判定，系統會先阻止生成。</p></div>
         <form method="POST" action="{{ route('organizer.events.elimination.store', $event) }}" class="mt-4 grid gap-4 md:grid-cols-[10rem_minmax(0,1fr)_12rem_auto] md:items-end">@csrf
-            <label class="text-sm font-medium">類型<select name="category" class="mt-1 min-h-12 w-full rounded-xl border-gray-300"><option value="individual">個人對抗</option><option value="team">團體對抗</option></select></label>
+            <label class="text-sm font-medium">類型<select name="category" class="mt-1 min-h-12 w-full rounded-xl border-gray-300"><option value="individual">個人對抗</option><option value="team">3人團體對抗</option><option value="mixed_team">男女混雙對抗</option></select></label>
             <label class="text-sm font-medium">組別
                 <select name="event_group_id" required class="mt-1 min-h-12 w-full rounded-xl border-gray-300 text-base">
                     <option value="">請選擇</option>

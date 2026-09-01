@@ -6,7 +6,7 @@
         <a href="{{ route('events.show',$event) }}" class="inline-flex min-h-11 items-center text-sm font-medium text-indigo-600">← 返回賽事</a>
         <p class="text-xs font-semibold uppercase tracking-widest text-indigo-600">Team formation</p>
         <h1 class="mt-1 text-2xl font-bold">{{ $group->name }}・團體組隊</h1>
-        <p class="mt-1 text-sm text-gray-500">{{ $group->team_type==='mixed' ? '混雙2人隊' : '一般3人隊' }}{{ $group->team_substitute_limit ? '＋1位候補' : '' }}・{{ $group->teamFormationIsOpen() ? '目前開放組隊' : '組隊已截止，名單已鎖定' }}</p>
+        <p class="mt-1 text-sm text-gray-500">{{ collect([$group->standard_team_enabled ? '3人團體' : null,$group->mixed_team_enabled ? '男女混雙' : null])->filter()->join('＋') }}{{ $group->team_substitute_limit ? '・每隊可設1位候補' : '' }}・{{ $group->teamFormationIsOpen() ? '目前開放組隊' : '組隊已截止，名單已鎖定' }}</p>
     </header>
     @if(session('success'))<div class="rounded-xl bg-green-50 p-4 text-sm text-green-700">{{ session('success') }}</div>@endif
     @if($errors->any())<div class="rounded-xl bg-red-50 p-4 text-sm text-red-700">{{ $errors->first() }}</div>@endif
@@ -15,16 +15,17 @@
         <section class="rounded-2xl border border-indigo-200 bg-indigo-50 p-4 sm:p-5">
             <h2 class="font-semibold text-indigo-950">還沒有隊伍？</h2>
             <p class="mt-1 text-sm text-indigo-700">建立新隊伍成為隊長，或從下方招募列表申請加入。</p>
-            <form method="POST" action="{{ route('events.teams.store',[$event,$group]) }}" class="mt-4 grid gap-3 sm:grid-cols-[minmax(12rem,.8fr)_minmax(16rem,1.2fr)_auto]">@csrf
+            <form method="POST" action="{{ route('events.teams.store',[$event,$group]) }}" class="mt-4 grid gap-3 sm:grid-cols-2">@csrf
+                <select name="team_format" required class="min-h-12 rounded-xl border-indigo-200 bg-white"><option value="">選擇參加形式</option>@if($group->standard_team_enabled)<option value="standard">3 人團體賽</option>@endif @if($group->mixed_team_enabled)<option value="mixed">男女混雙</option>@endif</select>
                 <input name="name" required maxlength="100" value="{{ old('name') }}" class="min-h-12 min-w-0 rounded-xl border-indigo-200" placeholder="輸入隊伍名稱">
-                <input name="recruitment_note" maxlength="300" value="{{ old('recruitment_note') }}" class="min-h-12 min-w-0 rounded-xl border-indigo-200" placeholder="招募說明（選填，例如：尋找同校隊友）">
+                <input name="recruitment_note" maxlength="300" value="{{ old('recruitment_note') }}" class="min-h-12 min-w-0 rounded-xl border-indigo-200 sm:col-span-1" placeholder="招募說明（選填，例如：尋找同校隊友）">
                 <button class="min-h-12 rounded-xl bg-indigo-600 px-5 text-sm font-semibold text-white">建立並公開招募</button>
             </form>
         </section>
     @elseif(!$myRegistration)
         <div class="rounded-xl bg-amber-50 p-4 text-sm text-amber-800">完成此組別的個人報名後，才能建立或加入隊伍。</div>
     @endif
-    @if($canManage && $group->teamFormationIsOpen())<form method="POST" action="{{ route('events.teams.auto-match',[$event,$group]) }}" onsubmit="return confirm('系統只會使用尚未組隊的選手建立完整隊伍，確定自動配對？')" class="flex justify-end">@csrf<button class="min-h-11 rounded-xl border border-violet-200 bg-white px-4 text-sm font-medium text-violet-700">自動配對未組隊選手</button></form>@endif
+    @if($canManage && $group->teamFormationIsOpen())<div class="flex flex-wrap justify-end gap-2">@foreach(['standard'=>'自動配對3人團體','mixed'=>'自動配對男女混雙'] as $format=>$label)@if($group->hasTeamFormat($format))<form method="POST" action="{{ route('events.teams.auto-match',[$event,$group]) }}" onsubmit="return confirm('系統只會使用尚未參加任何團體形式的選手建立完整隊伍，確定？')">@csrf<input type="hidden" name="team_format" value="{{ $format }}"><button class="min-h-11 rounded-xl border border-violet-200 bg-white px-4 text-sm font-medium text-violet-700">{{ $label }}</button></form>@endif @endforeach</div>@endif
 
     @if($myMembership)
         <section class="rounded-2xl border bg-white p-4 shadow-sm sm:p-5">
@@ -49,11 +50,12 @@
                     $competingCount = $active->whereIn('role',['captain','member'])->count();
                     $pendingCount = $team->memberships->where('status','pending')->count();
                     $activeGenders = $active->whereIn('role',['captain','member'])->map(fn($member) => $member->registration?->athlete_gender)->filter();
-                    $mixedEligible = $group->team_type !== 'mixed' || ($myRegistration?->athlete_gender && ! $activeGenders->contains($myRegistration->athlete_gender));
-                    $wantedGender = $group->team_type === 'mixed' ? ($activeGenders->contains('male') ? '女性' : ($activeGenders->contains('female') ? '男性' : '一男一女')) : null;
+                    $mixedEligible = $team->team_format !== 'mixed' || ($myRegistration?->athlete_gender && ! $activeGenders->contains($myRegistration->athlete_gender));
+                    $wantedGender = $team->team_format === 'mixed' ? ($activeGenders->contains('male') ? '女性' : ($activeGenders->contains('female') ? '男性' : '一男一女')) : null;
+                    $requiredSize = $team->requiredSize();
                 @endphp
                 <article class="rounded-2xl border bg-white p-4 shadow-sm sm:p-5">
-                    <div class="flex items-start justify-between gap-3"><div><div class="flex flex-wrap items-center gap-2"><h3 class="font-bold">{{ $team->name }}</h3>@if($team->status==='recruiting' && $team->is_open)<span class="rounded-full bg-indigo-100 px-2 py-0.5 text-[10px] font-semibold text-indigo-700">公開招募</span>@endif</div><p class="mt-1 text-xs text-gray-500">隊長：{{ $team->captainRegistration?->name }}</p></div><span class="rounded-full px-2.5 py-1 text-xs font-medium {{ $competingCount >= $group->team_size ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700' }}">{{ $competingCount }} / {{ $group->team_size }}</span></div>
+                    <div class="flex items-start justify-between gap-3"><div><div class="flex flex-wrap items-center gap-2"><h3 class="font-bold">{{ $team->name }}</h3><span class="rounded-full bg-violet-100 px-2 py-0.5 text-[10px] font-semibold text-violet-700">{{ $team->team_format === 'mixed' ? '男女混雙' : '3人團體' }}</span>@if($team->status==='recruiting' && $team->is_open)<span class="rounded-full bg-indigo-100 px-2 py-0.5 text-[10px] font-semibold text-indigo-700">公開招募</span>@endif</div><p class="mt-1 text-xs text-gray-500">隊長：{{ $team->captainRegistration?->name }}</p></div><span class="rounded-full px-2.5 py-1 text-xs font-medium {{ $competingCount >= $requiredSize ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700' }}">{{ $competingCount }} / {{ $requiredSize }}</span></div>
                     @if($team->recruitment_note)<p class="mt-3 rounded-xl bg-slate-50 px-3 py-2 text-sm text-slate-600">{{ $team->recruitment_note }}</p>@endif
                     @if($wantedGender && $team->status==='recruiting')<p class="mt-2 text-xs font-medium text-violet-700">目前正在招募：{{ $wantedGender }}選手</p>@endif
                     <div class="mt-3 flex flex-wrap gap-2">@foreach($active as $member)<span class="rounded-full bg-gray-100 px-3 py-1 text-xs">{{ $member->registration?->name }}{{ $member->role==='captain' ? '・隊長' : ($member->role==='substitute' ? '・候補' : '') }}</span>@endforeach</div>
@@ -66,7 +68,7 @@
                     @if($myTeam?->is($team) && $team->captain_registration_id===$myRegistration?->id && $group->teamFormationIsOpen())
                         @php($pending=$team->memberships->where('status','pending'))
                         @if($pending->isNotEmpty())<div class="mt-4 space-y-2 border-t pt-3"><p class="text-xs font-semibold text-gray-500">待審核申請（{{ $pendingCount }}）</p>@foreach($pending as $member)<div class="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-indigo-50 p-3"><span class="text-sm"><strong>{{ $member->registration?->name }}</strong><small class="ml-1 text-gray-500">{{ $member->registration?->athlete_gender === 'male' ? '男子' : ($member->registration?->athlete_gender === 'female' ? '女子' : '') }}・{{ $member->created_at?->format('m/d H:i') }}</small></span><div class="flex gap-1"><form method="POST" action="{{ route('events.teams.review',[$event,$group,$team,$member]) }}">@csrf @method('PATCH')<input type="hidden" name="decision" value="approve"><button class="min-h-10 rounded-lg bg-indigo-600 px-3 text-xs font-semibold text-white">同意加入</button></form><form method="POST" action="{{ route('events.teams.review',[$event,$group,$team,$member]) }}">@csrf @method('PATCH')<input type="hidden" name="decision" value="reject"><button class="min-h-10 rounded-lg border bg-white px-3 text-xs">拒絕</button></form></div></div>@endforeach</div>@endif
-                        @if($eligibleInvitees->isNotEmpty() && ($team->competingMemberships()->count() < $group->team_size || $group->team_substitute_limit > $active->where('role','substitute')->count()))<form method="POST" action="{{ route('events.teams.invite',[$event,$group,$team]) }}" class="mt-4 grid gap-2 border-t pt-3 sm:grid-cols-[1fr_8rem_auto]">@csrf<select name="registration_id" required class="min-h-11 min-w-0 rounded-xl border-gray-300 text-sm"><option value="">邀請已報名選手</option>@foreach($eligibleInvitees as $registration)<option value="{{ $registration->id }}">{{ $registration->name }}{{ $registration->athlete_gender ? '・'.($registration->athlete_gender==='male'?'男':'女') : '' }}</option>@endforeach</select><select name="member_role" class="min-h-11 rounded-xl border-gray-300 text-sm"><option value="member">正式隊員</option>@if($group->team_substitute_limit)<option value="substitute">候補</option>@endif</select><button class="min-h-11 rounded-xl bg-gray-900 px-4 text-sm text-white">邀請</button></form>@endif
+                        @if($eligibleInvitees->isNotEmpty() && ($competingCount < $requiredSize || $group->team_substitute_limit > $active->where('role','substitute')->count()))<form method="POST" action="{{ route('events.teams.invite',[$event,$group,$team]) }}" class="mt-4 grid gap-2 border-t pt-3 sm:grid-cols-[1fr_8rem_auto]">@csrf<select name="registration_id" required class="min-h-11 min-w-0 rounded-xl border-gray-300 text-sm"><option value="">邀請已報名選手</option>@foreach($eligibleInvitees as $registration)<option value="{{ $registration->id }}">{{ $registration->name }}{{ $registration->athlete_gender ? '・'.($registration->athlete_gender==='male'?'男':'女') : '' }}</option>@endforeach</select><select name="member_role" class="min-h-11 rounded-xl border-gray-300 text-sm"><option value="member">正式隊員</option>@if($group->team_substitute_limit)<option value="substitute">候補</option>@endif</select><button class="min-h-11 rounded-xl bg-gray-900 px-4 text-sm text-white">邀請</button></form>@endif
                     @endif
                 </article>
             @empty<div class="rounded-2xl border border-dashed bg-white p-8 text-center text-sm text-gray-500 md:col-span-2">目前還沒有隊伍，成為第一位隊長吧。</div>@endforelse

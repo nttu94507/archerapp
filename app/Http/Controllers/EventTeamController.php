@@ -45,7 +45,7 @@ class EventTeamController extends Controller
 
         $rankings = $teams->map(function (EventTeam $team): array {
             $members = $team->memberships->where('status', 'active')->whereIn('role', ['captain','member']);
-            $published = $members->count() === (int) $team->group->team_size
+            $published = $members->count() === $team->requiredSize()
                 && $members->every(fn (EventTeamMember $member) => $member->registration?->result_published_at !== null);
             $scores = $members->flatMap(fn (EventTeamMember $member) => $member->registration?->scoreEntries ?? collect());
             $arrows = $scores->flatMap(fn ($entry) => $entry->scores ?? []);
@@ -62,16 +62,18 @@ class EventTeamController extends Controller
     {
         $this->assertOpen($event, $group);
         $registration = $this->registrationFor($request, $event, $group);
-        if ($group->team_type==='mixed') abort_unless($registration->athlete_gender,422,'混雙選手必須先在報名資料設定性別。');
+        $format = $request->validate(['team_format'=>['nullable','in:standard,mixed']])['team_format'] ?? ($group->hasTeamFormat('standard') ? 'standard' : 'mixed');
+        abort_unless($group->hasTeamFormat($format), 422, '此組別未開放所選團體形式。');
+        if ($format==='mixed') abort_unless($registration->athlete_gender,422,'混雙選手必須先在報名資料設定性別。');
         $data = $request->validate([
             'name'=>['required','string','max:100'],
             'recruitment_note'=>['nullable','string','max:300'],
         ]);
 
-        DB::transaction(function () use ($event, $group, $registration, $data, $request): void {
+        DB::transaction(function () use ($event, $group, $registration, $data, $request, $format): void {
             abort_if(EventTeamMember::where('event_group_id', $group->id)->where('event_registration_id', $registration->id)->exists(), 422, '你已經有組隊申請或隊伍。');
             $team = EventTeam::create(['event_id'=>$event->id, 'event_group_id'=>$group->id,
-                'captain_registration_id'=>$registration->id, 'name'=>$data['name'], 'is_open'=>true,
+                'captain_registration_id'=>$registration->id, 'name'=>$data['name'], 'team_format'=>$format, 'is_open'=>true,
                 'recruitment_note'=>$data['recruitment_note'] ?? null, 'status'=>'recruiting']);
             $team->memberships()->create(['event_group_id'=>$group->id, 'event_registration_id'=>$registration->id,
                 'role'=>'captain', 'status'=>'active', 'requested_by'=>$request->user()->id, 'responded_at'=>now()]);
@@ -85,7 +87,7 @@ class EventTeamController extends Controller
         $registration = $this->registrationFor($request, $event, $group);
         abort_unless($team->status === 'recruiting' && $team->is_open, 422, '此隊伍目前不接受申請。');
         abort_if(EventTeamMember::where('event_group_id',$group->id)->where('event_registration_id',$registration->id)->exists(), 422, '你已經有組隊申請或隊伍。');
-        if ($group->team_type === 'mixed') {
+        if ($team->team_format === 'mixed') {
             abort_unless($registration->athlete_gender, 422, '混雙選手必須先設定性別。');
             abort_if($team->competingMemberships()->with('registration')->get()
                 ->contains(fn (EventTeamMember $member) => $member->registration?->athlete_gender === $registration->athlete_gender),
@@ -101,7 +103,7 @@ class EventTeamController extends Controller
         $this->assertCaptain($request, $event, $group, $team); $this->assertOpen($event, $group);
         $data=$request->validate(['registration_id'=>['required','integer'],'member_role'=>['nullable','in:member,substitute']]);
         $role=$data['member_role'] ?? 'member';
-        abort_if($role==='member' && $team->competingMemberships()->count() >= $group->team_size, 422, '正式隊員人數已滿。');
+        abort_if($role==='member' && $team->competingMemberships()->count() >= $team->requiredSize(), 422, '正式隊員人數已滿。');
         abort_if($role==='substitute' && ($group->team_substitute_limit < 1 || $team->activeMemberships()->where('role','substitute')->count() >= $group->team_substitute_limit),422,'候補名額已滿或未開放。');
         $registration=$group->registrations()->whereIn('status',['registered','checked_in'])->findOrFail($data['registration_id']);
         abort_if(EventTeamMember::where('event_group_id',$group->id)->where('event_registration_id',$registration->id)->exists(), 422, '此選手已有隊伍或邀請。');
@@ -143,8 +145,8 @@ class EventTeamController extends Controller
     {
         $team=$membership->team()->with('group')->firstOrFail();
         if ($accept && $membership->role!=='substitute') {
-            abort_if($team->competingMemberships()->count() >= $team->group->team_size,422,'隊伍人數已滿。');
-            if ($team->group->team_type==='mixed') {
+            abort_if($team->competingMemberships()->count() >= $team->requiredSize(),422,'隊伍人數已滿。');
+            if ($team->team_format==='mixed') {
                 $gender=$membership->registration?->athlete_gender;
                 abort_unless($gender,422,'混雙選手必須先設定性別。');
                 abort_if($team->competingMemberships()->with('registration')->get()->contains(fn ($member)=>$member->registration?->athlete_gender===$gender),422,'混雙隊伍必須由一男一女組成。');
@@ -173,15 +175,17 @@ class EventTeamController extends Controller
         $this->assertOpen($event,$group);
         $this->authorize('manageRegistrations',$event);
         $occupied=EventTeamMember::where('event_group_id',$group->id)->pluck('event_registration_id');
+        $format=$request->validate(['team_format'=>['nullable','in:standard,mixed']])['team_format'] ?? ($group->hasTeamFormat('standard') ? 'standard' : 'mixed');
+        abort_unless($group->hasTeamFormat($format),422,'此組別未開放所選團體形式。');
         $available=$group->registrations()->whereIn('status',['registered','checked_in'])->whereNotIn('id',$occupied)->orderBy('id')->get();
-        $sets=$group->team_type==='mixed'
+        $sets=$format==='mixed'
             ? $available->where('athlete_gender','male')->values()->zip($available->where('athlete_gender','female')->values())->filter(fn($pair)=>$pair->filter()->count()===2)
-            : $available->chunk($group->team_size)->filter(fn($chunk)=>$chunk->count()===$group->team_size);
+            : $available->chunk(3)->filter(fn($chunk)=>$chunk->count()===3);
         $created=0;
-        DB::transaction(function () use ($sets,$event,$group,$request,&$created): void {
+        DB::transaction(function () use ($sets,$event,$group,$request,$format,&$created): void {
             foreach ($sets as $members) {
                 $members=collect($members)->values(); $captain=$members->first();
-                $team=EventTeam::create(['event_id'=>$event->id,'event_group_id'=>$group->id,'captain_registration_id'=>$captain->id,'name'=>'自動配對 '.str_pad((string)($group->eventTeams()->count()+1),2,'0',STR_PAD_LEFT),'status'=>'full']);
+                $team=EventTeam::create(['event_id'=>$event->id,'event_group_id'=>$group->id,'captain_registration_id'=>$captain->id,'team_format'=>$format,'name'=>'自動配對 '.str_pad((string)($group->eventTeams()->count()+1),2,'0',STR_PAD_LEFT),'status'=>'full']);
                 foreach ($members as $index=>$registration) $team->memberships()->create(['event_group_id'=>$group->id,'event_registration_id'=>$registration->id,'role'=>$index===0?'captain':'member','status'=>'active','requested_by'=>$request->user()->id,'responded_at'=>now()]);
                 $created++;
             }

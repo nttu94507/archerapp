@@ -7,7 +7,7 @@ use Illuminate\Support\Str;
 
 class EventTeam extends Model
 {
-    protected $fillable = ['uuid', 'event_id', 'event_group_id', 'captain_registration_id', 'name', 'is_open', 'recruitment_note', 'status', 'locked_at'];
+    protected $fillable = ['uuid', 'event_id', 'event_group_id', 'captain_registration_id', 'name', 'team_format', 'is_open', 'recruitment_note', 'status', 'locked_at'];
     protected $casts = ['is_open'=>'boolean', 'locked_at'=>'datetime'];
 
     protected static function booted(): void
@@ -22,10 +22,11 @@ class EventTeam extends Model
     public function memberships() { return $this->hasMany(EventTeamMember::class); }
     public function activeMemberships() { return $this->hasMany(EventTeamMember::class)->where('status', 'active'); }
     public function competingMemberships() { return $this->hasMany(EventTeamMember::class)->where('status', 'active')->whereIn('role', ['captain','member']); }
+    public function requiredSize(): int { return $this->team_format === 'mixed' ? 2 : 3; }
 
     public function refreshStatus(): void
     {
         if (in_array($this->status, ['locked', 'disbanded'], true)) return;
-        $this->update(['status'=>$this->competingMemberships()->count() >= $this->group->team_size ? 'full' : 'recruiting']);
+        $this->update(['status'=>$this->competingMemberships()->count() >= $this->requiredSize() ? 'full' : 'recruiting']);
     }
 }

@@ -122,6 +122,22 @@ class EventTeamWorkflowTest extends TestCase
         $this->assertNotNull($updated->participant_one_team_id);
     }
 
+    public function test_group_can_offer_standard_and_mixed_but_archer_can_choose_only_one(): void
+    {
+        [$event,$group,$users,$registrations]=$this->teamEvent(4);
+        $group->update(['standard_team_enabled'=>true,'mixed_team_enabled'=>true]);
+        foreach ($registrations as $index=>$registration) $registration->update(['athlete_gender'=>$index % 2 === 0 ? 'male' : 'female']);
+
+        $this->actingAs($users[0])->post(route('events.teams.store',[$event,$group]),['team_format'=>'standard','name'=>'三人隊'])->assertSessionHas('success');
+        $this->actingAs($users[0])->post(route('events.teams.store',[$event,$group]),['team_format'=>'mixed','name'=>'重複混雙'])->assertStatus(422);
+        $this->actingAs($users[1])->post(route('events.teams.store',[$event,$group]),['team_format'=>'mixed','name'=>'混雙隊'])->assertSessionHas('success');
+
+        $this->assertDatabaseHas('event_teams',['event_group_id'=>$group->id,'name'=>'三人隊','team_format'=>'standard']);
+        $this->assertDatabaseHas('event_teams',['event_group_id'=>$group->id,'name'=>'混雙隊','team_format'=>'mixed']);
+        $this->actingAs($users[2])->get(route('events.teams.index',[$event,$group]))
+            ->assertOk()->assertSee('3人團體')->assertSee('男女混雙');
+    }
+
     private function teamEvent(int $count): array
     {
         $event=Event::factory()->create([

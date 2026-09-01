@@ -98,6 +98,8 @@ class EventGroupController extends Controller
             'groups.*.quota'               => ['nullable','integer','min:1'],
             'groups.*.fee'                 => ['nullable','integer','min:0'],
             'groups.*.is_team'             => ['boolean'],
+            'groups.*.standard_team_enabled'=> ['nullable','boolean'],
+            'groups.*.mixed_team_enabled'  => ['nullable','boolean'],
             'groups.*.team_size'           => ['nullable','integer','in:3'],
             'groups.*.team_type'           => ['nullable','in:standard,mixed'],
             'groups.*.team_substitute_limit'=> ['nullable','integer','between:0,1'],
@@ -120,6 +122,9 @@ class EventGroupController extends Controller
             }
             foreach ($data['groups'] as $g) {
                 unset($g['use_custom_reg_window']);
+                $g['standard_team_enabled'] = ! empty($g['standard_team_enabled']);
+                $g['mixed_team_enabled'] = ! empty($g['mixed_team_enabled']);
+                $g['is_team'] = $g['standard_team_enabled'] || $g['mixed_team_enabled'] || ! empty($g['is_team']);
                 $event->groups()->create($g);
             }
         });
@@ -160,6 +165,8 @@ class EventGroupController extends Controller
             'quota'     => ['nullable','integer','min:1'],
             'fee'       => ['nullable','integer','min:0'],
             'is_team'   => ['boolean'],
+            'standard_team_enabled'=>['nullable','boolean'],
+            'mixed_team_enabled'=>['nullable','boolean'],
             'team_size' => ['nullable','integer','in:3'],
             'team_type' => ['nullable','in:standard,mixed'],
             'team_substitute_limit' => ['nullable','integer','between:0,1'],
@@ -168,13 +175,17 @@ class EventGroupController extends Controller
             'reg_start' => ['nullable','date','required_if:use_custom_reg_window,1','required_with:reg_end'],
             'reg_end'   => ['nullable','date','required_if:use_custom_reg_window,1','required_with:reg_start','after_or_equal:reg_start'],
         ]);
-        if ($req->boolean('is_team') && ! $event->hasPlanFeature('team_competition')) {
+        $standardEnabled=$req->boolean('standard_team_enabled');
+        $mixedEnabled=$req->boolean('mixed_team_enabled');
+        if (($standardEnabled || $mixedEnabled) && ! $event->hasPlanFeature('team_competition')) {
             throw ValidationException::withMessages(['is_team'=>'團體賽為單場升級或訂閱方案功能。']);
         }
-        if (! $req->boolean('is_team') && $group->eventTeams()->where('status','!=','disbanded')->exists()) {
+        if (! ($standardEnabled || $mixedEnabled) && $group->eventTeams()->where('status','!=','disbanded')->exists()) {
             throw ValidationException::withMessages(['is_team'=>'已有隊伍後不能關閉團體賽，請先處理現有隊伍。']);
         }
-        $g['is_team'] = $req->boolean('is_team');
+        $g['standard_team_enabled']=$standardEnabled;
+        $g['mixed_team_enabled']=$mixedEnabled;
+        $g['is_team'] = $standardEnabled || $mixedEnabled;
         $g['team_type'] = $g['team_type'] ?? 'standard';
         $g['team_size'] = $g['team_type'] === 'mixed' ? 2 : 3;
         $g['team_substitute_limit'] = (int) ($g['team_substitute_limit'] ?? 0);

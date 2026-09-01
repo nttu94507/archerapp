@@ -286,6 +286,8 @@ class EventController extends Controller
                 'groups.*.quota' => ['nullable', 'integer', 'min:1'],
                 'groups.*.fee' => ['nullable', 'integer', 'min:0'],
                 'groups.*.is_team' => ['nullable', 'boolean'],
+                'groups.*.standard_team_enabled' => ['nullable','boolean'],
+                'groups.*.mixed_team_enabled' => ['nullable','boolean'],
                 'groups.*.team_size' => ['nullable', 'integer', 'in:2,3'],
                 'groups.*.team_type' => ['nullable', 'in:standard,mixed'],
                 'groups.*.team_substitute_limit' => ['nullable', 'integer', 'between:0,1'],
@@ -294,6 +296,14 @@ class EventController extends Controller
         }
 
         $validated = $request->validate($rules);
+        if ($creating) {
+            $validated['groups'] = collect($validated['groups'] ?? [])->map(function (array $group): array {
+                $group['standard_team_enabled'] = ! empty($group['standard_team_enabled']);
+                $group['mixed_team_enabled'] = ! empty($group['mixed_team_enabled']);
+                $group['is_team'] = $group['standard_team_enabled'] || $group['mixed_team_enabled'] || ! empty($group['is_team']);
+                return $group;
+            })->all();
+        }
         if ($creating && collect($validated['groups'] ?? [])->contains(fn ($group) => ! empty($group['is_team']))
             && ! $request->user()->hasActiveOrganizerSubscription()) {
             throw \Illuminate\Validation\ValidationException::withMessages(['groups'=>'團體賽為訂閱或單場升級功能。']);
