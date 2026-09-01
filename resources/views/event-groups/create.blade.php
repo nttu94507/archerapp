@@ -27,7 +27,7 @@
                         ['compound','50m','open','複合弓 50 公尺公開組'],['compound','50m','male','複合弓 50 公尺男子組'],['compound','50m','female','複合弓 50 公尺女子組'],
                     ])
                     @foreach($presetGroups as [$bow,$distance,$gender,$name])
-                        @continue(in_array($bow.'|'.mb_strtolower(trim($distance)).'|'.$gender, $existingGroupKeys, true))
+                        @continue(in_array(\App\Models\EventGroup::duplicateKey($bow, $distance, $gender), $existingGroupKeys, true) || in_array(\App\Models\EventGroup::duplicateName($name), $existingGroupNames, true))
                         <label class="preset-choice-card flex min-h-12 cursor-pointer items-center gap-3 rounded-xl border border-indigo-100 bg-white px-3 text-sm transition has-[:checked]:border-indigo-500 has-[:checked]:bg-indigo-100"><input type="checkbox" class="preset-choice h-5 w-5 rounded text-indigo-600" data-bow="{{ $bow }}" data-distance="{{ $distance }}" data-gender="{{ $gender }}" data-key="{{ $bow }}|{{ mb_strtolower(trim($distance)) }}|{{ $gender }}" data-name="{{ $name }}" data-arrows="{{ $distance === '30m' ? 36 : ($maxArrows > 36 ? 72 : 36) }}">{{ $name }}</label>
                     @endforeach
                 </div>

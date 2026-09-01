@@ -220,13 +220,18 @@ class EventPlanEntitlementTest extends TestCase
         $event->staff()->create(['user_id'=>$owner->id, 'role'=>'owner', 'status'=>'active']);
         EventGroup::factory()->create([
             'event_id'=>$event->id, 'name'=>'既有公開組', 'bow_type'=>'recurve',
-            'distance'=>'70m', 'gender'=>'open', 'arrow_count'=>72,
+            'distance'=>null, 'age_class'=>'70m', 'gender'=>'open', 'arrow_count'=>72,
         ]);
 
         $this->actingAs($owner)->get(route('events.groups.create', $event))
             ->assertOk()
             ->assertDontSee('反曲弓 70 公尺公開組')
             ->assertSee('反曲弓 70 公尺男子組');
+
+        $legacyDuplicate = $this->groupPayload('另一個公開組', 72);
+        $this->actingAs($owner)->post(route('events.groups.store', $event), [
+            'groups'=>[$legacyDuplicate],
+        ])->assertSessionHasErrors('groups');
 
         $maleGroup = $this->groupPayload('男子甲組', 72);
         $maleGroup['gender'] = 'male';

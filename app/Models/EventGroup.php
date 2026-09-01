@@ -42,6 +42,24 @@ class EventGroup extends Model
         'live_results_visible' => 'boolean',
     ];
 
+    public static function duplicateKey(?string $bowType, ?string $distance, ?string $gender, ?string $ageClass = null): string
+    {
+        $normalizedDistance = mb_strtolower(trim((string) $distance));
+        $legacyAgeClass = mb_strtolower(trim((string) $ageClass));
+        if ($normalizedDistance === '' && preg_match('/^\d+\s*(?:m|公尺)$/iu', $legacyAgeClass)) {
+            $normalizedDistance = $legacyAgeClass;
+        }
+        $normalizedDistance = str_replace('公尺', 'm', $normalizedDistance);
+        $normalizedDistance = preg_replace('/\s+/u', '', $normalizedDistance) ?? $normalizedDistance;
+
+        return implode('|', [$bowType ?? '', $normalizedDistance, $gender ?? 'open']);
+    }
+
+    public static function duplicateName(?string $name): string
+    {
+        return mb_strtolower(preg_replace('/\s+/u', '', trim((string) $name)) ?? '');
+    }
+
     public function event() {
         return $this->belongsTo(Event::class);
     }

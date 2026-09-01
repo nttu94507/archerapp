@@ -58,13 +58,10 @@ class EventGroupController extends Controller
             'maxArrows' => $event->planLimit('arrows_per_phase') ?? 180,
             'maxNewGroups' => $groupLimit === null ? null : $groupLimit - $currentGroups,
             'existingGroupKeys' => $event->groups()
-                ->get(['bow_type', 'distance', 'gender'])
-                ->map(fn (EventGroup $group) => implode('|', [
-                    $group->bow_type ?? '',
-                    mb_strtolower(trim((string) $group->distance)),
-                    $group->gender ?? 'open',
-                ]))
+                ->get(['bow_type', 'distance', 'gender', 'age_class'])
+                ->map(fn (EventGroup $group) => EventGroup::duplicateKey($group->bow_type, $group->distance, $group->gender, $group->age_class))
                 ->all(),
+            'existingGroupNames' => $event->groups()->pluck('name')->map(fn ($name) => EventGroup::duplicateName($name))->all(),
         ]);
     }
 
@@ -138,23 +135,30 @@ class EventGroupController extends Controller
                     'groups' => '免費方案最多只能建立 1 個組別，請先升級單場方案或訂閱。',
                 ]);
             }
-            $groupKey = fn (array $group): string => implode('|', [
-                $group['bow_type'] ?? '',
-                mb_strtolower(trim((string) ($group['distance'] ?? ''))),
-                $group['gender'] ?? 'open',
-            ]);
-            $existingKeys = $event->groups()->get(['bow_type', 'distance', 'gender'])
+            $groupKey = fn (array $group): string => EventGroup::duplicateKey(
+                $group['bow_type'] ?? null,
+                $group['distance'] ?? null,
+                $group['gender'] ?? null,
+                $group['age_class'] ?? null,
+            );
+            $existingGroups = $event->groups()->get(['name', 'bow_type', 'distance', 'gender', 'age_class']);
+            $existingKeys = $existingGroups
                 ->map(fn (EventGroup $group): string => $groupKey($group->toArray()))
                 ->all();
+            $existingNames = $existingGroups->map(fn (EventGroup $group): string => EventGroup::duplicateName($group->name))->all();
             $pendingKeys = [];
+            $pendingNames = [];
             foreach ($data['groups'] as $g) {
                 $key = $groupKey($g);
-                if (in_array($key, $existingKeys, true) || in_array($key, $pendingKeys, true)) {
+                $name = EventGroup::duplicateName($g['name']);
+                if (in_array($key, $existingKeys, true) || in_array($key, $pendingKeys, true)
+                    || in_array($name, $existingNames, true) || in_array($name, $pendingNames, true)) {
                     throw ValidationException::withMessages([
-                        'groups' => '不能建立重複組別：相同弓種、距離與性別的組別已存在。',
+                        'groups' => '不能建立重複組別：相同名稱，或相同弓種、距離與性別的組別已存在。',
                     ]);
                 }
                 $pendingKeys[] = $key;
+                $pendingNames[] = $name;
                 unset($g['use_custom_reg_window']);
                 $g['arrows_per_end'] = $event->mode === 'indoor' ? 3 : 6;
                 $g['standard_team_enabled'] = ! empty($g['standard_team_enabled']);
