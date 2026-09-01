@@ -13,6 +13,7 @@
 
         <form method="POST" action="{{ route('events.groups.store', $event) }}" id="group-form">
             @csrf
+            <input type="hidden" name="use_first_group_fee" value="1">
 
             <section class="mb-5 rounded-2xl border border-indigo-100 bg-indigo-50 p-4 sm:p-5">
                 <div class="flex flex-wrap items-start justify-between gap-3"><div><h2 class="font-semibold text-indigo-950">快速套用預設組別</h2><p class="mt-1 text-xs text-indigo-700">選取後批次帶入，送出前仍可逐組修改。</p></div><button type="button" id="apply-presets" class="min-h-10 rounded-xl bg-indigo-600 px-4 text-sm font-semibold text-white">套用選取組別</button></div>
@@ -112,9 +113,10 @@
                 </div>
 
                 <div>
-                    <label class="block text-xs text-gray-600 mb-1">報名費</label>
-                    <input type="number" min="0" class="w-full rounded-lg border px-3 py-2 text-sm"
+                    <label class="fee-label block text-xs text-gray-600 mb-1">報名費</label>
+                    <input type="number" min="0" class="group-fee-field w-full rounded-lg border px-3 py-2 text-sm"
                            name="groups[__INDEX__][fee]">
+                    <p class="fee-sync-note mt-1 hidden text-[11px] text-gray-500">沿用第一組報名費</p>
                 </div>
 
                 @if($event->hasPlanFeature('team_competition'))<div class="md:col-span-2"><p class="block text-xs text-gray-600 mb-1">團體形式（可複選）</p><div class="flex flex-wrap gap-3"><label class="inline-flex items-center gap-2 text-xs"><input type="checkbox" class="rounded" name="groups[__INDEX__][standard_team_enabled]" value="1">三人團體（登記4人）</label><label class="inline-flex items-center gap-2 text-xs"><input type="checkbox" class="rounded" name="groups[__INDEX__][mixed_team_enabled]" value="1">男女混雙（2人）</label></div><p class="mt-1 text-[11px] text-gray-500">同一選手只能擇一參加。</p></div>
@@ -131,6 +133,20 @@
             const tpl = document.getElementById('group-item-template').innerHTML;
             const addBtn = document.getElementById('add-group');
             const maxNewGroups = @js($maxNewGroups);
+
+            function syncGroupFees() {
+                const feeFields = [...list.querySelectorAll('.group-fee-field')];
+                const firstFee = feeFields[0]?.value ?? '';
+                feeFields.forEach((field, index) => {
+                    field.readOnly = index > 0;
+                    field.classList.toggle('bg-gray-100', index > 0);
+                    if (index > 0) field.value = firstFee;
+                    const item = field.closest('.group-item');
+                    item?.querySelector('.fee-sync-note')?.classList.toggle('hidden', index === 0);
+                    const label = item?.querySelector('.fee-label');
+                    if (label) label.textContent = index === 0 ? '所有組別報名費' : '報名費';
+                });
+            }
 
             function renumber() {
                 // 更新「組別 n」顯示
@@ -191,6 +207,7 @@
 
                 list.appendChild(node);
                 renumber();
+                syncGroupFees();
             }
 
             function rebuildIndexes() {
@@ -203,7 +220,14 @@
                     });
                 });
                 renumber();
+                syncGroupFees();
             }
+
+            list.addEventListener('input', event => {
+                if (event.target.matches('.group-fee-field') && event.target === list.querySelector('.group-fee-field')) {
+                    syncGroupFees();
+                }
+            });
 
             addBtn.addEventListener('click', () => addGroup());
 

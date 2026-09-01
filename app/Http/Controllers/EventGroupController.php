@@ -87,6 +87,7 @@ class EventGroupController extends Controller
         }];
 
         $data = $req->validate([
+            'use_first_group_fee'          => ['nullable','boolean'],
             'groups'                       => array_filter(['required','array','min:1', $remainingGroups === null ? null : 'max:'.$remainingGroups]),
             'groups.*.name'                => ['required','string','max:100'],
             'groups.*.bow_type'            => ['nullable','in:recurve,compound,barebow'],
@@ -112,6 +113,15 @@ class EventGroupController extends Controller
         if (collect($data['groups'])->contains(fn ($group) => ! empty($group['is_team'])) && ! $event->hasPlanFeature('team_competition')) {
             throw ValidationException::withMessages(['groups'=>'團體賽為單場升級或訂閱方案功能。']);
         }
+
+        if (! empty($data['use_first_group_fee'])) {
+            $firstGroupFee = $data['groups'][0]['fee'] ?? 0;
+            foreach ($data['groups'] as &$groupData) {
+                $groupData['fee'] = $firstGroupFee;
+            }
+            unset($groupData);
+        }
+        unset($data['use_first_group_fee']);
 
         DB::transaction(function () use ($event, $data, $groupLimit) {
             Event::whereKey($event->id)->lockForUpdate()->firstOrFail();
