@@ -14,6 +14,20 @@
         <form method="POST" action="{{ route('events.groups.store', $event) }}" id="group-form">
             @csrf
 
+            <section class="mb-5 rounded-2xl border border-indigo-100 bg-indigo-50 p-4 sm:p-5">
+                <div class="flex flex-wrap items-start justify-between gap-3"><div><h2 class="font-semibold text-indigo-950">快速套用預設組別</h2><p class="mt-1 text-xs text-indigo-700">選取後批次帶入，送出前仍可逐組修改。</p></div><button type="button" id="apply-presets" class="min-h-10 rounded-xl bg-indigo-600 px-4 text-sm font-semibold text-white">套用選取組別</button></div>
+                <div class="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                    @foreach([
+                        ['recurve','70m','open','反曲弓 70 公尺公開組'],['recurve','70m','male','反曲弓 70 公尺男子組'],['recurve','70m','female','反曲弓 70 公尺女子組'],
+                        ['recurve','30m','open','反曲弓 30 公尺公開組'],['recurve','30m','male','反曲弓 30 公尺男子組'],['recurve','30m','female','反曲弓 30 公尺女子組'],
+                        ['compound','50m','open','複合弓 50 公尺公開組'],['compound','50m','male','複合弓 50 公尺男子組'],['compound','50m','female','複合弓 50 公尺女子組'],
+                    ] as [$bow,$distance,$gender,$name])
+                        <label class="flex min-h-12 cursor-pointer items-center gap-3 rounded-xl border border-indigo-100 bg-white px-3 text-sm transition has-[:checked]:border-indigo-500 has-[:checked]:bg-indigo-100"><input type="checkbox" class="preset-choice h-5 w-5 rounded text-indigo-600" data-bow="{{ $bow }}" data-distance="{{ $distance }}" data-gender="{{ $gender }}" data-name="{{ $name }}" data-arrows="{{ $distance === '30m' ? 36 : ($maxArrows > 36 ? 72 : 36) }}">{{ $name }}</label>
+                    @endforeach
+                </div>
+                @if($maxNewGroups !== null)<p class="mt-3 text-xs font-medium text-amber-700">目前方案本次最多可新增 {{ $maxNewGroups }} 組。</p>@endif
+            </section>
+
             <div id="group-list" class="space-y-4"></div>
 
             @error('groups')<p class="text-sm text-red-600 mb-2">{{ $message }}</p>@enderror
@@ -44,13 +58,13 @@
             <div class="grid grid-cols-1 md:grid-cols-7 gap-3">
                 <div class="md:col-span-2">
                     <label class="block text-xs text-gray-600 mb-1">名稱 *</label>
-                    <input type="text" class="w-full rounded-lg border px-3 py-2 text-sm"
+                    <input type="text" class="group-name-field w-full rounded-lg border px-3 py-2 text-sm"
                            name="groups[__INDEX__][name]" placeholder="例如：男子反曲 70m" required>
                 </div>
 
                 <div>
                     <label class="block text-xs text-gray-600 mb-1">弓種</label>
-                    <select class="w-full rounded-lg border px-3 py-2 text-sm" name="groups[__INDEX__][bow_type]">
+                    <select class="group-bow-field w-full rounded-lg border px-3 py-2 text-sm" name="groups[__INDEX__][bow_type]">
                         <option value="">—</option>
                         <option value="recurve">反曲</option>
                         <option value="compound">複合</option>
@@ -60,7 +74,7 @@
 
                 <div>
                     <label class="block text-xs text-gray-600 mb-1">性別</label>
-                    <select class="w-full rounded-lg border px-3 py-2 text-sm" name="groups[__INDEX__][gender]">
+                    <select class="group-gender-field w-full rounded-lg border px-3 py-2 text-sm" name="groups[__INDEX__][gender]">
                         <option value="open">不限</option>
                         <option value="male">男</option>
                         <option value="female">女</option>
@@ -69,7 +83,7 @@
 
                 <div>
                     <label class="block text-xs text-gray-600 mb-1">年齡組</label>
-                    <input type="text" class="w-full rounded-lg border px-3 py-2 text-sm"
+                    <input type="text" class="group-distance-field w-full rounded-lg border px-3 py-2 text-sm"
                            name="groups[__INDEX__][age_class]" placeholder="U18 / OPEN">
                 </div>
 
@@ -110,15 +124,7 @@
                            name="groups[__INDEX__][fee]">
                 </div>
 
-                @if($event->hasPlanFeature('team_competition'))<div class="flex items-center gap-2">
-                    <div>
-                        <label class="block text-xs text-gray-600 mb-1">隊制</label>
-                        <input type="checkbox" class="rounded"
-                               name="groups[__INDEX__][is_team]" value="1">
-                    </div>
-                    <span class="text-xs text-gray-500 mt-5">開放3人團體組隊</span>
-                    <input type="hidden" name="groups[__INDEX__][team_size]" value="3">
-                </div>
+                @if($event->hasPlanFeature('team_competition'))<div class="md:col-span-2"><p class="block text-xs text-gray-600 mb-1">團體形式（可複選）</p><div class="flex flex-wrap gap-3"><label class="inline-flex items-center gap-2 text-xs"><input type="checkbox" class="rounded" name="groups[__INDEX__][standard_team_enabled]" value="1">三人團體（登記4人）</label><label class="inline-flex items-center gap-2 text-xs"><input type="checkbox" class="rounded" name="groups[__INDEX__][mixed_team_enabled]" value="1">男女混雙（2人）</label></div><p class="mt-1 text-[11px] text-gray-500">同一選手只能擇一參加。</p></div>
                 <div><label class="block text-xs text-gray-600 mb-1">組隊截止</label><input type="datetime-local" name="groups[__INDEX__][team_formation_end]" class="w-full rounded-lg border px-3 py-2 text-sm"><p class="mt-1 text-xs text-gray-500">未填則沿用報名截止</p></div>@else<input type="hidden" name="groups[__INDEX__][is_team]" value="0">@endif
                 <div class="md:col-span-7"><label class="inline-flex min-h-11 items-center gap-2 text-sm"><input type="checkbox" name="groups[__INDEX__][use_custom_reg_window]" value="1" class="custom-reg-toggle h-5 w-5 rounded">自訂此組報名時間</label><p class="text-xs text-gray-500">未勾選時沿用賽事設定</p></div>
                 <div class="custom-reg-window hidden md:col-span-7 grid-cols-1 gap-3 sm:grid-cols-2"><div><label class="block text-xs text-gray-600 mb-1">報名開始</label><input type="datetime-local" name="groups[__INDEX__][reg_start]" class="custom-reg-input w-full rounded-lg border px-3 py-2 text-sm"></div><div><label class="block text-xs text-gray-600 mb-1">報名截止</label><input type="datetime-local" name="groups[__INDEX__][reg_end]" class="custom-reg-input w-full rounded-lg border px-3 py-2 text-sm"></div></div>
@@ -131,6 +137,7 @@
             const list = document.getElementById('group-list');
             const tpl = document.getElementById('group-item-template').innerHTML;
             const addBtn = document.getElementById('add-group');
+            const maxNewGroups = @js($maxNewGroups);
 
             function renumber() {
                 // 更新「組別 n」顯示
@@ -140,7 +147,7 @@
                 });
             }
 
-            function addGroup() {
+            function addGroup(preset = null) {
                 const index = list.querySelectorAll('.group-item').length;
                 const html = tpl.replace(/__INDEX__/g, index);
                 const wrapper = document.createElement('div');
@@ -195,6 +202,18 @@
                 regToggle.addEventListener('change', syncRegWindow);
                 syncRegWindow();
 
+                if (preset) {
+                    node.querySelector('.group-name-field').value = preset.name;
+                    node.querySelector('.group-bow-field').value = preset.bow;
+                    node.querySelector('.group-gender-field').value = preset.gender;
+                    node.querySelector('.group-distance-field').value = preset.distance;
+                    const wantedArrows = String(Math.min(Number(preset.arrows), {{ $maxArrows }}));
+                    const existingOption = [...arrowSelect.options].some(option => option.value === wantedArrows);
+                    if (existingOption) arrowSelect.value = wantedArrows;
+                    else { arrowSelect.value = 'custom'; customInput.value = wantedArrows; }
+                    syncArrowCount();
+                }
+
                 list.appendChild(node);
                 renumber();
             }
@@ -211,7 +230,20 @@
                 renumber();
             }
 
-            addBtn.addEventListener('click', addGroup);
+            addBtn.addEventListener('click', () => addGroup());
+
+            document.getElementById('apply-presets').addEventListener('click', () => {
+                let selected = [...document.querySelectorAll('.preset-choice:checked')].map(input => ({
+                    name: input.dataset.name, bow: input.dataset.bow, gender: input.dataset.gender,
+                    distance: input.dataset.distance, arrows: input.dataset.arrows,
+                }));
+                if (!selected.length) return alert('請先選擇至少一個預設組別。');
+                if (maxNewGroups !== null && selected.length > maxNewGroups) {
+                    return alert(`目前方案最多可新增 ${maxNewGroups} 組。`);
+                }
+                list.innerHTML = '';
+                selected.forEach(addGroup);
+            });
 
             // 預設先放一組
             addGroup();

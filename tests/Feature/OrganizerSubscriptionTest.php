@@ -198,7 +198,8 @@ class OrganizerSubscriptionTest extends TestCase
         OrganizerSubscription::create(['user_id'=>$subscriber->id,'plan_code'=>EventPlanCatalog::SUBSCRIPTION,'status'=>OrganizerSubscription::STATUS_ACTIVE,'starts_at'=>now()]);
 
         $this->actingAs($subscriber)->get(route('organizer.events.create'))
-            ->assertOk()->assertSee('賽事內容')->assertSee('3 人團體賽')->assertSee('男女混雙')->assertSee('建立架構預覽');
+            ->assertOk()->assertSee('賽事內容')->assertSee('3 人團體賽')->assertSee('男女混雙')->assertSee('建立架構預覽')
+            ->assertSee('反曲弓 70 公尺男子組')->assertSee('反曲弓 30 公尺女子組')->assertSee('複合弓 50 公尺公開組');
 
         $payload=array_merge($this->eventPayload('混雙快速賽事'),['submit_mode'=>'publish','groups'=>[0=>[
             'name'=>'反曲弓公開組','bow_type'=>'recurve','gender'=>'open','distance'=>'70m','arrow_count'=>72,
