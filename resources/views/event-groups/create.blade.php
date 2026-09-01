@@ -94,17 +94,13 @@
                 </div>
 
                 <div>
-                    <label class="block text-xs text-gray-600 mb-1">箭數 *</label>
-                    <div class="flex items-center gap-2">
-                        <select class="w-full rounded-lg border px-3 py-2 text-sm arrow-select">
-                            <option value="{{ $event->mode === 'indoor' ? 30 : 36 }}">{{ $event->mode === 'indoor' ? '30 支' : '36 支' }}</option>
-                            @if($maxArrows > 36)<option value="{{ $event->mode === 'indoor' ? 60 : 72 }}">{{ $event->mode === 'indoor' ? '60 支' : '72 支' }}</option>@endif
-                            <option value="custom">自訂</option>
-                        </select>
-                        <input type="number" min="6" max="{{ $maxArrows }}" step="6" class="hidden w-28 rounded-lg border px-3 py-2 text-sm custom-arrow-input" placeholder="6 的倍數">
-                    </div>
+                    <label class="block text-xs text-gray-600 mb-1">排名賽局數 *</label>
+                    <select class="w-full rounded-lg border px-3 py-2 text-sm round-format-select">
+                        <option value="single">單局（{{ $event->mode === 'indoor' ? '30' : '36' }} 箭）</option>
+                        @if($maxArrows > 36)<option value="double">雙局（{{ $event->mode === 'indoor' ? '60' : '72' }} 箭）</option>@endif
+                    </select>
                     <input type="hidden" name="groups[__INDEX__][arrow_count]" class="arrow-count-field" value="{{ $event->mode === 'indoor' ? 30 : 36 }}">
-                    <p class="text-xs text-gray-500 mt-1">最多 {{ $maxArrows }} 箭，箭數須為 6 的倍數。</p>
+                    @if($maxArrows === 36)<p class="text-xs text-amber-700 mt-1">免費方案僅支援單局。</p>@endif
                 </div>
 
                 <div>
@@ -161,32 +157,18 @@
                     rebuildIndexes();
                 });
 
-                const arrowSelect = node.querySelector('.arrow-select');
+                const roundFormat = node.querySelector('.round-format-select');
                 const arrowHidden = node.querySelector('.arrow-count-field');
-                const customInput = node.querySelector('.custom-arrow-input');
                 const regToggle = node.querySelector('.custom-reg-toggle');
                 const regWindow = node.querySelector('.custom-reg-window');
                 const regInputs = node.querySelectorAll('.custom-reg-input');
 
                 function syncArrowCount() {
-                    const value = arrowSelect.value;
-                    if (value === 'custom') {
-                        customInput.classList.remove('hidden');
-                        customInput.focus();
-                        if (customInput.value) {
-                            arrowHidden.value = customInput.value;
-                        }
-                    } else {
-                        customInput.classList.add('hidden');
-                        customInput.value = '';
-                        arrowHidden.value = value;
-                    }
+                    const singleArrows = {{ $event->mode === 'indoor' ? 30 : 36 }};
+                    arrowHidden.value = roundFormat.value === 'double' ? singleArrows * 2 : singleArrows;
                 }
 
-                arrowSelect.addEventListener('change', syncArrowCount);
-                customInput.addEventListener('input', () => {
-                    arrowHidden.value = customInput.value;
-                });
+                roundFormat.addEventListener('change', syncArrowCount);
 
                 // 初始同步
                 syncArrowCount();
@@ -207,10 +189,6 @@
                     node.querySelector('.group-bow-field').value = preset.bow;
                     node.querySelector('.group-gender-field').value = preset.gender;
                     node.querySelector('.group-distance-field').value = preset.distance;
-                    const wantedArrows = String(Math.min(Number(preset.arrows), {{ $maxArrows }}));
-                    const existingOption = [...arrowSelect.options].some(option => option.value === wantedArrows);
-                    if (existingOption) arrowSelect.value = wantedArrows;
-                    else { arrowSelect.value = 'custom'; customInput.value = wantedArrows; }
                     syncArrowCount();
                 }
 

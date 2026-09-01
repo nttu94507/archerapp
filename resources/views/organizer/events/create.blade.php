@@ -125,7 +125,7 @@
                 <div><label class="text-sm font-medium">弓種</label><select id="group-bow" name="groups[0][bow_type]" class="mt-1 min-h-12 w-full rounded-xl border-gray-300"><option value="recurve">反曲弓</option><option value="compound">複合弓</option><option value="barebow">光弓</option><option value="">不限</option></select></div>
                 <div><label class="text-sm font-medium">性別</label><select id="group-gender" name="groups[0][gender]" class="mt-1 min-h-12 w-full rounded-xl border-gray-300"><option value="open">公開／不限</option><option value="male">男子</option><option value="female">女子</option></select></div>
                 <div><label class="text-sm font-medium">距離</label><input id="group-distance" name="groups[0][distance]" value="{{ old('groups.0.distance','70m') }}" class="mt-1 min-h-12 w-full rounded-xl border-gray-300"></div>
-                <div><label class="text-sm font-medium">總箭數 *</label><input id="group-arrows" type="number" min="6" max="{{ $maxArrows }}" step="6" name="groups[0][arrow_count]" required value="{{ old('groups.0.arrow_count', $maxArrows > 36 ? 72 : 36) }}" class="mt-1 min-h-12 w-full rounded-xl border-gray-300"></div>
+                <div><label class="text-sm font-medium">排名賽局數 *</label><select id="group-round-format" class="mt-1 min-h-12 w-full rounded-xl border-gray-300"><option value="single">單局（室外 36 箭／室內 30 箭）</option>@if($maxArrows > 36)<option value="double">雙局（室外 72 箭／室內 60 箭）</option>@endif</select>@if($maxArrows === 36)<p class="mt-1 text-xs text-amber-700">免費方案僅支援單局。</p>@endif<input id="group-arrows" type="hidden" name="groups[0][arrow_count]" value="{{ old('groups.0.arrow_count', 36) }}"></div>
                 <div><label class="text-sm font-medium">每趟箭數 *</label><select name="groups[0][arrows_per_end]" class="mt-1 min-h-12 w-full rounded-xl border-gray-300"><option value="6">6 箭</option><option value="3">3 箭</option></select></div>
                 <div><label class="text-sm font-medium">名額</label><input type="number" min="1" name="groups[0][quota]" value="{{ old('groups.0.quota') }}" placeholder="不填表示不限" class="mt-1 min-h-12 w-full rounded-xl border-gray-300"></div>
                 <div><label class="text-sm font-medium">報名費</label><input type="number" min="0" name="groups[0][fee]" value="{{ old('groups.0.fee',0) }}" class="mt-1 min-h-12 w-full rounded-xl border-gray-300"></div>
@@ -155,6 +155,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const preset = document.getElementById('group-preset');
     const distance = document.getElementById('group-distance');
     const arrows = document.getElementById('group-arrows');
+    const roundFormat = document.getElementById('group-round-format');
     const mode = document.getElementById('event-mode');
     const groupName = document.getElementById('group-name');
     const groupBow = document.getElementById('group-bow');
@@ -176,16 +177,20 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     const presets = {
-        r70o: { name:'反曲弓 70 公尺公開組', bow:'recurve', gender:'open', mode:'outdoor', distance:'70m', arrows:{{ $maxArrows > 36 ? 72 : 36 }} },
-        r70m: { name:'反曲弓 70 公尺男子組', bow:'recurve', gender:'male', mode:'outdoor', distance:'70m', arrows:{{ $maxArrows > 36 ? 72 : 36 }} },
-        r70f: { name:'反曲弓 70 公尺女子組', bow:'recurve', gender:'female', mode:'outdoor', distance:'70m', arrows:{{ $maxArrows > 36 ? 72 : 36 }} },
+        r70o: { name:'反曲弓 70 公尺公開組', bow:'recurve', gender:'open', mode:'outdoor', distance:'70m' },
+        r70m: { name:'反曲弓 70 公尺男子組', bow:'recurve', gender:'male', mode:'outdoor', distance:'70m' },
+        r70f: { name:'反曲弓 70 公尺女子組', bow:'recurve', gender:'female', mode:'outdoor', distance:'70m' },
         r30o: { name:'反曲弓 30 公尺公開組', bow:'recurve', gender:'open', mode:'outdoor', distance:'30m', arrows:36 },
         r30m: { name:'反曲弓 30 公尺男子組', bow:'recurve', gender:'male', mode:'outdoor', distance:'30m', arrows:36 },
         r30f: { name:'反曲弓 30 公尺女子組', bow:'recurve', gender:'female', mode:'outdoor', distance:'30m', arrows:36 },
-        c50o: { name:'複合弓 50 公尺公開組', bow:'compound', gender:'open', mode:'outdoor', distance:'50m', arrows:{{ $maxArrows > 36 ? 72 : 36 }} },
-        c50m: { name:'複合弓 50 公尺男子組', bow:'compound', gender:'male', mode:'outdoor', distance:'50m', arrows:{{ $maxArrows > 36 ? 72 : 36 }} },
-        c50f: { name:'複合弓 50 公尺女子組', bow:'compound', gender:'female', mode:'outdoor', distance:'50m', arrows:{{ $maxArrows > 36 ? 72 : 36 }} },
-        indoor18: { mode: 'indoor', distance: '18m', arrows: {{ $maxArrows > 36 ? 60 : 30 }} },
+        c50o: { name:'複合弓 50 公尺公開組', bow:'compound', gender:'open', mode:'outdoor', distance:'50m' },
+        c50m: { name:'複合弓 50 公尺男子組', bow:'compound', gender:'male', mode:'outdoor', distance:'50m' },
+        c50f: { name:'複合弓 50 公尺女子組', bow:'compound', gender:'female', mode:'outdoor', distance:'50m' },
+        indoor18: { mode: 'indoor', distance: '18m' },
+    };
+    const syncArrowCount = () => {
+        const singleArrows = mode.value === 'indoor' ? 30 : 36;
+        arrows.value = roundFormat.value === 'double' ? singleArrows * 2 : singleArrows;
     };
     preset.addEventListener('change', () => {
         const selected = presets[preset.value];
@@ -195,8 +200,12 @@ document.addEventListener('DOMContentLoaded', () => {
         if(selected.bow) groupBow.value=selected.bow;
         if(selected.gender) groupGender.value=selected.gender;
         distance.value = selected.distance;
-        arrows.value = selected.arrows;
+        syncArrowCount();
     });
+    roundFormat.addEventListener('change', syncArrowCount);
+    mode.addEventListener('change', syncArrowCount);
+    roundFormat.value = Number(arrows.value) > (mode.value === 'indoor' ? 30 : 36) ? 'double' : 'single';
+    syncArrowCount();
 
     const renderCompetition = () => {
         const standardSelected = !!standardTeamSelector?.checked;
