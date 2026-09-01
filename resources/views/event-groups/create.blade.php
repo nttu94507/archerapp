@@ -18,14 +18,20 @@
             <section class="mb-5 rounded-2xl border border-indigo-100 bg-indigo-50 p-4 sm:p-5">
                 <div class="flex flex-wrap items-start justify-between gap-3"><div><h2 class="font-semibold text-indigo-950">快速套用預設組別</h2><p class="mt-1 text-xs text-indigo-700">選取後批次帶入，送出前仍可逐組修改。</p></div><button type="button" id="apply-presets" class="min-h-10 rounded-xl bg-indigo-600 px-4 text-sm font-semibold text-white">套用選取組別</button></div>
                 <div class="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-                    @foreach([
+                    @php($presetGroups = $event->mode === 'indoor' ? [
+                        ['recurve','18m','open','反曲弓 18 公尺公開組'],['recurve','18m','male','反曲弓 18 公尺男子組'],['recurve','18m','female','反曲弓 18 公尺女子組'],
+                        ['compound','18m','open','複合弓 18 公尺公開組'],['compound','18m','male','複合弓 18 公尺男子組'],['compound','18m','female','複合弓 18 公尺女子組'],
+                    ] : [
                         ['recurve','70m','open','反曲弓 70 公尺公開組'],['recurve','70m','male','反曲弓 70 公尺男子組'],['recurve','70m','female','反曲弓 70 公尺女子組'],
                         ['recurve','30m','open','反曲弓 30 公尺公開組'],['recurve','30m','male','反曲弓 30 公尺男子組'],['recurve','30m','female','反曲弓 30 公尺女子組'],
                         ['compound','50m','open','複合弓 50 公尺公開組'],['compound','50m','male','複合弓 50 公尺男子組'],['compound','50m','female','複合弓 50 公尺女子組'],
-                    ] as [$bow,$distance,$gender,$name])
+                    ])
+                    @foreach($presetGroups as [$bow,$distance,$gender,$name])
+                        @continue(in_array($bow.'|'.mb_strtolower(trim($distance)).'|'.$gender, $existingGroupKeys, true))
                         <label class="flex min-h-12 cursor-pointer items-center gap-3 rounded-xl border border-indigo-100 bg-white px-3 text-sm transition has-[:checked]:border-indigo-500 has-[:checked]:bg-indigo-100"><input type="checkbox" class="preset-choice h-5 w-5 rounded text-indigo-600" data-bow="{{ $bow }}" data-distance="{{ $distance }}" data-gender="{{ $gender }}" data-name="{{ $name }}" data-arrows="{{ $distance === '30m' ? 36 : ($maxArrows > 36 ? 72 : 36) }}">{{ $name }}</label>
                     @endforeach
                 </div>
+                @if(count($existingGroupKeys))<p class="mt-3 text-xs text-indigo-700">已建立的相同弓種、距離與性別組別，已從快速選項中隱藏。</p>@endif
                 @if($maxNewGroups !== null)<p class="mt-3 text-xs font-medium text-amber-700">目前方案本次最多可新增 {{ $maxNewGroups }} 組。</p>@endif
             </section>
 

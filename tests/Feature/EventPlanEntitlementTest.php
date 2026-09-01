@@ -208,6 +208,37 @@ class EventPlanEntitlementTest extends TestCase
         $this->assertDatabaseMissing('event_scoring_assignments', ['event_registration_id'=>$registrations[1]->id]);
     }
 
+    public function test_quick_group_creation_hides_and_rejects_duplicate_group_combinations(): void
+    {
+        $owner = User::factory()->create();
+        $event = Event::factory()->create([
+            'mode' => 'outdoor',
+            'plan_code' => EventPlanCatalog::EVENT_PASS,
+            'plan_features_snapshot' => EventPlanCatalog::features(EventPlanCatalog::EVENT_PASS),
+            'plan_limits_snapshot' => EventPlanCatalog::limits(EventPlanCatalog::EVENT_PASS),
+        ]);
+        $event->staff()->create(['user_id'=>$owner->id, 'role'=>'owner', 'status'=>'active']);
+        EventGroup::factory()->create([
+            'event_id'=>$event->id, 'name'=>'既有公開組', 'bow_type'=>'recurve',
+            'distance'=>'70m', 'gender'=>'open', 'arrow_count'=>72,
+        ]);
+
+        $this->actingAs($owner)->get(route('events.groups.create', $event))
+            ->assertOk()
+            ->assertDontSee('反曲弓 70 公尺公開組')
+            ->assertSee('反曲弓 70 公尺男子組');
+
+        $maleGroup = $this->groupPayload('男子甲組', 72);
+        $maleGroup['gender'] = 'male';
+        $duplicate = $maleGroup;
+        $duplicate['name'] = '男子乙組';
+        $this->actingAs($owner)->post(route('events.groups.store', $event), [
+            'groups'=>[$maleGroup, $duplicate],
+        ])->assertSessionHasErrors('groups');
+
+        $this->assertSame(1, $event->groups()->count());
+    }
+
     private function groupPayload(string $name, int $arrows = 36): array
     {
         return [

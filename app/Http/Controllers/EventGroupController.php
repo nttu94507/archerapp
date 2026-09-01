@@ -57,6 +57,14 @@ class EventGroupController extends Controller
             'event' => $event,
             'maxArrows' => $event->planLimit('arrows_per_phase') ?? 180,
             'maxNewGroups' => $groupLimit === null ? null : $groupLimit - $currentGroups,
+            'existingGroupKeys' => $event->groups()
+                ->get(['bow_type', 'distance', 'gender'])
+                ->map(fn (EventGroup $group) => implode('|', [
+                    $group->bow_type ?? '',
+                    mb_strtolower(trim((string) $group->distance)),
+                    $group->gender ?? 'open',
+                ]))
+                ->all(),
         ]);
     }
 
@@ -130,7 +138,23 @@ class EventGroupController extends Controller
                     'groups' => '免費方案最多只能建立 1 個組別，請先升級單場方案或訂閱。',
                 ]);
             }
+            $groupKey = fn (array $group): string => implode('|', [
+                $group['bow_type'] ?? '',
+                mb_strtolower(trim((string) ($group['distance'] ?? ''))),
+                $group['gender'] ?? 'open',
+            ]);
+            $existingKeys = $event->groups()->get(['bow_type', 'distance', 'gender'])
+                ->map(fn (EventGroup $group): string => $groupKey($group->toArray()))
+                ->all();
+            $pendingKeys = [];
             foreach ($data['groups'] as $g) {
+                $key = $groupKey($g);
+                if (in_array($key, $existingKeys, true) || in_array($key, $pendingKeys, true)) {
+                    throw ValidationException::withMessages([
+                        'groups' => '不能建立重複組別：相同弓種、距離與性別的組別已存在。',
+                    ]);
+                }
+                $pendingKeys[] = $key;
                 unset($g['use_custom_reg_window']);
                 $g['arrows_per_end'] = $event->mode === 'indoor' ? 3 : 6;
                 $g['standard_team_enabled'] = ! empty($g['standard_team_enabled']);
