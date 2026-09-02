@@ -41,10 +41,13 @@ class EventCompletionService
                 'ready', 'in_progress', 'awaiting_shoot_off', 'awaiting_judge',
             ])->count();
 
-            if (! $final?->winner_registration_id) {
+            $finalHasWinner = $final && ($final->winner_registration_id || $final->winner_team_id);
+            $bronzeHasWinner = ! $bronze || $bronze->winner_registration_id || $bronze->winner_team_id;
+
+            if (! $finalHasWinner) {
                 $blockers[] = $bracket->group->name.'：冠軍賽尚未完成。';
             }
-            if ($bronze && ! $bronze->winner_registration_id) {
+            if (! $bronzeHasWinner) {
                 $blockers[] = $bracket->group->name.'：季軍賽尚未完成或尚未判定輪空。';
             }
             if ($unresolved > 0) {

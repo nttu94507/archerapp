@@ -12,6 +12,7 @@
     @php
         $brackets = $event->groups->flatMap->eliminationBrackets;
         $statusNames = ['pending'=>'等待前場', 'ready'=>'等待比賽', 'in_progress'=>'比賽中', 'awaiting_shoot_off'=>'等待加射', 'awaiting_judge'=>'等待主裁判', 'walkover'=>'輪空晉級', 'completed'=>'已完成'];
+        $categoryNames = ['individual'=>'個人對抗', 'team'=>'3 人團體對抗', 'mixed_team'=>'男女混雙對抗'];
     @endphp
 
     @unless($event->hasPlanFeature('individual_elimination'))
@@ -44,7 +45,22 @@
     @endif
     @endcan
 
-    @forelse($brackets as $bracket)
+    @if($brackets->isNotEmpty())
+        <nav class="overflow-x-auto rounded-2xl border bg-white p-2 shadow-sm" aria-label="對抗表切換">
+            <div class="flex min-w-max gap-2">
+                @foreach($brackets as $tabBracket)
+                    <a href="{{ route('organizer.events.elimination.index', ['event'=>$event, 'bracket'=>$tabBracket->uuid]) }}"
+                       class="inline-flex min-h-12 items-center gap-2 rounded-xl px-4 text-sm font-semibold {{ $selectedBracket?->is($tabBracket) ? 'bg-violet-600 text-white' : 'bg-gray-50 text-gray-700 hover:bg-violet-50 hover:text-violet-700' }}">
+                        <span>{{ $tabBracket->group->name }}</span>
+                        <span class="rounded-full px-2 py-0.5 text-xs {{ $selectedBracket?->is($tabBracket) ? 'bg-white/20' : 'bg-white text-gray-500' }}">{{ $categoryNames[$tabBracket->category] ?? '對抗賽' }}</span>
+                    </a>
+                @endforeach
+            </div>
+        </nav>
+
+        @php
+            $bracket = $selectedBracket;
+        @endphp
         <section class="overflow-hidden rounded-2xl border bg-white shadow-sm">
             <div class="flex flex-wrap items-center justify-between gap-3 border-b bg-gray-50 p-4 sm:p-5"><div><h2 class="font-semibold">{{ $bracket->name }}</h2><p class="mt-1 text-xs text-gray-500">{{ $bracket->bracket_size }} {{ in_array($bracket->category, ['team', 'mixed_team'], true) ? '隊制' : '人制' }}・{{ $bracket->scoring_mode === 'set' ? '局分制' : '累計制' }}・種子快照 v{{ $bracket->rankingSnapshot->version }}</p></div><div class="flex items-center gap-2"><span class="rounded-full px-3 py-1 text-xs font-medium {{ $bracket->visibility === 'public' ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-200 text-gray-600' }}">{{ $bracket->visibility === 'public' ? '公開戰況' : '僅工作人員' }}</span>@can('manageScoreCorrections',$event)<form method="POST" action="{{ route('organizer.events.elimination.visibility', [$event, $bracket]) }}">@csrf @method('PATCH')<input type="hidden" name="visibility" value="{{ $bracket->visibility === 'public' ? 'internal' : 'public' }}"><button class="min-h-9 rounded-lg border bg-white px-3 text-xs font-medium" onclick="return confirm('{{ $bracket->visibility === 'public' ? '確定關閉公開戰況？' : '公開後任何人都能查看籤表與即時分數，確定公開？' }}')">{{ $bracket->visibility === 'public' ? '停止公開' : '公開戰況' }}</button></form>@endcan</div></div>
             @php
@@ -57,36 +73,32 @@
             @endif
             @include('events._elimination-bracket-tree', ['bracket'=>$bracket, 'statusNames'=>$statusNames])
         </section>
-    @empty
-        <section class="rounded-2xl border border-dashed bg-white p-8 text-center"><h2 class="font-semibold">尚未建立個人對抗表</h2><p class="mt-1 text-sm text-gray-500">先完成排名賽成績發布，再依鎖定的種子快照建立籤表。</p></section>
-    @endforelse
+    @else
+        <section class="rounded-2xl border border-dashed bg-white p-8 text-center"><h2 class="font-semibold">尚未建立對抗表</h2><p class="mt-1 text-sm text-gray-500">先完成排名賽成績發布，再依鎖定的種子快照建立個人、團體或混雙對抗表。</p></section>
+    @endif
 
     @can('manageScores', $event)
     @if($brackets->isNotEmpty())
     <section class="space-y-4">
-        <div><h2 class="text-xl font-bold">各組別對戰計分</h2><p class="mt-1 text-sm text-gray-500">QR Code 依組別與對抗類型分區；每場對戰仍使用獨立 PIN 綁定唯一計分設備。</p></div>
+        <div><h2 class="text-xl font-bold">目前對抗表計分</h2><p class="mt-1 text-sm text-gray-500">以下僅顯示目前頁籤的 QR Code；每場對戰使用獨立 PIN 綁定唯一計分設備。</p></div>
         @php
             $matchIsReadyForDevice = fn ($match) => ($match->participant_one_registration_id && $match->participant_two_registration_id)
                 || ($match->participant_one_team_id && $match->participant_two_team_id);
-            $groupsWithMatches = $event->groups->filter(fn ($group) => $group->eliminationBrackets
-                ->contains(fn ($bracket) => $bracket->matches->contains($matchIsReadyForDevice)));
-            $categoryNames = ['individual'=>'個人對抗', 'team'=>'3 人團體對抗', 'mixed_team'=>'男女混雙對抗'];
+            $deviceMatches = $selectedBracket?->matches->filter($matchIsReadyForDevice) ?? collect();
         @endphp
-        @forelse($groupsWithMatches as $group)
+        @if($selectedBracket && $deviceMatches->isNotEmpty())
+            @php
+                $group = $selectedBracket->group;
+            @endphp
             <section class="overflow-hidden rounded-2xl border border-indigo-200 bg-indigo-50/40 shadow-sm">
                 <header class="border-b border-indigo-200 bg-indigo-50 px-4 py-4 sm:px-5"><p class="text-xs font-semibold uppercase tracking-wider text-indigo-600">計分組別</p><h3 class="mt-1 text-lg font-bold text-indigo-950">{{ $group->name }}</h3><p class="mt-1 text-xs text-indigo-700">{{ $group->distance ?: '距離未設定' }}・{{ $group->bow_type === 'compound' ? '複合弓' : ($group->bow_type === 'recurve' ? '反曲弓' : '其他弓種') }}</p></header>
                 <div class="space-y-6 p-4 sm:p-5">
-                    @foreach($group->eliminationBrackets as $bracket)
-                        @php
-                            $deviceMatches = $bracket->matches->filter($matchIsReadyForDevice);
-                        @endphp
-                        @if($deviceMatches->isNotEmpty())
                             <div>
-                                <div class="mb-3 flex flex-wrap items-center justify-between gap-2"><div><h4 class="font-semibold text-gray-900">{{ $categoryNames[$bracket->category] ?? $bracket->name }}</h4><p class="mt-0.5 text-xs text-gray-500">{{ $bracket->bracket_size }} {{ $bracket->category === 'individual' ? '人制' : '隊制' }}・{{ $deviceMatches->count() }} 場可綁定設備</p></div></div>
+                                <div class="mb-3 flex flex-wrap items-center justify-between gap-2"><div><h4 class="font-semibold text-gray-900">{{ $categoryNames[$selectedBracket->category] ?? $selectedBracket->name }}</h4><p class="mt-0.5 text-xs text-gray-500">{{ $selectedBracket->bracket_size }} {{ $selectedBracket->category === 'individual' ? '人制' : '隊制' }}・{{ $deviceMatches->count() }} 場可綁定設備</p></div></div>
                                 <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
                                     @foreach($deviceMatches as $match)
                                         @php
-                                            $teamMatch = in_array($bracket->category, ['team', 'mixed_team'], true);
+                                            $teamMatch = in_array($selectedBracket->category, ['team', 'mixed_team'], true);
                                             $participantOneName = $teamMatch ? $match->participantOneTeam?->name : $match->participantOneEntry?->athlete_name;
                                             $participantTwoName = $teamMatch ? $match->participantTwoTeam?->name : $match->participantTwoEntry?->athlete_name;
                                         @endphp
@@ -101,13 +113,11 @@
                                     @endforeach
                                 </div>
                             </div>
-                        @endif
-                    @endforeach
                 </div>
             </section>
-        @empty
+        @else
             <p class="rounded-2xl border border-dashed bg-white p-6 text-center text-sm text-gray-500">目前尚無雙方選手或隊伍都已確定的對戰。</p>
-        @endforelse
+        @endif
     </section>
     @endif
     @endcan

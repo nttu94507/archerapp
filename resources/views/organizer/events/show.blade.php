@@ -96,7 +96,7 @@
                     @can('viewResults', $event)
                         @if($event->hasPlanFeature('individual_elimination') || $event->canUpgradeToEventPass())
                             <a href="{{ $event->hasPlanFeature('individual_elimination') ? route('organizer.events.elimination.index',$event) : route('store.index', ['event' => $event->uuid]) }}" class="group flex min-h-20 items-center justify-between gap-3 py-3">
-                                <div class="min-w-0"><p class="font-semibold group-hover:text-violet-700">個人對抗表</p><p class="mt-0.5 text-xs text-gray-500">由正式排名種子建立淘汰賽籤表</p></div>
+                                <div class="min-w-0"><p class="font-semibold group-hover:text-violet-700">對抗賽管理</p><p class="mt-0.5 text-xs text-gray-500">建立與管理個人、團體及混雙對抗表</p></div>
                                 <div class="flex shrink-0 items-center gap-2">
                                     @unless($event->hasPlanFeature('individual_elimination'))<span class="rounded-full bg-amber-100 px-2 py-1 text-xs font-medium text-amber-700">前往商店</span>@endunless
                                     <span class="text-gray-300 group-hover:text-violet-500">›</span>

@@ -17,7 +17,7 @@
 
     @if(!$officiallyCompleted && $completionCheck['ready'] && auth()->user()->can('update', $event))
         <section class="flex flex-col gap-4 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
-            <div><p class="font-bold text-emerald-950">所有組別成績都已發布</p><p class="mt-1 text-sm text-emerald-800">必要流程已完成，可以直接在這裡完成整場賽事。</p></div>
+            <div><p class="font-bold text-emerald-950">{{ $event->eliminationBrackets()->exists() ? '排名賽與所有對抗賽均已完成' : '所有組別排名成績都已發布' }}</p><p class="mt-1 text-sm text-emerald-800">必要流程已完成，可以直接在這裡完成整場賽事。</p></div>
             <form method="POST" action="{{ route('organizer.events.complete', $event) }}" onsubmit="return confirm('結案後所有計分裝置會停用，正式成績仍會保留。確定完成整場賽事？')">@csrf<button class="min-h-12 w-full rounded-xl bg-emerald-700 px-5 text-sm font-semibold text-white sm:w-auto">完成整場賽事</button></form>
         </section>
     @endif

@@ -23,7 +23,7 @@ use BaconQrCode\Writer;
 
 class EventEliminationController extends Controller
 {
-    public function index(Event $event): View
+    public function index(Request $request, Event $event): View
     {
         $this->authorize('viewResults', $event);
 
@@ -39,10 +39,15 @@ class EventEliminationController extends Controller
             ->get()
             ->keyBy('event_group_id');
 
+        $brackets = $event->groups->flatMap->eliminationBrackets;
+        $selectedBracket = $brackets->firstWhere('uuid', $request->string('bracket')->toString())
+            ?? $brackets->first();
+
         return view('organizer.elimination.index', [
             'event'=>$event,
             'snapshots'=>$snapshots,
             'sizes'=>IndividualEliminationBracketService::SIZES,
+            'selectedBracket'=>$selectedBracket,
         ]);
     }
 
@@ -65,13 +70,19 @@ class EventEliminationController extends Controller
 
         $category=$data['category']??'individual';
         if ($category === 'individual') {
-            $service->create($event,$group,(int)$data['bracket_size'],$request->boolean('bronze_match_enabled'),$request->user()->id);
+            $bracket = $service->create($event,$group,(int)$data['bracket_size'],$request->boolean('bronze_match_enabled'),$request->user()->id);
         } else {
-            $teamService->create($event,$group,(int)$data['bracket_size'],$request->boolean('bronze_match_enabled'),$request->user()->id,$category==='mixed_team'?'mixed':'standard');
+            $bracket = $teamService->create($event,$group,(int)$data['bracket_size'],$request->boolean('bronze_match_enabled'),$request->user()->id,$category==='mixed_team'?'mixed':'standard');
         }
 
-        return redirect()->route('organizer.events.elimination.index', $event)
-            ->with('success', $group->name.($category==='team'?' 團體':' 個人').'對抗表已依正式排名種子建立。');
+        $categoryName = match ($category) {
+            'team' => '團體',
+            'mixed_team' => '混雙',
+            default => '個人',
+        };
+
+        return redirect()->route('organizer.events.elimination.index', ['event'=>$event, 'bracket'=>$bracket->uuid])
+            ->with('success', $group->name.' '.$categoryName.'對抗表已依正式排名種子建立。');
     }
 
     public function showMatch(Event $event, EventEliminationMatch $match): View

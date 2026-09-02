@@ -349,6 +349,20 @@ class EventController extends Controller
             return ['title'=>'完成現場計分', 'description'=>'還有 '.$unfinishedTargets.' 個靶位尚未完成；可查看設備綁定與各靶進度。', 'label'=>'查看計分進度', 'url'=>route('organizer.events.scoring.index', $event)];
         }
 
+        $rankingRegistrations = $event->registrations()->whereIn('status', ['registered', 'checked_in', 'no_show']);
+        $rankingsPublished = (clone $rankingRegistrations)->exists()
+            && (clone $rankingRegistrations)->whereNull('result_published_at')->doesntExist();
+        $hasElimination = $event->eliminationBrackets()->exists();
+
+        if ($rankingsPublished && $hasElimination && ! $completionCheck['ready'] && $request->user()->can('viewResults', $event)) {
+            return [
+                'title'=>'完成所有對抗賽',
+                'description'=>'排名賽已發布；請完成所有個人、團體及混雙對抗場次與必要判定，完成後才會出現結案按鈕。',
+                'label'=>'前往對抗賽管理',
+                'url'=>route('organizer.events.elimination.index', $event),
+            ];
+        }
+
         if (! $completionCheck['ready'] && $request->user()->can('viewResults', $event)) {
             return ['title'=>'核對並發布各組成績', 'description'=>'計分結束後依序完成必要的裁判簽核、成績核准與正式發布。', 'label'=>'前往成績管理', 'url'=>route('organizer.events.results.index', $event)];
         }

@@ -99,7 +99,7 @@ class EventEliminationBracketTest extends TestCase
             'event_group_id'=>$group->id, 'name'=>$group->name.' 團體對抗賽',
             'type'=>'elimination', 'sequence'=>2, 'scoring_mode'=>'set', 'status'=>'ready',
         ]);
-        \App\Models\EventEliminationBracket::create([
+        $team = \App\Models\EventEliminationBracket::create([
             'event_id'=>$event->id, 'event_group_id'=>$group->id,
             'event_phase_id'=>$teamPhase->id, 'event_ranking_snapshot_id'=>$snapshot->id,
             'name'=>$group->name.' 團體對抗表', 'category'=>'team',
@@ -110,6 +110,20 @@ class EventEliminationBracketTest extends TestCase
 
         $this->assertSame('individual', $individual->fresh()->category);
         $this->assertSame(2, $group->eliminationBrackets()->count());
+
+        $owner = User::factory()->create();
+        EventStaff::create([
+            'event_id'=>$event->id, 'user_id'=>$owner->id, 'role'=>'owner',
+            'status'=>'active', 'invited_by'=>$owner->id,
+        ]);
+
+        $this->actingAs($owner)
+            ->get(route('organizer.events.elimination.index', ['event'=>$event, 'bracket'=>$team->uuid]))
+            ->assertOk()
+            ->assertSee('3 人團體對抗')
+            ->assertSee('個人對抗')
+            ->assertSee($team->name)
+            ->assertDontSee($individual->name);
     }
 
     public function test_recurve_match_awards_two_one_zero_set_points_and_stops_at_six(): void
@@ -419,8 +433,9 @@ class EventEliminationBracketTest extends TestCase
         $this->actingAs($owner)
             ->get(route('organizer.events.elimination.index', $event))
             ->assertOk()
-            ->assertSee('個人對抗表')
-            ->assertSee('各組別對戰計分')
+            ->assertSee('對抗賽管理')
+            ->assertSee('個人對抗')
+            ->assertSee('目前對抗表計分')
             ->assertSee('計分組別')
             ->assertSee($group->name)
             ->assertSee($firstMatch->participantOneEntry->athlete_name)
@@ -443,7 +458,35 @@ class EventEliminationBracketTest extends TestCase
             'status'=>'active',
             'invited_by'=>$owner->id,
         ]);
+        $session = \App\Models\EventScoringSession::create([
+            'event_id'=>$event->id,
+            'event_group_id'=>$group->id,
+            'event_phase_id'=>$group->qualificationPhase()->firstOrFail()->id,
+            'name'=>$group->name.' 排名賽',
+            'total_arrows'=>36,
+            'arrows_per_end'=>6,
+            'athletes_per_target'=>4,
+            'status'=>'completed',
+            'created_by'=>$owner->id,
+        ]);
+        $session->targets()->create([
+            'target_number'=>1,
+            'access_token'=>(string) \Illuminate\Support\Str::uuid(),
+            'device_pin'=>'123456',
+            'status'=>'completed',
+        ]);
         app(IndividualEliminationBracketService::class)->create($event, $group, 4, true, $owner->id);
+
+        $this->actingAs($owner)
+            ->get(route('organizer.events.show', $event))
+            ->assertOk()
+            ->assertSee('完成所有對抗賽')
+            ->assertSee('前往對抗賽管理')
+            ->assertDontSee('完成整場賽事');
+        $this->actingAs($owner)
+            ->get(route('organizer.events.results.index', $event))
+            ->assertOk()
+            ->assertDontSee('完成整場賽事');
 
         $this->actingAs($owner)
             ->post(route('organizer.events.complete', $event))
