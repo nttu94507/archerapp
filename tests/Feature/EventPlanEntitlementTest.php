@@ -133,6 +133,7 @@ class EventPlanEntitlementTest extends TestCase
         $this->actingAs($owner)
             ->get(route('organizer.events.show', $event))
             ->assertOk()
+            ->assertDontSee('報名與繳費')
             ->assertDontSee('現場報到');
         $this->actingAs($owner)
             ->get(route('organizer.events.check-in.index', $event))

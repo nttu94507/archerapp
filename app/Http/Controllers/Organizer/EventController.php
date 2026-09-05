@@ -337,6 +337,9 @@ class EventController extends Controller
         $hasScoring = $event->scoringSessions()->exists();
         if (! $hasScoring) {
             if ($event->active_registrations_count === 0 && $request->user()->can('manageRegistrations', $event)) {
+                if ($event->plan_code === EventPlanCatalog::FREE) {
+                    return ['title'=>'等待選手報名', 'description'=>'', 'label'=>'查看賽事頁', 'url'=>route('events.show', $event)];
+                }
                 return ['title'=>'先讓選手完成報名', 'description'=>'目前尚無有效報名；分享賽事或進入名單頁確認報名狀況。', 'label'=>'查看報名名單', 'url'=>route('organizer.events.registrations.index', $event)];
             }
             $hasUnreported = $event->registrations()->where('status', 'registered')->whereNull('checked_in_at')->exists();
