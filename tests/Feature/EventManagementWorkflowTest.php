@@ -35,7 +35,7 @@ class EventManagementWorkflowTest extends TestCase
         $this->get(route('events.show',$event))->assertOk();
 
         $this->actingAs($owner)->post(route('organizer.events.unpublish',$event))->assertSessionHas('success');
-        $this->assertSame('draft',$event->fresh()->status);
+        $this->assertSame('rejected',$event->fresh()->status);
         $this->app['auth']->logout();
         $this->get(route('events.show',$event))->assertNotFound();
     }
@@ -80,10 +80,29 @@ class EventManagementWorkflowTest extends TestCase
         $this->actingAs($staffUser)->get(route('organizer.events.registrations.index',$event))->assertOk();
         $this->actingAs($staffUser)->get(route('organizer.events.results.index',$event))->assertForbidden();
         $this->actingAs($viewer)->get(route('organizer.events.registrations.index',$event))->assertForbidden();
-        $this->actingAs($owner)->get(route('organizer.events.show',$event))->assertOk()->assertSee('最近操作紀錄');
+        $this->actingAs($owner)->get(route('organizer.events.show',$event))->assertOk()
+            ->assertSee('總覽')->assertSee('執行')->assertSee('管理')->assertSee('最近操作紀錄');
         $this->actingAs($staffUser)->get(route('organizer.events.show',$event))->assertOk()->assertDontSee('最近操作紀錄')->assertDontSee('成績核對與發布');
         $this->actingAs($viewer)->get(route('organizer.events.show',$event))->assertOk()->assertDontSee('最近操作紀錄');
         $this->actingAs($outsider)->get(route('organizer.events.show',$event))->assertForbidden();
+    }
+
+    public function test_cancelling_event_requires_and_records_reason(): void
+    {
+        [$owner, $event] = $this->ownedEvent();
+
+        $this->actingAs($owner)
+            ->post(route('organizer.events.cancel', $event))
+            ->assertSessionHasErrors('cancellation_reason');
+        $this->assertNull($event->fresh()->cancelled_at);
+
+        $this->actingAs($owner)
+            ->post(route('organizer.events.cancel', $event), ['cancellation_reason'=>'場地臨時無法使用'])
+            ->assertSessionHas('success');
+
+        $this->assertNotNull($event->fresh()->cancelled_at);
+        $this->assertSame('場地臨時無法使用', $event->fresh()->review_note);
+        $this->assertDatabaseHas('event_audit_logs', ['event_id'=>$event->id, 'action'=>'event.cancelled']);
     }
 
     public function test_admin_can_emergency_publish_or_unpublish_with_a_reason(): void

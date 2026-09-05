@@ -159,7 +159,7 @@ class EventController extends Controller
     {
         $this->authorize('update', $event);
         abort_unless($event->isPublished(), 422, '目前賽事尚未發布。');
-        $event->update(['status' => 'draft', 'published_at' => null, 'verified' => false]);
+        $event->update(['status' => 'rejected', 'published_at' => null, 'verified' => false]);
         $this->audit($event, $request, 'event.unpublished');
 
         return back()->with('success', '賽事已下架並保留為草稿。');
@@ -168,8 +168,9 @@ class EventController extends Controller
     public function cancel(Request $request, Event $event): RedirectResponse
     {
         $this->authorize('update', $event);
-        $event->update(['cancelled_at' => now()]);
-        $this->audit($event, $request, 'event.cancelled');
+        $data = $request->validate(['cancellation_reason'=>['required', 'string', 'max:500']]);
+        $event->update(['cancelled_at' => now(), 'review_note'=>$data['cancellation_reason']]);
+        $this->audit($event, $request, 'event.cancelled', metadata: ['reason'=>$data['cancellation_reason']]);
 
         return back()->with('success', '賽事已取消並停止公開報名。');
     }
