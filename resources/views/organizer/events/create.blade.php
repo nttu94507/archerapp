@@ -34,7 +34,7 @@
 </style>
 <div class="mx-auto max-w-4xl px-4 py-6 sm:px-6 sm:py-8">
     <div class="mb-6">
-        <a href="{{ route('organizer.events.index') }}" class="inline-flex min-h-11 items-center text-sm font-medium text-indigo-600">← 我的賽事</a>
+        <a href="{{ route('organizer.events.index') }}" class="inline-flex min-h-11 items-center text-sm font-medium text-indigo-600">← 我的主辦賽事</a>
         <p class="text-xs font-semibold uppercase tracking-widest text-indigo-600">Organizer</p>
         <h1 class="mt-1 text-2xl font-bold">快速建立賽事</h1>
         <p class="mt-1 text-sm text-gray-500">填寫基本資料與第一個組別，就能直接發布並開始收件。</p>
@@ -145,7 +145,11 @@
                 <div><label class="text-sm font-medium">排名賽局數 *</label><select id="group-round-format" class="mt-1 min-h-12 w-full rounded-xl border-gray-300"><option value="single">單局（室外 36 箭／室內 30 箭）</option>@if($maxArrows > 36)<option value="double">雙局（室外 72 箭／室內 60 箭）</option>@endif</select>@if($maxArrows === 36)<p class="mt-1 text-xs text-amber-700">免費方案僅支援單局。</p>@endif<input id="group-arrows" type="hidden" name="groups[0][arrow_count]" value="{{ old('groups.0.arrow_count', 36) }}"></div>
                 <input id="group-arrows-per-end" type="hidden" name="groups[0][arrows_per_end]" value="{{ old('groups.0.arrows_per_end', old('mode') === 'indoor' ? 3 : 6) }}">
                 <div><label class="text-sm font-medium">名額</label><input type="number" min="1" name="groups[0][quota]" value="{{ old('groups.0.quota') }}" placeholder="不填表示不限" class="mt-1 min-h-12 w-full rounded-xl border-gray-300"></div>
-                <div><label class="text-sm font-medium">報名費</label><input type="number" min="0" name="groups[0][fee]" value="{{ old('groups.0.fee',0) }}" class="mt-1 min-h-12 w-full rounded-xl border-gray-300"></div>
+                @if($maxArrows > 36)
+                    <div><label class="text-sm font-medium">報名費</label><input type="number" min="0" name="groups[0][fee]" value="{{ old('groups.0.fee',0) }}" class="mt-1 min-h-12 w-full rounded-xl border-gray-300"></div>
+                @else
+                    <input type="hidden" name="groups[0][fee]" value="0">
+                @endif
                 <input id="group-is-team" type="hidden" name="groups[0][is_team]" value="{{ old('groups.0.is_team', 0) ? 1 : 0 }}">
                 <input id="group-standard-team" type="hidden" name="groups[0][standard_team_enabled]" value="{{ old('groups.0.standard_team_enabled', 0) ? 1 : 0 }}">
                 <input id="group-mixed-team" type="hidden" name="groups[0][mixed_team_enabled]" value="{{ old('groups.0.mixed_team_enabled', 0) ? 1 : 0 }}">

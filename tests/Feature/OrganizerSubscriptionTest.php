@@ -212,6 +212,26 @@ class OrganizerSubscriptionTest extends TestCase
         $this->assertDatabaseHas('event_groups',['event_id'=>$event->id,'is_team'=>1,'standard_team_enabled'=>1,'mixed_team_enabled'=>1]);
     }
 
+    public function test_free_event_hides_and_ignores_registration_fee(): void
+    {
+        $organizer = $this->approvedOrganizer('免費主辦方');
+
+        $this->actingAs($organizer)
+            ->get(route('organizer.events.create'))
+            ->assertOk()
+            ->assertDontSee('報名費</label>', false);
+
+        $payload = array_merge($this->eventPayload('免費無收費賽事'), ['submit_mode'=>'publish', 'groups'=>[0=>[
+            'name'=>'反曲弓 30 公尺公開組', 'bow_type'=>'recurve', 'gender'=>'open',
+            'distance'=>'30m', 'arrow_count'=>36, 'arrows_per_end'=>6, 'fee'=>1500,
+        ]]]);
+
+        $this->actingAs($organizer)->post(route('organizer.events.store'), $payload)->assertRedirect();
+
+        $event = Event::where('name', '免費無收費賽事')->firstOrFail();
+        $this->assertSame(0, $event->groups()->firstOrFail()->fee);
+    }
+
     private function approvedOrganizer(string $organizationName): User
     {
         $user = User::factory()->create();

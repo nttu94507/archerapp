@@ -30,7 +30,9 @@ class EventController extends Controller
                 'groups', 'registrations', 'badges',
                 'registrations as checked_in_count' => fn ($query) => $query->where('status', 'checked_in'),
             ])
-            ->orderByDesc('start_date')->paginate(15);
+            ->orderByDesc('created_at')
+            ->orderByDesc('id')
+            ->paginate(15);
 
         return view('organizer.events.index', compact('events'));
     }
@@ -298,8 +300,10 @@ class EventController extends Controller
 
         $validated = $request->validate($rules);
         if ($creating) {
-            $validated['groups'] = collect($validated['groups'] ?? [])->map(function (array $group) use ($validated): array {
+            $isSubscriber = $request->user()->hasActiveOrganizerSubscription();
+            $validated['groups'] = collect($validated['groups'] ?? [])->map(function (array $group) use ($validated, $isSubscriber): array {
                 $group['arrows_per_end'] = $validated['mode'] === 'indoor' ? 3 : 6;
+                $group['fee'] = $isSubscriber ? ($group['fee'] ?? 0) : 0;
                 $group['standard_team_enabled'] = ! empty($group['standard_team_enabled']);
                 $group['mixed_team_enabled'] = ! empty($group['mixed_team_enabled']);
                 $group['is_team'] = $group['standard_team_enabled'] || $group['mixed_team_enabled'] || ! empty($group['is_team']);

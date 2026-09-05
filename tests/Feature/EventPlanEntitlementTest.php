@@ -94,7 +94,10 @@ class EventPlanEntitlementTest extends TestCase
             'plan_limits_snapshot'=>EventPlanCatalog::limits(EventPlanCatalog::EVENT_PASS),
         ]);
         $paidEvent->staff()->create(['user_id'=>$owner->id, 'role'=>'owner', 'status'=>'active']);
-        EventGroup::factory()->create(['event_id'=>$paidEvent->id, 'name'=>'第一組', 'arrow_count'=>72]);
+        EventGroup::factory()->create([
+            'event_id'=>$paidEvent->id, 'name'=>'第一組', 'arrow_count'=>72,
+            'bow_type'=>'compound', 'gender'=>'open', 'distance'=>'50m',
+        ]);
 
         $this->actingAs($owner)
             ->post(route('events.groups.store', $paidEvent), ['groups'=>[$this->groupPayload('第二組', 72)]])

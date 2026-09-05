@@ -15,7 +15,7 @@
 @endphp
 <div class="mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-8" x-data="{ tab: ['overview','execute','manage'].includes(location.hash.slice(1)) ? location.hash.slice(1) : 'overview' }">
     <header class="flex items-center justify-between gap-3">
-        <div class="min-w-0"><a href="{{ route('organizer.events.index') }}" class="inline-flex min-h-10 items-center text-sm font-medium text-indigo-600">← 我的賽事</a><h1 class="truncate text-2xl font-bold">{{ $event->name }}</h1></div>
+        <div class="min-w-0"><a href="{{ route('organizer.events.index') }}" class="inline-flex min-h-10 items-center text-sm font-medium text-indigo-600">← 我的主辦賽事</a><h1 class="truncate text-2xl font-bold">{{ $event->name }}</h1></div>
         <details class="relative shrink-0"><summary class="flex h-11 w-11 cursor-pointer list-none items-center justify-center rounded-xl border bg-white text-xl">⋯</summary><div class="absolute right-0 z-30 mt-2 w-56 overflow-hidden rounded-xl border bg-white p-2 shadow-xl"><a href="{{ route('events.show',$event) }}" class="flex min-h-11 items-center rounded-lg px-3 text-sm hover:bg-gray-50">{{ $officiallyCompleted ? '查看正式成績' : ($event->isPublished() ? '查看賽事頁' : '預覽草稿') }}</a>@can('update',$event)@if(!$officiallyCompleted && !$event->cancelled_at)<a href="{{ route('organizer.events.edit',$event) }}" class="flex min-h-11 items-center rounded-lg px-3 text-sm hover:bg-gray-50">編輯資料</a>@endif @endcan</div></details>
     </header>
     @if(session('success'))<div class="mt-4 rounded-xl border border-green-200 bg-green-50 p-4 text-sm text-green-700">{{ session('success') }}</div>@endif

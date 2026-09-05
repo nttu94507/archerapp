@@ -87,6 +87,22 @@ class EventManagementWorkflowTest extends TestCase
         $this->actingAs($outsider)->get(route('organizer.events.show',$event))->assertForbidden();
     }
 
+    public function test_organized_events_are_sorted_by_newest_creation_time(): void
+    {
+        $owner = User::factory()->create();
+        $older = Event::factory()->create(['name'=>'較早建立但較晚比賽', 'start_date'=>now()->addYear(), 'created_at'=>now()->subDay()]);
+        $newer = Event::factory()->create(['name'=>'最新建立但較早比賽', 'start_date'=>now()->addMonth(), 'created_at'=>now()]);
+        foreach ([$older, $newer] as $event) {
+            EventStaff::create(['event_id'=>$event->id, 'user_id'=>$owner->id, 'role'=>'owner', 'status'=>'active', 'invited_by'=>$owner->id]);
+        }
+
+        $this->actingAs($owner)
+            ->get(route('organizer.events.index'))
+            ->assertOk()
+            ->assertSee('我的主辦賽事')
+            ->assertSeeInOrder([$newer->name, $older->name]);
+    }
+
     public function test_cancelling_event_requires_and_records_reason(): void
     {
         [$owner, $event] = $this->ownedEvent();
