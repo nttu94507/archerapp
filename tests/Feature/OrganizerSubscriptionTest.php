@@ -199,6 +199,7 @@ class OrganizerSubscriptionTest extends TestCase
 
         $this->actingAs($subscriber)->get(route('organizer.events.create'))
             ->assertOk()->assertSee('賽事內容')->assertSee('3 人團體賽')->assertSee('男女混雙')->assertSee('建立架構預覽')
+            ->assertSee('反曲弓 70m')->assertSee('複合弓 50m')->assertSee('室內反曲弓 18m')->assertSee('自訂賽制')
             ->assertSee('反曲弓 70 公尺男子組')->assertSee('反曲弓 30 公尺女子組')->assertSee('複合弓 50 公尺公開組');
 
         $payload=array_merge($this->eventPayload('混雙快速賽事'),['submit_mode'=>'publish','groups'=>[0=>[

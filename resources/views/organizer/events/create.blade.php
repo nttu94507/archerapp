@@ -96,6 +96,18 @@
         <section id="event-step-two" class="rounded-2xl border bg-white p-4 shadow-sm sm:p-6 {{ $startAtStepTwo ? '' : 'hidden' }}">
             <div class="mb-5 flex flex-wrap items-start justify-between gap-3"><div><p class="text-xs font-semibold text-indigo-600">步驟 2</p><h2 class="text-lg font-semibold">第一個報名組別</h2><p class="mt-1 text-xs text-gray-500">先建立主要組別，發布後仍可新增更多組別。</p></div><button id="back-to-step-one" type="button" class="min-h-10 rounded-xl border px-4 text-sm font-medium text-gray-700 hover:bg-gray-50">← 返回基本資料</button></div>
             @if($maxArrows === 36)<div class="mb-4 flex items-center justify-between gap-3 rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-800"><span>免費方案僅支援單局最多 36 箭。</span><a href="{{ route('store.index') }}" class="shrink-0 font-semibold underline">查看方案</a></div>@endif
+            <div class="mb-5">
+                <div id="event-template-grid" class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                    <button type="button" class="event-template min-h-24 rounded-2xl border-2 border-indigo-500 bg-indigo-50 p-4 text-left" data-preset="r70o" data-mode="outdoor" data-round="double"><strong class="block text-sm text-indigo-950">反曲弓 70m</strong><span class="mt-1 block text-xs text-indigo-700">公開組</span></button>
+                    <button type="button" class="event-template min-h-24 rounded-2xl border-2 border-gray-200 bg-white p-4 text-left" data-preset="c50o" data-mode="outdoor" data-round="double"><strong class="block text-sm">複合弓 50m</strong><span class="mt-1 block text-xs text-gray-500">公開組</span></button>
+                    <button type="button" class="event-template min-h-24 rounded-2xl border-2 border-gray-200 bg-white p-4 text-left" data-preset="r30o" data-mode="outdoor" data-round="single"><strong class="block text-sm">反曲弓 30m</strong><span class="mt-1 block text-xs text-gray-500">公開組</span></button>
+                    <button type="button" class="event-template hidden min-h-24 rounded-2xl border-2 border-gray-200 bg-white p-4 text-left" data-preset="i18ro" data-mode="indoor" data-round="double"><strong class="block text-sm">室內反曲弓 18m</strong><span class="mt-1 block text-xs text-gray-500">公開組</span></button>
+                    <button type="button" class="event-template hidden min-h-24 rounded-2xl border-2 border-gray-200 bg-white p-4 text-left" data-preset="i18co" data-mode="indoor" data-round="double"><strong class="block text-sm">室內複合弓 18m</strong><span class="mt-1 block text-xs text-gray-500">公開組</span></button>
+                    <button type="button" class="event-template min-h-24 rounded-2xl border-2 border-dashed border-gray-300 bg-gray-50 p-4 text-left" data-preset="custom" data-mode="all" data-round="single"><strong class="block text-sm">自訂賽制</strong><span class="mt-1 block text-xs text-gray-500">自行設定完整內容</span></button>
+                </div>
+                <div id="selected-template-summary" class="mt-3 rounded-xl bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800">已選擇：反曲弓 70 公尺公開組</div>
+            </div>
+            <div id="advanced-group-settings" class="hidden">
             <div class="mb-5 rounded-2xl border border-slate-200 bg-slate-50 p-4 sm:p-5">
                 <div class="flex flex-wrap items-start justify-between gap-3">
                     <div><h3 class="font-semibold text-slate-950">賽事內容</h3><p class="mt-1 text-xs text-slate-600">選擇這個組別除了個人排名賽，還要開放哪一種團體賽。</p></div>
@@ -142,6 +154,7 @@
                 @if($maxArrows > 36)
                     <div id="team-settings" class="sm:col-span-2 lg:col-span-3 hidden rounded-xl border border-violet-200 bg-violet-50 p-4"><label class="block text-sm text-violet-900">組隊截止<input type="datetime-local" name="groups[0][team_formation_end]" value="{{ old('groups.0.team_formation_end') }}" class="mt-1 min-h-12 w-full rounded-xl border-violet-200 bg-white"></label><p class="mt-2 text-xs text-violet-700">未設定時沿用報名截止。三人團體的第4人自動依排名成為替補；混雙固定2人且沒有替補。</p></div>
                 @endif
+            </div>
             </div>
         </section>
 
@@ -191,6 +204,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const end = document.getElementById('event-end');
     const regEnd = document.getElementById('reg-end');
     const preset = document.getElementById('group-preset');
+    const templateButtons = [...document.querySelectorAll('.event-template')];
+    const advancedSettings = document.getElementById('advanced-group-settings');
+    const selectedTemplateSummary = document.getElementById('selected-template-summary');
     const distance = document.getElementById('group-distance');
     const arrows = document.getElementById('group-arrows');
     const roundFormat = document.getElementById('group-round-format');
@@ -232,6 +248,29 @@ document.addEventListener('DOMContentLoaded', () => {
         i18cm: { name:'複合弓 18 公尺男子組', bow:'compound', gender:'male', mode:'indoor', distance:'18m' },
         i18cf: { name:'複合弓 18 公尺女子組', bow:'compound', gender:'female', mode:'indoor', distance:'18m' },
     };
+    const templateLabel = button => button?.querySelector('strong')?.textContent.trim() ?? '自訂賽制';
+    const selectTemplate = button => {
+        if (!button || button.classList.contains('hidden')) return;
+        templateButtons.forEach(item => {
+            const selected = item === button;
+            item.classList.toggle('border-indigo-500', selected);
+            item.classList.toggle('bg-indigo-50', selected);
+            item.classList.toggle('border-gray-200', !selected && item.dataset.preset !== 'custom');
+            item.classList.toggle('bg-white', !selected && item.dataset.preset !== 'custom');
+        });
+        preset.value = button.dataset.preset;
+        advancedSettings.classList.toggle('hidden', preset.value !== 'custom');
+        if (preset.value !== 'custom') {
+            if (standardTeamSelector) standardTeamSelector.checked = false;
+            if (mixedTeamSelector) mixedTeamSelector.checked = false;
+            applySelectedPreset();
+            if (button.dataset.round === 'double' && roundFormat.querySelector('option[value="double"]')) roundFormat.value = 'double';
+            else roundFormat.value = 'single';
+            syncArrowCount();
+            renderCompetition();
+        }
+        selectedTemplateSummary.textContent = preset.value === 'custom' ? '自訂賽制' : `已選擇：${groupName.value}`;
+    };
     const syncArrowCount = () => {
         const singleArrows = mode.value === 'indoor' ? 30 : 36;
         arrows.value = roundFormat.value === 'double' ? singleArrows * 2 : singleArrows;
@@ -256,11 +295,16 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!available.includes(preset.selectedOptions[0])) preset.value = available[0]?.value ?? 'custom';
         if (applyFirst) applySelectedPreset();
     };
+    const syncTemplateOptions = (selectFirst = false) => {
+        templateButtons.forEach(button => button.classList.toggle('hidden', button.dataset.mode !== 'all' && button.dataset.mode !== mode.value));
+        if (selectFirst) selectTemplate(templateButtons.find(button => button.dataset.mode === mode.value));
+    };
     preset.addEventListener('change', applySelectedPreset);
     roundFormat.addEventListener('change', syncArrowCount);
     mode.addEventListener('change', () => {
         syncPresetOptions(true);
         syncArrowCount();
+        syncTemplateOptions(true);
     });
     roundFormat.value = Number(arrows.value) > (mode.value === 'indoor' ? 30 : 36) ? 'double' : 'single';
     syncPresetOptions();
@@ -284,7 +328,10 @@ document.addEventListener('DOMContentLoaded', () => {
     };
     [standardTeamSelector,mixedTeamSelector].filter(Boolean).forEach(input => input.addEventListener('change', renderCompetition));
     document.getElementById('clear-team-format')?.addEventListener('click', () => { if(standardTeamSelector) standardTeamSelector.checked=false; if(mixedTeamSelector) mixedTeamSelector.checked=false; renderCompetition(); });
+    templateButtons.forEach(button => button.addEventListener('click', () => selectTemplate(button)));
     renderCompetition();
+    syncTemplateOptions();
+    selectTemplate(@js($startAtStepTwo) ? templateButtons.find(button => button.dataset.preset === 'custom') : templateButtons.find(button => button.dataset.preset === preset.value && !button.classList.contains('hidden')));
 });
 </script>
 @endsection
