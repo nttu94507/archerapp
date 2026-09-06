@@ -283,6 +283,26 @@ class OrganizerSubscriptionTest extends TestCase
         $this->assertTrue($event->reg_start->between(now()->subMinute(), now()->addMinute()));
     }
 
+    public function test_free_event_can_be_created_and_registered_on_the_same_day(): void
+    {
+        $this->travelTo(now()->startOfDay()->setHour(12));
+        $organizer = $this->approvedOrganizer('當日賽主辦方');
+        $payload = array_merge($this->eventPayload('當日建立賽事'), [
+            'start_date'=>today()->toDateString(), 'end_date'=>today()->toDateString(),
+            'free_reg_end_time'=>'23:59', 'submit_mode'=>'publish',
+            'groups'=>[0=>[
+                'name'=>'反曲弓 30 公尺公開組', 'bow_type'=>'recurve', 'gender'=>'open',
+                'distance'=>'30m', 'arrow_count'=>36, 'arrows_per_end'=>6, 'fee'=>0,
+            ]],
+        ]);
+
+        $this->actingAs($organizer)->post(route('organizer.events.store'), $payload)->assertRedirect();
+        $event = Event::where('name', '當日建立賽事')->firstOrFail();
+        $this->assertTrue($event->isPublished());
+        $this->assertSame(today()->toDateString().' 23:59', $event->reg_end->format('Y-m-d H:i'));
+        $this->travelBack();
+    }
+
     private function approvedOrganizer(string $organizationName): User
     {
         $user = User::factory()->create();

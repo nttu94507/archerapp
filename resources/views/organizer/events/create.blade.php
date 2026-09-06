@@ -69,7 +69,7 @@
                 @if($maxArrows === 36)
                     <input id="reg-start" type="hidden" name="reg_start" value="{{ old('reg_start', now()->format('Y-m-d\TH:i')) }}">
                     <input id="reg-end" type="hidden" name="reg_end" value="{{ old('reg_end') }}">
-                    <div class="sm:col-span-2"><label class="text-sm font-medium">報名截止時間 *</label><input id="free-reg-end-time" type="time" name="free_reg_end_time" required value="{{ old('free_reg_end_time', '08:00') }}" class="mt-1 min-h-12 w-full rounded-xl border-gray-300"></div>
+                    <div class="sm:col-span-2"><label class="text-sm font-medium">報名截止時間 *</label><input id="free-reg-end-time" type="time" name="free_reg_end_time" required value="{{ old('free_reg_end_time', '23:59') }}" class="mt-1 min-h-12 w-full rounded-xl border-gray-300"></div>
                 @else
                     <div><label class="text-sm font-medium">報名開始 *</label><input id="reg-start" type="datetime-local" name="reg_start" required value="{{ old('reg_start', now()->format('Y-m-d\TH:i')) }}" class="mt-1 min-h-12 w-full rounded-xl border-gray-300"></div>
                     <div><label class="text-sm font-medium">報名截止 *</label><input id="reg-end" type="datetime-local" name="reg_end" required value="{{ old('reg_end') }}" class="mt-1 min-h-12 w-full rounded-xl border-gray-300"></div>
@@ -252,7 +252,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     start.addEventListener('change', () => {
         if (end.type === 'hidden' || !end.value) end.value = start.value;
-        if (start.value && freeRegEndTime) regEnd.value = `${start.value}T${freeRegEndTime.value || '08:00'}`;
+        if (start.value && freeRegEndTime) regEnd.value = `${start.value}T${freeRegEndTime.value || '23:59'}`;
         else if (!regEnd.value && start.value) regEnd.value = `${start.value}T23:59`;
     });
     freeRegEndTime?.addEventListener('change', () => {

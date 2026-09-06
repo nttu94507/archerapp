@@ -11,6 +11,24 @@ use Illuminate\Support\Facades\DB;
 
 class EventBadgeAwardService
 {
+    public function ensureFreeFinisherBadge(Event $event, int $creatorId): EventBadge
+    {
+        return $event->badges()->firstOrCreate(
+            ['type' => 'finisher'],
+            [
+                'created_by' => $creatorId,
+                'issuer_type' => 'organization',
+                'issuer_name' => $event->organizer,
+                'name' => $event->name.' 完賽紀念',
+                'description' => '完成賽事並取得正式發布成績後自動獲得。',
+                'eligibility' => 'scored',
+                'award_rule' => 'finisher',
+                'claim_enabled' => false,
+                'is_active' => true,
+            ]
+        );
+    }
+
     public function awardFinishersFor(Event $event): int
     {
         $count = 0;
@@ -18,8 +36,11 @@ class EventBadgeAwardService
         foreach ($badges as $badge) {
             $registrations = $event->registrations()
                 ->whereIn('status', ['registered', 'checked_in'])
-                ->whereNotIn('result_status', ['dns', 'dnf', 'dsq'])
+                ->where(fn ($query) => $query
+                    ->whereNull('result_status')
+                    ->orWhereNotIn('result_status', ['dns', 'dsq']))
                 ->whereNotNull('result_published_at')
+                ->whereHas('scoreEntries')
                 ->when($badge->event_group_id, fn ($query) => $query->where('event_group_id', $badge->event_group_id))
                 ->get();
             foreach ($registrations as $registration) {

@@ -35,6 +35,21 @@ class OrganizerQualificationTest extends TestCase
         $event=Event::where('name','會員自由賽事')->firstOrFail();
         $this->assertTrue($event->isFreePlan());
         $this->assertDatabaseHas('event_staff',['event_id'=>$event->id,'user_id'=>$user->id,'role'=>'owner']);
+        $this->assertDatabaseHas('event_badges', [
+            'event_id'=>$event->id,
+            'created_by'=>$user->id,
+            'name'=>'會員自由賽事 完賽紀念',
+            'type'=>'finisher',
+            'eligibility'=>'scored',
+            'award_rule'=>'finisher',
+            'claim_enabled'=>false,
+        ]);
+        $this->actingAs($user)->get(route('organizer.events.show', $event))
+            ->assertOk()
+            ->assertSee('完賽 Badge')
+            ->assertSee('結案後自動發放')
+            ->assertDontSee('Badge 管理');
+        $this->actingAs($user)->get(route('organizer.events.badges.index', $event))->assertForbidden();
     }
 
     public function test_member_can_save_submit_and_withdraw_application(): void

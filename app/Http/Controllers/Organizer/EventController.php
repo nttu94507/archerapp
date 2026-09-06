@@ -47,7 +47,7 @@ class EventController extends Controller
         ]);
     }
 
-    public function store(Request $request): RedirectResponse
+    public function store(Request $request, EventBadgeAwardService $badges): RedirectResponse
     {
         abort_unless($request->user()->canCreateEvents(),403);
         $validated = $this->validateEvent($request, true);
@@ -69,7 +69,7 @@ class EventController extends Controller
             $validated['plan_order_reference'] = 'subscription:'.$subscription->id;
         }
 
-        $event = DB::transaction(function () use ($validated, $groups, $request, $publish) {
+        $event = DB::transaction(function () use ($validated, $groups, $request, $publish, $badges) {
             $event = Event::create($validated);
             $event->staff()->create([
                 'user_id' => $request->user()->id, 'role' => 'owner', 'status' => 'active',
@@ -77,6 +77,9 @@ class EventController extends Controller
             ]);
             foreach ($groups as $group) {
                 $event->groups()->create($group);
+            }
+            if ($event->isFreePlan()) {
+                $badges->ensureFreeFinisherBadge($event, $request->user()->id);
             }
             $this->audit($event, $request, 'event.created');
             if ($publish) {
@@ -192,6 +195,9 @@ class EventController extends Controller
         abort_if($event->auditLogs()->where('action', 'event.completed')->exists(), 422, '此賽事已經完成結案。');
 
         $completion->complete($event, $request->user()->id);
+        if ($event->isFreePlan()) {
+            $badges->ensureFreeFinisherBadge($event, $request->user()->id);
+        }
         $finisherBadges = $badges->awardFinishersFor($event->fresh());
 
         return back()->with('success', '整場賽事已正式完成，計分設備已停用'.($finisherBadges ? '，並發放 '.$finisherBadges.' 枚完賽 Badge' : '').'。');
@@ -255,7 +261,7 @@ class EventController extends Controller
             ? $request->user()->hasActiveOrganizerSubscription()
             : $event instanceof Event && $event->hasPlanFeature('unlisted_visibility');
         if ($creating && $maxArrows === 36 && $request->filled('start_date') && $request->filled('free_reg_end_time')) {
-            $deadlineTime = $request->string('free_reg_end_time', '08:00')->toString();
+            $deadlineTime = $request->string('free_reg_end_time', '23:59')->toString();
             $request->merge([
                 'reg_start'=>now()->format('Y-m-d H:i:s'),
                 'reg_end'=>$request->string('start_date')->toString().' '.$deadlineTime,
@@ -310,7 +316,10 @@ class EventController extends Controller
             ];
         }
 
-        $validated = $request->validate($rules);
+        $validated = $request->validate($rules, [
+            'reg_end.after_or_equal'=>'報名截止時間必須晚於或等於報名開始時間。',
+            'free_reg_end_time.date_format'=>'請選擇正確的報名截止時間。',
+        ]);
         unset($validated['free_reg_end_time']);
         if ($creating && ! $request->user()->hasActiveOrganizerSubscription()) {
             $validated['end_date'] = $validated['start_date'];

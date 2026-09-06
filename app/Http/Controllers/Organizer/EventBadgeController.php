@@ -197,6 +197,7 @@ class EventBadgeController extends Controller
     private function authorizeOrganizer(Request $request, Event $event): void
     {
         $user = $request->user();
+        abort_if($event->isFreePlan() && ! $user->isAdmin(), 403, '免費賽事的完賽 Badge 由系統自動管理。');
         $allowed = $user->isAdmin() || ($user->organizerProfile()->where('status', 'suspended')->doesntExist() && $event->staff()
             ->where('user_id', $user->id)
             ->where('status', 'active')

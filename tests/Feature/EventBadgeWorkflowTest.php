@@ -14,6 +14,7 @@ use App\Models\EventStaff;
 use App\Models\OrganizerProfile;
 use App\Models\User;
 use App\Models\UserEventBadge;
+use App\Services\EventBadgeAwardService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
@@ -22,6 +23,64 @@ use Tests\TestCase;
 class EventBadgeWorkflowTest extends TestCase
 {
     use RefreshDatabase;
+
+    public function test_finisher_badge_requires_published_score_and_excludes_dns_or_disqualified_archers(): void
+    {
+        [$owner, $event] = $this->eventWithOwner();
+        $group = EventGroup::factory()->create(['event_id'=>$event->id]);
+        $members = User::factory()->count(4)->create();
+        $registrations = $members->map(fn (User $member) => EventRegistration::create([
+            'event_id'=>$event->id,
+            'event_group_id'=>$group->id,
+            'user_id'=>$member->id,
+            'name'=>$member->name,
+            'email'=>$member->email,
+            'status'=>'registered',
+            'result_published_at'=>now(),
+        ]));
+        $registrations[1]->update(['result_status'=>'dnf']);
+        $registrations[2]->update(['result_status'=>'dns']);
+        $registrations[3]->update(['result_status'=>'dsq']);
+        foreach ([0, 1, 2, 3] as $index) {
+            EventScoreEntry::create([
+                'event_id'=>$event->id,
+                'event_registration_id'=>$registrations[$index]->id,
+                'user_id'=>$members[$index]->id,
+                'end_number'=>1,
+                'scores'=>[10],
+                'end_total'=>10,
+            ]);
+        }
+        $badge = app(EventBadgeAwardService::class)->ensureFreeFinisherBadge($event, $owner->id);
+
+        $awarded = app(EventBadgeAwardService::class)->awardFinishersFor($event);
+
+        $this->assertSame(2, $awarded);
+        $this->assertDatabaseHas('user_event_badges', ['event_badge_id'=>$badge->id, 'user_id'=>$members[0]->id]);
+        $this->assertDatabaseHas('user_event_badges', ['event_badge_id'=>$badge->id, 'user_id'=>$members[1]->id]);
+        $this->assertDatabaseMissing('user_event_badges', ['event_badge_id'=>$badge->id, 'user_id'=>$members[2]->id]);
+        $this->assertDatabaseMissing('user_event_badges', ['event_badge_id'=>$badge->id, 'user_id'=>$members[3]->id]);
+    }
+
+    public function test_finisher_badge_does_not_award_published_registration_without_score_entries(): void
+    {
+        [$owner, $event] = $this->eventWithOwner();
+        $group = EventGroup::factory()->create(['event_id'=>$event->id]);
+        $member = User::factory()->create();
+        EventRegistration::create([
+            'event_id'=>$event->id,
+            'event_group_id'=>$group->id,
+            'user_id'=>$member->id,
+            'name'=>$member->name,
+            'email'=>$member->email,
+            'status'=>'registered',
+            'result_published_at'=>now(),
+        ]);
+        $badge = app(EventBadgeAwardService::class)->ensureFreeFinisherBadge($event, $owner->id);
+
+        $this->assertSame(0, app(EventBadgeAwardService::class)->awardFinishersFor($event));
+        $this->assertDatabaseMissing('user_event_badges', ['event_badge_id'=>$badge->id, 'user_id'=>$member->id]);
+    }
 
     public function test_member_can_scan_location_qr_and_receive_badge_inside_radius_but_not_from_another_city(): void
     {
@@ -607,7 +666,7 @@ class EventBadgeWorkflowTest extends TestCase
     private function eventWithOwner(): array
     {
         $owner = User::factory()->create();
-        $event = Event::factory()->create();
+        $event = Event::factory()->create(['plan_code'=>\App\Support\EventPlanCatalog::LEGACY]);
         EventStaff::create([
             'event_id' => $event->id,
             'user_id' => $owner->id,
