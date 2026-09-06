@@ -375,6 +375,12 @@ class EventResultController extends Controller
         abort_unless($group->event_id === $event->id, 404);
         $validated = $request->validate(['visible' => ['required', 'boolean']]);
 
+        if ($event->isFreePlan()) {
+            $group->update(['live_results_visible'=>true]);
+
+            return back()->with('success', '免費賽事的排名戰況固定公開。');
+        }
+
         $visible = (bool) $validated['visible'];
         $group->update(['live_results_visible' => $visible]);
         EventAuditLog::create([

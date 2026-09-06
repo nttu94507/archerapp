@@ -61,7 +61,8 @@ class EventManagementWorkflowTest extends TestCase
         $response->assertRedirect(route('organizer.events.show', $event));
         $this->assertTrue($event->isPublished());
         $this->assertDatabaseHas('event_groups', [
-            'event_id'=>$event->id, 'name'=>'反曲弓公開組', 'arrow_count'=>36, 'quota'=>32,
+            'event_id'=>$event->id, 'name'=>'反曲弓公開組', 'arrow_count'=>36, 'quota'=>16,
+            'live_results_visible'=>true,
         ]);
     }
 
@@ -221,6 +222,11 @@ class EventManagementWorkflowTest extends TestCase
     public function test_scores_are_bound_to_registration_and_require_verification_before_publication(): void
     {
         [$owner,$event,$group] = $this->ownedEvent();
+        $event->update([
+            'plan_code'=>\App\Support\EventPlanCatalog::EVENT_PASS,
+            'plan_features_snapshot'=>\App\Support\EventPlanCatalog::features(\App\Support\EventPlanCatalog::EVENT_PASS),
+            'plan_limits_snapshot'=>\App\Support\EventPlanCatalog::limits(\App\Support\EventPlanCatalog::EVENT_PASS),
+        ]);
         $member = User::factory()->create();
         $registration = $this->registration($event,$group,$member);
         $registration->update(['score_submitted_at'=>now()]);

@@ -43,21 +43,24 @@
             @endphp
             <section class="overflow-hidden rounded-2xl border bg-white shadow-sm">
                 <div class="flex flex-col gap-4 border-b bg-gray-50 p-4 sm:flex-row sm:items-start sm:justify-between">
-                    <div>
-                        <h2 class="text-lg font-semibold">{{ $group->name }}</h2>
+                    <div class="min-w-0 flex-1">
+                        <div class="flex flex-wrap items-center justify-between gap-3">
+                            <h2 class="text-lg font-semibold">{{ $group->name }}</h2>
+                            @if($event->isFreePlan())
+                                <a href="{{ route('events.live', $event) }}" class="inline-flex min-h-11 items-center rounded-xl border bg-white px-4 text-sm font-medium text-indigo-600">查看公開戰況</a>
+                            @elseif($canManageResults)
+                                <form method="POST" action="{{ route('organizer.events.results.live-visibility', [$event, $group]) }}">
+                                    @csrf @method('PATCH')
+                                    <input type="hidden" name="visible" value="{{ $group->live_results_visible ? 0 : 1 }}">
+                                    <button class="min-h-11 rounded-xl border bg-white px-4 text-sm font-medium" onclick="return confirm('{{ $group->live_results_visible ? '確定停止公開此組排名賽戰況？' : '公開後所有人都能查看此組即時分數與排名，確定公開？' }}')">{{ $group->live_results_visible ? '停止公開戰況' : '公開戰況' }}</button>
+                                </form>
+                            @endif
+                        </div>
                         <div class="mt-2 flex flex-wrap gap-2 text-xs">
                             <span class="rounded-lg bg-white px-2.5 py-1.5 text-gray-600">選手 {{ $items->count() }} 人</span>
                             <span class="rounded-lg bg-white px-2.5 py-1.5 {{ $state['unverified'] ? 'text-red-600' : 'text-green-700' }}">尚未核准 {{ $state['unverified'] }}</span>
                         </div>
                     </div>
-
-                    @if($canManageResults)
-                        <form method="POST" action="{{ route('organizer.events.results.live-visibility', [$event, $group]) }}">
-                            @csrf @method('PATCH')
-                            <input type="hidden" name="visible" value="{{ $group->live_results_visible ? 0 : 1 }}">
-                            <button class="min-h-11 rounded-xl border bg-white px-4 text-sm font-medium" onclick="return confirm('{{ $group->live_results_visible ? '確定停止公開此組排名賽戰況？' : '公開後所有人都能查看此組即時分數與排名，確定公開？' }}')">{{ $group->live_results_visible ? '停止公開戰況' : '公開戰況' }}</button>
-                        </form>
-                    @endif
 
                     @if(!$state['published'] && ($canApproveResults || $canManageResults))
                         <div class="flex flex-wrap gap-2 sm:justify-end">

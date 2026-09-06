@@ -342,6 +342,7 @@ class EventController extends Controller
                 $group['arrows_per_end'] = $validated['mode'] === 'indoor' ? 3 : 6;
                 $group['fee'] = $isSubscriber ? ($group['fee'] ?? 0) : 0;
                 $group['quota'] = $isSubscriber ? ($group['quota'] ?? null) : 16;
+                $group['live_results_visible'] = ! $isSubscriber;
                 $group['standard_team_enabled'] = ! empty($group['standard_team_enabled']);
                 $group['mixed_team_enabled'] = ! empty($group['mixed_team_enabled']);
                 $group['is_team'] = $group['standard_team_enabled'] || $group['mixed_team_enabled'] || ! empty($group['is_team']);

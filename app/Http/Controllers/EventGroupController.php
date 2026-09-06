@@ -161,6 +161,7 @@ class EventGroupController extends Controller
                 $pendingNames[] = $name;
                 unset($g['use_custom_reg_window']);
                 $g['arrows_per_end'] = $event->mode === 'indoor' ? 3 : 6;
+                $g['live_results_visible'] = $event->isFreePlan();
                 $g['standard_team_enabled'] = ! empty($g['standard_team_enabled']);
                 $g['mixed_team_enabled'] = ! empty($g['mixed_team_enabled']);
                 $g['is_team'] = $g['standard_team_enabled'] || $g['mixed_team_enabled'] || ! empty($g['is_team']);

@@ -105,6 +105,25 @@ class EventPlanEntitlementTest extends TestCase
         $this->assertSame(2, $paidEvent->groups()->count());
     }
 
+    public function test_free_event_forces_qualification_live_results_to_remain_public(): void
+    {
+        $owner = User::factory()->create();
+        $event = Event::factory()->create();
+        $event->staff()->create(['user_id'=>$owner->id, 'role'=>'owner', 'status'=>'active']);
+        $group = EventGroup::factory()->create(['event_id'=>$event->id, 'live_results_visible'=>false]);
+
+        $this->actingAs($owner)->patch(
+            route('organizer.events.results.live-visibility', [$event, $group]),
+            ['visible'=>0]
+        )->assertSessionHas('success', '免費賽事的排名戰況固定公開。');
+
+        $this->assertTrue($group->fresh()->live_results_visible);
+        $this->actingAs($owner)->get(route('organizer.events.results.index', $event))
+            ->assertOk()
+            ->assertSee('查看公開戰況')
+            ->assertDontSee('停止公開戰況');
+    }
+
     public function test_free_event_hides_check_in_and_assigns_registered_archers_without_dns(): void
     {
         $owner = User::factory()->create();

@@ -231,6 +231,7 @@ class OrganizerSubscriptionTest extends TestCase
         $event = Event::where('name', '免費無收費賽事')->firstOrFail();
         $this->assertSame(0, $event->groups()->firstOrFail()->fee);
         $this->assertSame(16, $event->groups()->firstOrFail()->quota);
+        $this->assertTrue($event->groups()->firstOrFail()->live_results_visible);
     }
 
     public function test_free_event_only_allows_preset_groups(): void
