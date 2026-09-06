@@ -52,6 +52,7 @@ class EventBadgeWorkflowTest extends TestCase
             ]);
         }
         $badge = app(EventBadgeAwardService::class)->ensureFreeFinisherBadge($event, $owner->id);
+        $badge->update(['is_active'=>true]);
 
         $awarded = app(EventBadgeAwardService::class)->awardFinishersFor($event);
 
@@ -77,6 +78,7 @@ class EventBadgeWorkflowTest extends TestCase
             'result_published_at'=>now(),
         ]);
         $badge = app(EventBadgeAwardService::class)->ensureFreeFinisherBadge($event, $owner->id);
+        $badge->update(['is_active'=>true]);
 
         $this->assertSame(0, app(EventBadgeAwardService::class)->awardFinishersFor($event));
         $this->assertDatabaseMissing('user_event_badges', ['event_badge_id'=>$badge->id, 'user_id'=>$member->id]);

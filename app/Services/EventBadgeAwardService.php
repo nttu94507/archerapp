@@ -24,7 +24,7 @@ class EventBadgeAwardService
                 'eligibility' => 'scored',
                 'award_rule' => 'finisher',
                 'claim_enabled' => false,
-                'is_active' => true,
+                'is_active' => false,
             ]
         );
     }

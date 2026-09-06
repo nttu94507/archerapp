@@ -55,7 +55,7 @@
             <h2 class="mt-2 text-2xl font-bold text-gray-950">社團排名賽</h2>
             <p class="mt-2 text-sm text-gray-500">適合小型、單日且流程單純的比賽。</p>
             <ul class="mt-6 space-y-3 text-sm text-gray-700">
-                <li>✓ 1 個組別，最多 32 位選手</li>
+                <li>✓ 1 個組別，最多 16 位選手</li>
                 <li>✓ 單局最多 36 箭</li>
                 <li>✓ 最多 2 位工作人員、8 個靶位</li>
                 <li>✓ 1 枚賽事 Badge</li>

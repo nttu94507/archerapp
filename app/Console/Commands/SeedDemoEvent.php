@@ -56,8 +56,8 @@ class SeedDemoEvent extends Command
 
             return self::INVALID;
         }
-        if ($free && $athletesPerGroup > 32) {
-            $this->error('免費版每組最多建立 32 位測試選手。');
+        if ($free && $athletesPerGroup > 16) {
+            $this->error('免費版每場最多建立 16 位測試選手。');
 
             return self::INVALID;
         }

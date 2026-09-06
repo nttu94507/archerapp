@@ -359,9 +359,13 @@ class EventResultController extends Controller
 
         $awarded = $badges->awardPlacementsFor($event, $group->id);
         $completionCheck = $completion->inspect($event->fresh());
+        $successMessage = $group->name.'正式成績已發布（'.$publication['published_count'].' 人），排名種子快照 v'.$publication['snapshot_version'].' 已鎖定';
+        if ($awarded > 0) {
+            $successMessage .= '，已發放 '.$awarded.' 個名次 Badge';
+        }
 
         return back()
-            ->with('success', $group->name.'正式成績已發布（'.$publication['published_count'].' 人），排名種子快照 v'.$publication['snapshot_version'].' 已鎖定，已發放 '.$awarded.' 個名次 Badge。')
+            ->with('success', $successMessage.'。')
             ->with('offer_event_completion', $completionCheck['ready']);
     }
 

@@ -24,7 +24,7 @@ final class EventPlanCatalog
                 'active_events'=>1,
                 'groups'=>1,
                 'staff_members'=>2,
-                'athletes'=>32,
+                'athletes'=>16,
                 'targets'=>8,
                 'arrows_per_phase'=>36,
                 'badges'=>1,

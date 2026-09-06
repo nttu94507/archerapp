@@ -35,6 +35,9 @@ class EventRegistrationController extends Controller
         if ($group->quota !== null && $registered >= $group->quota) {
             return redirect()->route('events.show', $event)->with('error', '此組別名額已滿。');
         }
+        if ($this->hasReachedEventAthleteLimit($event)) {
+            return redirect()->route('events.show', $event)->with('error', '免費賽事最多 16 位選手，目前名額已滿。');
+        }
 
         $alreadyRegistered = EventRegistration::query()
             ->where('event_id', $event->id)
@@ -95,6 +98,11 @@ class EventRegistrationController extends Controller
                 if ($lockedEvent->scoringSessions()->exists()) {
                     abort(422, '賽事已完成排靶，報名已截止。');
                 }
+                $athleteLimit = $lockedEvent->isFreePlan() ? 16 : $lockedEvent->planLimit('athletes');
+                $activeRegistrations = $lockedEvent->registrations()->whereIn('status', ['registered', 'checked_in'])->count();
+                if ($athleteLimit !== null && $activeRegistrations >= $athleteLimit) {
+                    abort(422, '免費賽事最多 16 位選手，目前名額已滿。');
+                }
 
                 $lockedGroup = EventGroup::whereKey($group->id)->lockForUpdate()->firstOrFail();
                 $current = EventRegistration::where('event_group_id', $group->id)->whereIn('status', ['registered','checked_in'])->count();
@@ -112,6 +120,15 @@ class EventRegistrationController extends Controller
         }
 
         return redirect()->route('events.show', $event)->with('success', '報名成功！');
+    }
+
+    private function hasReachedEventAthleteLimit(Event $event): bool
+    {
+        $limit = $event->isFreePlan() ? 16 : $event->planLimit('athletes');
+
+        return $limit !== null && $event->registrations()
+            ->whereIn('status', ['registered', 'checked_in'])
+            ->count() >= $limit;
     }
 
     private function genderEligibilityMessage(Request $request, EventGroup $group): ?string

@@ -22,7 +22,7 @@ class EventPlanEntitlementTest extends TestCase
         $this->assertSame(EventPlanCatalog::STATUS_ACTIVE, $event->plan_status);
         $this->assertSame(1, $event->planLimit('groups'));
         $this->assertSame(2, $event->planLimit('staff_members'));
-        $this->assertSame(32, $event->planLimit('athletes'));
+        $this->assertSame(16, $event->planLimit('athletes'));
         $this->assertSame(8, $event->planLimit('targets'));
         $this->assertSame(36, $event->planLimit('arrows_per_phase'));
         $this->assertSame(1, $event->planLimit('badges'));

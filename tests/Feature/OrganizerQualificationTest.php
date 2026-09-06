@@ -43,13 +43,18 @@ class OrganizerQualificationTest extends TestCase
             'eligibility'=>'scored',
             'award_rule'=>'finisher',
             'claim_enabled'=>false,
+            'is_active'=>false,
         ]);
         $this->actingAs($user)->get(route('organizer.events.show', $event))
             ->assertOk()
             ->assertSee('完賽 Badge')
-            ->assertSee('結案後自動發放')
+            ->assertSee('不發放')
             ->assertDontSee('Badge 管理');
         $this->actingAs($user)->get(route('organizer.events.badges.index', $event))->assertForbidden();
+
+        $this->actingAs($user)->patch(route('organizer.events.free-finisher-badge', $event), ['enabled'=>1])
+            ->assertSessionHas('success', '已開啟完賽 Badge，結案時將自動發放。');
+        $this->assertTrue($event->badges()->where('type', 'finisher')->firstOrFail()->is_active);
     }
 
     public function test_member_can_save_submit_and_withdraw_application(): void

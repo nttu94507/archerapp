@@ -203,6 +203,18 @@ class EventController extends Controller
         return back()->with('success', '整場賽事已正式完成，計分設備已停用'.($finisherBadges ? '，並發放 '.$finisherBadges.' 枚完賽 Badge' : '').'。');
     }
 
+    public function toggleFreeFinisherBadge(Request $request, Event $event, EventBadgeAwardService $badges): RedirectResponse
+    {
+        $this->authorize('update', $event);
+        abort_unless($event->isFreePlan(), 404);
+        abort_if($event->auditLogs()->where('action', 'event.completed')->exists(), 422, '賽事完成後不能變更完賽 Badge 設定。');
+
+        $badge = $badges->ensureFreeFinisherBadge($event, $request->user()->id);
+        $badge->update(['is_active'=>$request->boolean('enabled')]);
+
+        return back()->with('success', $badge->is_active ? '已開啟完賽 Badge，結案時將自動發放。' : '已關閉完賽 Badge。');
+    }
+
     public function addStaff(Request $request, Event $event, EventBadgeAwardService $badges): RedirectResponse
     {
         $this->authorize('manageStaff', $event);

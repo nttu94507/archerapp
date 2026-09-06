@@ -110,6 +110,36 @@ class EventRegistrationQuickRegisterTest extends TestCase
         $this->assertDatabaseCount('event_registrations', 1);
     }
 
+    public function test_free_event_stops_accepting_registrations_at_sixteen_archers(): void
+    {
+        $event = Event::factory()->create([
+            'reg_start'=>now()->subDay(),
+            'reg_end'=>now()->addDay(),
+        ]);
+        $group = EventGroup::factory()->create(['event_id'=>$event->id, 'quota'=>null]);
+        foreach (User::factory()->count(16)->create() as $member) {
+            EventRegistration::create([
+                'event_id'=>$event->id,
+                'event_group_id'=>$group->id,
+                'user_id'=>$member->id,
+                'name'=>$member->name,
+                'email'=>$member->email,
+                'status'=>'registered',
+            ]);
+        }
+        $seventeenth = User::factory()->create();
+
+        $this->actingAs($seventeenth)
+            ->get(route('events.registration.confirm', [$event, $group]))
+            ->assertRedirect(route('events.show', $event))
+            ->assertSessionHas('error', '免費賽事最多 16 位選手，目前名額已滿。');
+        $this->actingAs($seventeenth)
+            ->post(route('events.quick_register', [$event, $group]))
+            ->assertSessionHas('error', '免費賽事最多 16 位選手，目前名額已滿。');
+
+        $this->assertSame(16, $event->registrations()->whereIn('status', ['registered', 'checked_in'])->count());
+    }
+
     public function test_admin_can_register_when_group_registration_window_is_open(): void
     {
         $admin = User::factory()->create(['is_admin' => true]);

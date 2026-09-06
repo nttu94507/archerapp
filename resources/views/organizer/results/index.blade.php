@@ -7,8 +7,6 @@
     <div>
         <a href="{{ route('organizer.events.show', $event) }}" class="text-sm text-indigo-600">← 返回賽事工作台</a>
         <h1 class="mt-2 text-2xl font-bold">成績確認與分組發布</h1>
-        <p class="mt-1 text-sm text-gray-500">已報到選手即使中途停止，也會依現有分數結算並參與排名；只有未報到選手會標記為棄賽（DNF）。</p>
-        <p class="mt-1 text-sm text-indigo-700">成績須由賽事主辦、成績管理員或主裁判核准，核准完成後才能正式發布。</p>
     </div>
 
     @if(session('success'))<div class="rounded-xl bg-green-50 p-4 text-sm text-green-700">{{ session('success') }}</div>@endif
@@ -46,28 +44,11 @@
             <section class="overflow-hidden rounded-2xl border bg-white shadow-sm">
                 <div class="flex flex-col gap-4 border-b bg-gray-50 p-4 sm:flex-row sm:items-start sm:justify-between">
                     <div>
-                        <div class="flex flex-wrap items-center gap-2">
-                            <h2 class="text-lg font-semibold">{{ $group->name }}</h2>
-                            @if($state['published'])
-                                <span class="rounded-full bg-green-100 px-2.5 py-1 text-xs font-medium text-green-700">已發布</span>
-                                @if($rankingSnapshot)<span class="rounded-full bg-violet-100 px-2.5 py-1 text-xs font-medium text-violet-700">種子快照 v{{ $rankingSnapshot->version }}</span>@else<span class="rounded-full bg-red-100 px-2.5 py-1 text-xs font-medium text-red-700">缺少種子快照</span>@endif
-                            @elseif($canPublish)
-                                <span class="rounded-full bg-indigo-100 px-2.5 py-1 text-xs font-medium text-indigo-700">可發布</span>
-                            @else
-                                <span class="rounded-full bg-amber-100 px-2.5 py-1 text-xs font-medium text-amber-700">尚未完成</span>
-                            @endif
-                        </div>
+                        <h2 class="text-lg font-semibold">{{ $group->name }}</h2>
                         <div class="mt-2 flex flex-wrap gap-2 text-xs">
-                            <span class="rounded-lg px-2.5 py-1.5 {{ $group->live_results_visible ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-200 text-gray-600' }}">{{ $group->live_results_visible ? '公開戰況中' : '未公開戰況' }}</span>
                             <span class="rounded-lg bg-white px-2.5 py-1.5 text-gray-600">選手 {{ $items->count() }} 人</span>
-                            <span class="rounded-lg bg-white px-2.5 py-1.5 {{ $state['unfinished_targets'] ? 'text-red-600' : 'text-green-700' }}">未完成靶位 {{ $state['unfinished_targets'] }}</span>
-                            @if($state['requires_judge_review'])<span class="rounded-lg bg-white px-2.5 py-1.5 {{ $state['unconfirmed_targets'] ? 'text-red-600' : 'text-green-700' }}">待主裁判簽核 {{ $state['unconfirmed_targets'] }}</span>@endif
-                            <span class="rounded-lg bg-white px-2.5 py-1.5 {{ $state['incomplete_scores'] ? 'text-amber-700' : 'text-green-700' }}">待審核的部分成績 {{ $state['incomplete_scores'] }}</span>
                             <span class="rounded-lg bg-white px-2.5 py-1.5 {{ $state['unverified'] ? 'text-red-600' : 'text-green-700' }}">尚未核准 {{ $state['unverified'] }}</span>
                         </div>
-                        @if(!$state['has_session'] || !$state['has_targets'])
-                            <p class="mt-2 text-xs text-red-600">此組別尚未建立排靶與計分場次。</p>
-                        @endif
                     </div>
 
                     @if($canManageResults)

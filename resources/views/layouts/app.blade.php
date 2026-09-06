@@ -359,6 +359,23 @@
 {{-- 下拉選單（桌機）與 側邊欄（手機）控制腳本 --}}
 <script>
     document.addEventListener('DOMContentLoaded', () => {
+        @if(session('success'))
+        // 所有頁面的成功訊息共用可關閉按鈕，不要求各頁重複實作。
+        const successMessage = @json(session('success'));
+        document.querySelectorAll('main div').forEach((notice) => {
+            if (notice.textContent.trim() !== successMessage || !notice.className.includes('green') && !notice.className.includes('emerald')) return;
+
+            notice.classList.add('relative', 'pr-14');
+            const dismiss = document.createElement('button');
+            dismiss.type = 'button';
+            dismiss.setAttribute('aria-label', '關閉成功通知');
+            dismiss.className = 'absolute right-1 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-lg text-xl leading-none text-green-700 hover:bg-green-100 focus:outline-none focus:ring-2 focus:ring-green-500';
+            dismiss.textContent = '×';
+            dismiss.addEventListener('click', () => notice.remove());
+            notice.appendChild(dismiss);
+        });
+        @endif
+
         // 桌機使用者選單
         const btn = document.getElementById('user-menu-button');
         const menu = document.getElementById('user-menu');
