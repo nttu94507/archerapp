@@ -26,9 +26,7 @@
                     <div>
                         <p class="text-xs uppercase tracking-widest text-gray-500">組別清單</p>
                         <h2 class="text-lg font-semibold text-gray-900">選擇組別查看{{ $eventFinished ? '排名賽結果' : '排名賽戰況' }}</h2>
-                        <p class="text-xs text-gray-500">初次進入僅顯示組別狀態，點擊後開啟詳情。</p>
                     </div>
-                    <p class="text-xs text-gray-400">狀態：尚未開始 / 正在進行 / 已結束</p>
                 </div>
 
                 <div class="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -59,7 +57,7 @@
 
         <div class="space-y-8">
             @if($selectedBoard)
-                <div id="group-{{ optional($selectedBoard['group'])->id ?? 'none' }}" class="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden">
+                <div id="group-{{ optional($selectedBoard['group'])->id ?? 'none' }}" data-live-board data-live-url="{{ route('events.live-data', ['event'=>$event, 'group'=>optional($selectedBoard['group'])->id, 'sort'=>$sortDirection]) }}" class="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden">
                     <div class="border-b border-gray-100 bg-gray-50 px-4 py-4">
                         <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                             <div>
@@ -80,11 +78,11 @@
                         <div class="mt-3 grid grid-cols-2 gap-2 text-xs">
                             <div class="rounded-xl bg-white px-3 py-2 text-center shadow-sm">
                                 <p class="text-[11px] text-gray-500">狀態</p>
-                                <p class="text-base font-semibold text-gray-900">{{ $selectedBoard['status_label'] }}</p>
+                                <p data-live-status class="text-base font-semibold text-gray-900">{{ $selectedBoard['status_label'] }}</p>
                             </div>
                             <div class="rounded-xl bg-white px-3 py-2 text-center shadow-sm">
                                 <p class="text-[11px] text-gray-500">選手數</p>
-                                <p class="text-base font-semibold text-gray-900">{{ $selectedBoard['rows']->count() }}</p>
+                                <p data-live-athletes class="text-base font-semibold text-gray-900">{{ $selectedBoard['rows']->count() }}</p>
                             </div>
                         </div>
                     </div>
@@ -94,23 +92,23 @@
                     @else
                         <div class="divide-y divide-gray-100">
                             @foreach($selectedBoard['rows'] as $row)
-                                <details class="group">
+                                <details data-live-row="{{ $row['registration']->id }}" class="group">
                                     <summary class="flex cursor-pointer items-center gap-3 px-4 py-3 hover:bg-gray-50">
-                                        <div class="w-10 text-center text-sm font-semibold {{ in_array($row['rank_position'], ['DNF','DNS'], true) ? 'text-amber-700' : 'text-gray-800' }}">{{ in_array($row['rank_position'], ['DNF','DNS'], true) ? $row['rank_position'] : '#'.$row['rank_position'] }}</div>
+                                        <div data-live-rank class="w-10 text-center text-sm font-semibold {{ in_array($row['rank_position'], ['DNF','DNS'], true) ? 'text-amber-700' : 'text-gray-800' }}">{{ in_array($row['rank_position'], ['DNF','DNS'], true) ? $row['rank_position'] : '#'.$row['rank_position'] }}</div>
                                         <div class="flex-1">
                                             <p class="text-sm font-semibold text-gray-900">{{ $row['registration']->name ?? '未命名選手' }}</p>
                                             <p class="text-xs text-gray-500">{{ $row['registration']->team_name ?? '未填隊伍' }}</p>
                                         </div>
                                         <div class="text-right">
-                                            <p class="text-lg font-bold text-gray-900">{{ $row['total_score'] }}</p>
-                                            <p class="text-xs text-gray-500">{{ $row['ends_recorded'] }} / {{ $selectedBoard['totalEnds'] }} 趟</p>
+                                            <p data-live-total class="text-lg font-bold text-gray-900">{{ $row['total_score'] }}</p>
+                                            <p data-live-ends class="text-xs text-gray-500">{{ $row['ends_recorded'] }} / {{ $selectedBoard['totalEnds'] }} 趟</p>
                                         </div>
                                     </summary>
                                     <div class="bg-gray-50 px-4 pb-4 pt-2">
                                         <div class="flex flex-wrap gap-2 text-xs text-gray-600 mb-3">
-                                            <span class="inline-flex items-center rounded-full bg-white px-2 py-1 shadow-sm">箭數 {{ $row['arrow_count'] }}</span>
-                                            <span class="inline-flex items-center rounded-full bg-white px-2 py-1 shadow-sm">每箭均值 {{ $row['avg_per_arrow'] ?? '—' }}</span>
-                                            <span class="inline-flex items-center rounded-full bg-white px-2 py-1 shadow-sm">完成 {{ $row['ends_recorded'] }} / {{ $selectedBoard['totalEnds'] }} 趟</span>
+                                            <span data-live-arrow-count class="inline-flex items-center rounded-full bg-white px-2 py-1 shadow-sm">箭數 {{ $row['arrow_count'] }}</span>
+                                            <span data-live-average class="inline-flex items-center rounded-full bg-white px-2 py-1 shadow-sm">每箭均值 {{ $row['avg_per_arrow'] ?? '—' }}</span>
+                                            <span data-live-completion class="inline-flex items-center rounded-full bg-white px-2 py-1 shadow-sm">完成 {{ $row['ends_recorded'] }} / {{ $selectedBoard['totalEnds'] }} 趟</span>
                                         </div>
 
                                         @php
@@ -151,18 +149,18 @@
                                                             $cumulative += $endTotal;
                                                         }
                                                     @endphp
-                                                    <tr class="border-t border-gray-100">
+                                                    <tr data-live-end="{{ $end }}" class="border-t border-gray-100">
                                                         <td class="px-3 py-2 text-xs text-gray-600">第 {{ $end }} 趟</td>
                                                         @for($shot = 0; $shot < $per; $shot++)
-                                                            <td class="px-2 py-2 text-center font-semibold text-gray-900">
+                                                            <td data-live-score="{{ $shot }}" class="px-2 py-2 text-center font-semibold text-gray-900">
                                                                 {{ $scores[$shot] ?? '—' }}
                                                             </td>
                                                         @endfor
-                                                        <td class="px-3 py-2 text-right font-semibold text-gray-900">{{ $hasEnd ? $endTen : '—' }}</td>
-                                                        <td class="px-3 py-2 text-right font-semibold text-gray-900">{{ $hasEnd ? $endX : '—' }}</td>
-                                                        <td class="px-3 py-2 text-right text-gray-800">{{ $hasEnd && !is_null($endAvg) ? $endAvg : '—' }}</td>
-                                                        <td class="px-3 py-2 text-right font-semibold text-gray-900">{{ $hasEnd ? $endTotal : '—' }}</td>
-                                                        <td class="px-3 py-2 text-right text-gray-800">{{ $hasEnd ? $cumulative : '—' }}</td>
+                                                        <td data-live-end-ten class="px-3 py-2 text-right font-semibold text-gray-900">{{ $hasEnd ? $endTen : '—' }}</td>
+                                                        <td data-live-end-x class="px-3 py-2 text-right font-semibold text-gray-900">{{ $hasEnd ? $endX : '—' }}</td>
+                                                        <td data-live-end-average class="px-3 py-2 text-right text-gray-800">{{ $hasEnd && !is_null($endAvg) ? $endAvg : '—' }}</td>
+                                                        <td data-live-end-total class="px-3 py-2 text-right font-semibold text-gray-900">{{ $hasEnd ? $endTotal : '—' }}</td>
+                                                        <td data-live-end-cumulative class="px-3 py-2 text-right text-gray-800">{{ $hasEnd ? $cumulative : '—' }}</td>
                                                     </tr>
                                                 @endfor
                                                 </tbody>
@@ -170,11 +168,11 @@
                                                     <tr class="border-t border-gray-100">
                                                         <td class="px-3 py-2 text-xs text-gray-600">總計</td>
                                                         <td colspan="{{ $per }}" class="px-2 py-2 text-center text-[11px] text-gray-400">—</td>
-                                                        <td class="px-3 py-2 text-right font-semibold text-gray-900">{{ $row['ten_count'] }}</td>
-                                                        <td class="px-3 py-2 text-right font-semibold text-gray-900">{{ $row['x_count'] }}</td>
-                                                        <td class="px-3 py-2 text-right text-gray-800">{{ $row['avg_per_arrow'] ?? '—' }}</td>
-                                                        <td class="px-3 py-2 text-right font-semibold text-gray-900">{{ $row['total_score'] }}</td>
-                                                        <td class="px-3 py-2 text-right font-semibold text-gray-900">{{ $row['total_score'] }}</td>
+                                                        <td data-live-summary-ten class="px-3 py-2 text-right font-semibold text-gray-900">{{ $row['ten_count'] }}</td>
+                                                        <td data-live-summary-x class="px-3 py-2 text-right font-semibold text-gray-900">{{ $row['x_count'] }}</td>
+                                                        <td data-live-summary-average class="px-3 py-2 text-right text-gray-800">{{ $row['avg_per_arrow'] ?? '—' }}</td>
+                                                        <td data-live-summary-total class="px-3 py-2 text-right font-semibold text-gray-900">{{ $row['total_score'] }}</td>
+                                                        <td data-live-summary-cumulative class="px-3 py-2 text-right font-semibold text-gray-900">{{ $row['total_score'] }}</td>
                                                     </tr>
                                                 </tfoot>
                                             </table>
@@ -185,11 +183,94 @@
                         </div>
                     @endif
                 </div>
-            @elseif(isset($groupsBoard) && $groupsBoard->isNotEmpty())
-                <div class="rounded-2xl border border-dashed border-gray-300 bg-white p-6 text-center text-gray-500">
-                    選擇上方組別即可查看排名賽詳細{{ $eventFinished ? '結果' : '成績' }}。
-                </div>
             @endif
         </div>
-    </div>
+</div>
+@endsection
+
+@section('js')
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const board = document.querySelector('[data-live-board]');
+    if (!board || !board.dataset.liveUrl) return;
+
+    let timer = null;
+    let loading = false;
+    const value = (input) => input === null || input === undefined ? '—' : input;
+
+    const updateBoard = async () => {
+        if (loading || document.hidden) return;
+        loading = true;
+        try {
+            const response = await fetch(board.dataset.liveUrl, {
+                headers: {'Accept': 'application/json'},
+                cache: 'no-store',
+            });
+            if (!response.ok) return;
+            const data = await response.json();
+            board.querySelector('[data-live-status]').textContent = data.status;
+            board.querySelector('[data-live-athletes]').textContent = data.athletes;
+
+            const rowContainer = board.querySelector('[data-live-row]')?.parentElement;
+            data.rows.forEach((row) => {
+                const element = board.querySelector('[data-live-row="' + row.id + '"]');
+                if (!element) return;
+                const rank = String(row.rank);
+                element.querySelector('[data-live-rank]').textContent = ['DNF', 'DNS'].includes(rank) ? rank : '#' + rank;
+                element.querySelector('[data-live-total]').textContent = row.total;
+                element.querySelector('[data-live-ends]').textContent = row.ends_recorded + ' / ' + row.ends.length + ' 趟';
+                element.querySelector('[data-live-arrow-count]').textContent = '箭數 ' + row.arrow_count;
+                element.querySelector('[data-live-average]').textContent = '每箭均值 ' + value(row.average);
+                element.querySelector('[data-live-completion]').textContent = '完成 ' + row.ends_recorded + ' / ' + row.ends.length + ' 趟';
+
+                row.ends.forEach((end) => {
+                    const endElement = element.querySelector('[data-live-end="' + end.number + '"]');
+                    if (!endElement) return;
+                    end.scores.forEach((score, index) => {
+                        endElement.querySelector('[data-live-score="' + index + '"]').textContent = value(score);
+                    });
+                    endElement.querySelector('[data-live-end-ten]').textContent = value(end.ten_count);
+                    endElement.querySelector('[data-live-end-x]').textContent = value(end.x_count);
+                    endElement.querySelector('[data-live-end-average]').textContent = value(end.average);
+                    endElement.querySelector('[data-live-end-total]').textContent = value(end.total);
+                    endElement.querySelector('[data-live-end-cumulative]').textContent = value(end.cumulative);
+                });
+
+                element.querySelector('[data-live-summary-ten]').textContent = row.ten_count;
+                element.querySelector('[data-live-summary-x]').textContent = row.x_count;
+                element.querySelector('[data-live-summary-average]').textContent = value(row.average);
+                element.querySelector('[data-live-summary-total]').textContent = row.total;
+                element.querySelector('[data-live-summary-cumulative]').textContent = row.total;
+                rowContainer?.appendChild(element);
+            });
+
+            if (data.event_finished) stopPolling();
+        } catch (error) {
+            // 暫時斷線時保留目前畫面，下一輪自動重試。
+        } finally {
+            loading = false;
+        }
+    };
+
+    const startPolling = () => {
+        if (timer) return;
+        timer = window.setInterval(updateBoard, 10000);
+    };
+    const stopPolling = () => {
+        if (!timer) return;
+        window.clearInterval(timer);
+        timer = null;
+    };
+
+    document.addEventListener('visibilitychange', () => {
+        if (document.hidden) {
+            stopPolling();
+        } else {
+            updateBoard();
+            startPolling();
+        }
+    });
+    startPolling();
+});
+</script>
 @endsection

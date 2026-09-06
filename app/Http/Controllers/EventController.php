@@ -10,6 +10,8 @@ use App\Models\EventRankingSnapshotEntry;
 use App\Models\EventStaff;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Collection;
 
@@ -456,6 +458,113 @@ class EventController extends Controller
             'sortDirection' => $sortDirection,
             'eventFinished'  => $eventFinished,
         ]);
+    }
+
+    public function liveData(Request $request, Event $event): JsonResponse
+    {
+        abort_unless($event->isPublished(), 404);
+        $canManage = $request->user() && $request->user()->can('viewManagement', $event);
+        $group = $event->groups()->findOrFail($request->integer('group'));
+        abort_unless($canManage || $group->live_results_visible, 404);
+        $sortDirection = $request->input('sort') === 'asc' ? 'asc' : 'desc';
+        $cacheKey = 'qualification-live:'.$event->id.':'.$group->id.':'.$sortDirection.':'.($canManage ? 'manager' : 'public');
+
+        $payload = Cache::remember($cacheKey, now()->addSeconds(5), function () use ($event, $group, $sortDirection): array {
+            [$arrowsPerEnd, $totalArrows, $totalEnds] = $this->resolveGroupArrowSettings($event, $group);
+            $registrations = EventRegistration::query()
+                ->where('event_id', $event->id)
+                ->where('event_group_id', $group->id)
+                ->whereIn('status', ['registered', 'checked_in', 'no_show'])
+                ->get();
+            $entries = EventScoreEntry::query()
+                ->whereIn('event_registration_id', $registrations->pluck('id'))
+                ->orderBy('end_number')
+                ->get()
+                ->groupBy('event_registration_id');
+            $lockedRanks = EventRankingSnapshotEntry::query()
+                ->whereHas('snapshot', fn ($query) => $query->where('event_id', $event->id)->whereNull('superseded_at'))
+                ->whereIn('event_registration_id', $registrations->pluck('id'))
+                ->pluck('rank_position', 'event_registration_id');
+
+            $rows = $registrations->map(function (EventRegistration $registration) use ($entries): array {
+                $scoreEntries = $entries->get($registration->id, collect());
+                $scores = $scoreEntries->flatMap(fn (EventScoreEntry $entry) => $entry->scores ?? [])->all();
+                $stats = $this->tallyScores($scores);
+
+                return [
+                    'registration'=>$registration,
+                    'entries'=>$scoreEntries,
+                    'total_score'=>$scoreEntries->sum('end_total'),
+                    'ends_recorded'=>$scoreEntries->count(),
+                    'arrow_count'=>$stats['recorded_arrows'],
+                    'ten_count'=>$stats['ten_count'],
+                    'x_count'=>$stats['x_count'],
+                    'avg_per_arrow'=>$stats['recorded_arrows'] ? round($stats['total_score'] / $stats['recorded_arrows'], 2) : null,
+                ];
+            });
+            $dnfRows = $rows->filter(fn (array $row) => in_array($row['registration']->result_status, ['dnf', 'dns'], true))
+                ->map(function (array $row): array {
+                    $row['rank_position'] = strtoupper((string) $row['registration']->result_status);
+                    return $row;
+                })->values();
+            $ranked = $rows->reject(fn (array $row) => in_array($row['registration']->result_status, ['dnf', 'dns'], true))
+                ->sort(fn (array $left, array $right) => [$right['total_score'], $right['ten_count'], $right['x_count']] <=> [$left['total_score'], $left['ten_count'], $left['x_count']])
+                ->values();
+            $previous = null;
+            $rank = 1;
+            $ranked = $ranked->map(function (array $row, int $index) use (&$previous, &$rank, $lockedRanks): array {
+                $signature = [$row['total_score'], $row['ten_count'], $row['x_count']];
+                if ($previous !== null && $signature !== $previous) $rank = $index + 1;
+                $row['rank_position'] = $lockedRanks->get($row['registration']->id) ?? $rank;
+                $previous = $signature;
+                return $row;
+            });
+            if ($sortDirection === 'asc') $ranked = $ranked->sortBy('total_score')->values();
+            $sorted = $ranked->concat($dnfRows)->values();
+            $maxEnds = (int) ($sorted->max('ends_recorded') ?? 0);
+            $status = $maxEnds === 0 ? '尚未開始' : ($maxEnds < $totalEnds ? '正在進行' : '已結束');
+
+            return [
+                'event_finished'=>$event->isOfficiallyCompleted(),
+                'status'=>$status,
+                'athletes'=>$sorted->count(),
+                'rows'=>$sorted->map(function (array $row) use ($arrowsPerEnd, $totalEnds): array {
+                    $entriesByEnd = $row['entries']->keyBy('end_number');
+                    $cumulative = 0;
+                    $ends = [];
+                    for ($end = 1; $end <= $totalEnds; $end++) {
+                        $entry = $entriesByEnd->get($end);
+                        $scores = $entry?->scores ?? [];
+                        $stats = $this->tallyScores($scores);
+                        $hasEnd = $entry !== null;
+                        if ($hasEnd) $cumulative += (int) $entry->end_total;
+                        $ends[] = [
+                            'number'=>$end,
+                            'scores'=>array_pad(array_slice($scores, 0, $arrowsPerEnd), $arrowsPerEnd, null),
+                            'ten_count'=>$hasEnd ? $stats['ten_count'] : null,
+                            'x_count'=>$hasEnd ? $stats['x_count'] : null,
+                            'average'=>$hasEnd && $stats['recorded_arrows'] ? round($stats['total_score'] / $stats['recorded_arrows'], 2) : null,
+                            'total'=>$hasEnd ? (int) $entry->end_total : null,
+                            'cumulative'=>$hasEnd ? $cumulative : null,
+                        ];
+                    }
+
+                    return [
+                        'id'=>$row['registration']->id,
+                        'rank'=>$row['rank_position'],
+                        'total'=>(int) $row['total_score'],
+                        'ends_recorded'=>$row['ends_recorded'],
+                        'arrow_count'=>$row['arrow_count'],
+                        'ten_count'=>$row['ten_count'],
+                        'x_count'=>$row['x_count'],
+                        'average'=>$row['avg_per_arrow'],
+                        'ends'=>$ends,
+                    ];
+                })->all(),
+            ];
+        });
+
+        return response()->json($payload)->header('Cache-Control', 'private, max-age=5');
     }
 
     public function elimination(Request $request, Event $event)

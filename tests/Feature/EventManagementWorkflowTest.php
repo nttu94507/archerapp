@@ -270,6 +270,13 @@ class EventManagementWorkflowTest extends TestCase
             ->assertOk()
             ->assertSee('排名賽戰況')
             ->assertDontSee('即時戰況');
+        $this->getJson(route('events.live-data', ['event'=>$event, 'group'=>$group->id]))
+            ->assertOk()
+            ->assertJsonPath('athletes', 1)
+            ->assertJsonPath('rows.0.id', $registration->id)
+            ->assertJsonPath('rows.0.total', 54)
+            ->assertJsonPath('rows.0.ends.0.scores.0', 10)
+            ->assertHeader('Cache-Control', 'max-age=5, private');
         $this->actingAs($owner)
             ->get(route('organizer.events.show', $event))
             ->assertOk()

@@ -238,6 +238,7 @@ Route::middleware(['auth', 'profile.completed'])->group(function () {
 
 //快速報名
 Route::get('events/{event}/live', [EventController::class, 'live'])->name('events.live');
+Route::get('events/{event}/live-data', [EventController::class, 'liveData'])->name('events.live-data');
 Route::get('events/{event}/elimination', [EventController::class, 'elimination'])->name('events.elimination');
 Route::get('events/{event}', [EventController::class, 'show'])->name('events.show');
 Route::post('events/{event}/groups/{group}/quick-register', [EventRegistrationController::class, 'quickRegister'])
