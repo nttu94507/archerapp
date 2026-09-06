@@ -117,7 +117,7 @@
                 <ul class="divide-y divide-gray-100">
                     @foreach($groups as $g)
                         @php
-                            $cap = $g->quota ?? null;
+                            $cap = $event->isFreePlan() ? 16 : ($g->quota ?? null);
                             $registered = $g->registered_count ?? 0; // 來自 withCount
                             $full = $cap !== null && $registered >= $cap;
 

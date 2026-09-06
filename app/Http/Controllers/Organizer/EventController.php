@@ -341,6 +341,7 @@ class EventController extends Controller
             $validated['groups'] = collect($validated['groups'] ?? [])->map(function (array $group) use ($validated, $isSubscriber): array {
                 $group['arrows_per_end'] = $validated['mode'] === 'indoor' ? 3 : 6;
                 $group['fee'] = $isSubscriber ? ($group['fee'] ?? 0) : 0;
+                $group['quota'] = $isSubscriber ? ($group['quota'] ?? null) : 16;
                 $group['standard_team_enabled'] = ! empty($group['standard_team_enabled']);
                 $group['mixed_team_enabled'] = ! empty($group['mixed_team_enabled']);
                 $group['is_team'] = $group['standard_team_enabled'] || $group['mixed_team_enabled'] || ! empty($group['is_team']);

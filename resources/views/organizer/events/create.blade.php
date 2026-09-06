@@ -161,7 +161,11 @@
                 <div><label class="text-sm font-medium">距離</label><input id="group-distance" name="groups[0][distance]" value="{{ old('groups.0.distance','70m') }}" class="mt-1 min-h-12 w-full rounded-xl border-gray-300"></div>
                 <div><label class="text-sm font-medium">排名賽局數 *</label><select id="group-round-format" class="mt-1 min-h-12 w-full rounded-xl border-gray-300"><option value="single">單局（室外 36 箭／室內 30 箭）</option>@if($maxArrows > 36)<option value="double">雙局（室外 72 箭／室內 60 箭）</option>@endif</select>@if($maxArrows === 36)<p class="mt-1 text-xs text-amber-700">免費方案僅支援單局。</p>@endif<input id="group-arrows" type="hidden" name="groups[0][arrow_count]" value="{{ old('groups.0.arrow_count', 36) }}"></div>
                 <input id="group-arrows-per-end" type="hidden" name="groups[0][arrows_per_end]" value="{{ old('groups.0.arrows_per_end', old('mode') === 'indoor' ? 3 : 6) }}">
-                <div><label class="text-sm font-medium">名額</label><input type="number" min="1" name="groups[0][quota]" value="{{ old('groups.0.quota') }}" placeholder="不填表示不限" class="mt-1 min-h-12 w-full rounded-xl border-gray-300"></div>
+                @if($maxArrows > 36)
+                    <div><label class="text-sm font-medium">名額</label><input type="number" min="1" name="groups[0][quota]" value="{{ old('groups.0.quota') }}" placeholder="不填表示不限" class="mt-1 min-h-12 w-full rounded-xl border-gray-300"></div>
+                @else
+                    <div><label class="text-sm font-medium">名額</label><div class="mt-1 flex min-h-12 items-center rounded-xl border border-gray-200 bg-gray-50 px-3 text-gray-700">16 人</div><input type="hidden" name="groups[0][quota]" value="16"></div>
+                @endif
                 @if($maxArrows > 36)
                     <div><label class="text-sm font-medium">報名費</label><input type="number" min="0" name="groups[0][fee]" value="{{ old('groups.0.fee',0) }}" class="mt-1 min-h-12 w-full rounded-xl border-gray-300"></div>
                 @else

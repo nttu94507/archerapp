@@ -55,7 +55,8 @@ class EventRegistrationQuickRegisterTest extends TestCase
             ->assertOk()
             ->assertSee('確認並完成報名')
             ->assertSee('反曲公開組')
-            ->assertSee('NT$ 500');
+            ->assertSee('NT$ 500')
+            ->assertSee('0 / 16 人');
 
         $this->assertDatabaseCount('event_registrations', 0);
     }
