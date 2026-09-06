@@ -58,12 +58,22 @@
                     <label class="text-sm font-medium">賽事名稱 *</label>
                     <input name="name" required value="{{ old('name') }}" placeholder="例如：2026 台北夏季射箭賽" class="mt-1 min-h-12 w-full rounded-xl border-gray-300">
                 </div>
-                <div><label class="text-sm font-medium">開始日期 *</label><input id="event-start" type="date" name="start_date" required value="{{ old('start_date') }}" class="mt-1 min-h-12 w-full rounded-xl border-gray-300"></div>
-                <div><label class="text-sm font-medium">結束日期 *</label><input id="event-end" type="date" name="end_date" required value="{{ old('end_date') }}" class="mt-1 min-h-12 w-full rounded-xl border-gray-300"><p class="mt-1 text-xs text-gray-500">預設為單日賽，可自行修改。</p></div>
+                @if($maxArrows === 36)
+                    <div class="sm:col-span-2"><label class="text-sm font-medium">賽事日期 *</label><input id="event-start" type="date" name="start_date" required value="{{ old('start_date') }}" class="mt-1 min-h-12 w-full rounded-xl border-gray-300"><input id="event-end" type="hidden" name="end_date" value="{{ old('end_date', old('start_date')) }}"></div>
+                @else
+                    <div><label class="text-sm font-medium">開始日期 *</label><input id="event-start" type="date" name="start_date" required value="{{ old('start_date') }}" class="mt-1 min-h-12 w-full rounded-xl border-gray-300"></div>
+                    <div><label class="text-sm font-medium">結束日期 *</label><input id="event-end" type="date" name="end_date" required value="{{ old('end_date') }}" class="mt-1 min-h-12 w-full rounded-xl border-gray-300"></div>
+                @endif
                 <div><label class="text-sm font-medium">賽事類型 *</label><select id="event-mode" name="mode" required class="mt-1 min-h-12 w-full rounded-xl border-gray-300"><option value="outdoor" @selected(old('mode','outdoor')==='outdoor')>室外</option><option value="indoor" @selected(old('mode')==='indoor')>室內</option></select></div>
                 <div><label class="text-sm font-medium">場地</label><input name="venue" value="{{ old('venue') }}" placeholder="例如：台北市立射箭場" class="mt-1 min-h-12 w-full rounded-xl border-gray-300"></div>
-                <div><label class="text-sm font-medium">報名開始 *</label><input id="reg-start" type="datetime-local" name="reg_start" required value="{{ old('reg_start', now()->format('Y-m-d\TH:i')) }}" class="mt-1 min-h-12 w-full rounded-xl border-gray-300"></div>
-                <div><label class="text-sm font-medium">報名截止 *</label><input id="reg-end" type="datetime-local" name="reg_end" required value="{{ old('reg_end') }}" class="mt-1 min-h-12 w-full rounded-xl border-gray-300"></div>
+                @if($maxArrows === 36)
+                    <input id="reg-start" type="hidden" name="reg_start" value="{{ old('reg_start', now()->format('Y-m-d\TH:i')) }}">
+                    <input id="reg-end" type="hidden" name="reg_end" value="{{ old('reg_end') }}">
+                    <div class="sm:col-span-2"><label class="text-sm font-medium">報名截止時間 *</label><input id="free-reg-end-time" type="time" name="free_reg_end_time" required value="{{ old('free_reg_end_time', '08:00') }}" class="mt-1 min-h-12 w-full rounded-xl border-gray-300"></div>
+                @else
+                    <div><label class="text-sm font-medium">報名開始 *</label><input id="reg-start" type="datetime-local" name="reg_start" required value="{{ old('reg_start', now()->format('Y-m-d\TH:i')) }}" class="mt-1 min-h-12 w-full rounded-xl border-gray-300"></div>
+                    <div><label class="text-sm font-medium">報名截止 *</label><input id="reg-end" type="datetime-local" name="reg_end" required value="{{ old('reg_end') }}" class="mt-1 min-h-12 w-full rounded-xl border-gray-300"></div>
+                @endif
                 <div class="sm:col-span-2"><label class="text-sm font-medium">主辦單位 *</label><input name="organizer" required value="{{ old('organizer', $organizerName) }}" class="mt-1 min-h-12 w-full rounded-xl border-gray-300"></div>
                 <div class="sm:col-span-2">
                     <p class="text-sm font-medium">賽事可見度</p>
@@ -214,6 +224,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const start = document.getElementById('event-start');
     const end = document.getElementById('event-end');
     const regEnd = document.getElementById('reg-end');
+    const freeRegEndTime = document.getElementById('free-reg-end-time');
     const preset = document.getElementById('group-preset');
     const templateButtons = [...document.querySelectorAll('.event-template')];
     const advancedSettings = document.getElementById('advanced-group-settings');
@@ -240,8 +251,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const summaryNote = document.getElementById('competition-note');
 
     start.addEventListener('change', () => {
-        if (!end.value) end.value = start.value;
-        if (!regEnd.value && start.value) regEnd.value = `${start.value}T23:59`;
+        if (end.type === 'hidden' || !end.value) end.value = start.value;
+        if (start.value && freeRegEndTime) regEnd.value = `${start.value}T${freeRegEndTime.value || '08:00'}`;
+        else if (!regEnd.value && start.value) regEnd.value = `${start.value}T23:59`;
+    });
+    freeRegEndTime?.addEventListener('change', () => {
+        if (start.value) regEnd.value = `${start.value}T${freeRegEndTime.value}`;
     });
 
     const presets = {

@@ -151,7 +151,11 @@ class EventController extends Controller
         $this->authorize('update', $event);
         abort_unless(in_array($event->status, ['draft', 'pending', 'rejected'], true), 422);
         abort_if($event->groups()->doesntExist(), 422, '至少建立一個組別才能發布。');
-        $event->update(['status' => 'approved', 'review_note' => null, 'published_at' => now(), 'verified' => true]);
+        $publishAttributes = ['status' => 'approved', 'review_note' => null, 'published_at' => now(), 'verified' => true];
+        if ($event->plan_code === EventPlanCatalog::FREE) {
+            $publishAttributes['reg_start'] = now();
+        }
+        $event->update($publishAttributes);
         $this->audit($event, $request, 'event.published');
 
         return back()->with('success', '賽事已發布，參賽者現在可以查看與報名。');
@@ -250,6 +254,13 @@ class EventController extends Controller
         $canUseUnlisted = $creating
             ? $request->user()->hasActiveOrganizerSubscription()
             : $event instanceof Event && $event->hasPlanFeature('unlisted_visibility');
+        if ($creating && $maxArrows === 36 && $request->filled('start_date') && $request->filled('free_reg_end_time')) {
+            $deadlineTime = $request->string('free_reg_end_time', '08:00')->toString();
+            $request->merge([
+                'reg_start'=>now()->format('Y-m-d H:i:s'),
+                'reg_end'=>$request->string('start_date')->toString().' '.$deadlineTime,
+            ]);
+        }
         $rules = [
             'name' => ['required', 'string', 'max:120'], 'start_date' => ['required', 'date'],
             'end_date' => ['required', 'date', 'after_or_equal:start_date'], 'mode' => ['required', 'in:indoor,outdoor'],
@@ -266,6 +277,7 @@ class EventController extends Controller
                 },
             ],
             'check_in_enabled' => ['nullable', 'boolean'],
+            'free_reg_end_time' => ['nullable', 'date_format:H:i'],
         ];
 
         if ($creating) {
@@ -299,6 +311,10 @@ class EventController extends Controller
         }
 
         $validated = $request->validate($rules);
+        unset($validated['free_reg_end_time']);
+        if ($creating && ! $request->user()->hasActiveOrganizerSubscription()) {
+            $validated['end_date'] = $validated['start_date'];
+        }
         if ($creating) {
             $isSubscriber = $request->user()->hasActiveOrganizerSubscription();
             $validated['groups'] = collect($validated['groups'] ?? [])->map(function (array $group) use ($validated, $isSubscriber): array {

@@ -255,6 +255,34 @@ class OrganizerSubscriptionTest extends TestCase
         $this->assertDatabaseMissing('events', ['name'=>'免費自訂賽事']);
     }
 
+    public function test_free_event_uses_one_date_and_cannot_be_created_as_multi_day(): void
+    {
+        $organizer = $this->approvedOrganizer('單日主辦方');
+
+        $this->actingAs($organizer)
+            ->get(route('organizer.events.create'))
+            ->assertOk()
+            ->assertSee('賽事日期')
+            ->assertDontSee('開始日期')
+            ->assertDontSee('結束日期');
+
+        $payload = array_merge($this->eventPayload('免費單日賽事'), [
+            'start_date'=>'2026-10-10', 'end_date'=>'2026-10-12', 'submit_mode'=>'publish',
+            'free_reg_end_time'=>'09:30',
+            'groups'=>[0=>[
+                'name'=>'反曲弓 30 公尺公開組', 'bow_type'=>'recurve', 'gender'=>'open',
+                'distance'=>'30m', 'arrow_count'=>36, 'arrows_per_end'=>6, 'fee'=>0,
+            ]],
+        ]);
+
+        $this->actingAs($organizer)->post(route('organizer.events.store'), $payload)->assertRedirect();
+        $event = Event::where('name', '免費單日賽事')->firstOrFail();
+        $this->assertSame('2026-10-10', $event->start_date->toDateString());
+        $this->assertSame('2026-10-10', $event->end_date->toDateString());
+        $this->assertSame('2026-10-10 09:30', $event->reg_end->format('Y-m-d H:i'));
+        $this->assertTrue($event->reg_start->between(now()->subMinute(), now()->addMinute()));
+    }
+
     private function approvedOrganizer(string $organizationName): User
     {
         $user = User::factory()->create();
