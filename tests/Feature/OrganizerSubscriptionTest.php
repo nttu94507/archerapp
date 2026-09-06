@@ -232,6 +232,29 @@ class OrganizerSubscriptionTest extends TestCase
         $this->assertSame(0, $event->groups()->firstOrFail()->fee);
     }
 
+    public function test_free_event_only_allows_preset_groups(): void
+    {
+        $organizer = $this->approvedOrganizer('模板主辦方');
+
+        $this->actingAs($organizer)
+            ->get(route('organizer.events.create'))
+            ->assertOk()
+            ->assertSee('id="free-bow"', false)
+            ->assertSee('id="free-distance"', false)
+            ->assertDontSee('id="event-template-grid"', false)
+            ->assertDontSee('data-preset="custom"', false);
+
+        $payload = array_merge($this->eventPayload('免費自訂賽事'), ['submit_mode'=>'publish', 'groups'=>[0=>[
+            'name'=>'自訂 25 公尺組', 'bow_type'=>'barebow', 'gender'=>'open',
+            'distance'=>'25m', 'arrow_count'=>36, 'arrows_per_end'=>6, 'fee'=>0,
+        ]]]);
+
+        $this->actingAs($organizer)
+            ->post(route('organizer.events.store'), $payload)
+            ->assertSessionHasErrors('groups');
+        $this->assertDatabaseMissing('events', ['name'=>'免費自訂賽事']);
+    }
+
     private function approvedOrganizer(string $organizationName): User
     {
         $user = User::factory()->create();

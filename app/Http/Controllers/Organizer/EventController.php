@@ -314,6 +314,26 @@ class EventController extends Controller
             && ! $request->user()->hasActiveOrganizerSubscription()) {
             throw \Illuminate\Validation\ValidationException::withMessages(['groups'=>'團體賽為訂閱或單場升級功能。']);
         }
+        if ($creating && ! $request->user()->hasActiveOrganizerSubscription()) {
+            $allowedTemplates = $validated['mode'] === 'indoor'
+                ? [
+                    ['bow_type'=>'recurve', 'gender'=>'open', 'distance'=>'18m', 'arrow_count'=>30],
+                    ['bow_type'=>'compound', 'gender'=>'open', 'distance'=>'18m', 'arrow_count'=>30],
+                ]
+                : [
+                    ['bow_type'=>'recurve', 'gender'=>'open', 'distance'=>'70m', 'arrow_count'=>36],
+                    ['bow_type'=>'compound', 'gender'=>'open', 'distance'=>'50m', 'arrow_count'=>36],
+                    ['bow_type'=>'recurve', 'gender'=>'open', 'distance'=>'30m', 'arrow_count'=>36],
+                ];
+            $usesOnlyTemplates = collect($validated['groups'] ?? [])->every(function (array $group) use ($allowedTemplates): bool {
+                return collect($allowedTemplates)->contains(fn (array $template) => collect($template)->every(
+                    fn (mixed $value, string $key) => (string) ($group[$key] ?? '') === (string) $value
+                ));
+            });
+            if (! $usesOnlyTemplates) {
+                throw \Illuminate\Validation\ValidationException::withMessages(['groups'=>'免費版只能使用快速賽制模板；自訂組別需升級方案。']);
+            }
+        }
         $canUseCheckIn = $creating
             ? $request->user()->hasActiveOrganizerSubscription()
             : $event instanceof Event && $event->hasPlanFeature('check_in');
