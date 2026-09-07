@@ -321,8 +321,12 @@ class OrganizerSubscriptionTest extends TestCase
         $this->actingAs($organizer)->post(route('organizer.events.store'), [
             'name'=>'第一次送出即可建立',
             'start_date'=>$startDate,
+            'end_date'=>now()->toDateString(),
             'mode'=>'outdoor',
             'organizer'=>'付費快速建立主辦方',
+            'reg_start'=>now()->toDateTimeString(),
+            'reg_end'=>now()->toDateTimeString(),
+            'quick_date_defaults'=>1,
             'submit_mode'=>'draft',
         ])->assertRedirect()->assertSessionDoesntHaveErrors();
 

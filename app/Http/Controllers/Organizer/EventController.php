@@ -282,13 +282,13 @@ class EventController extends Controller
         }
         if ($creating && $maxArrows > 36 && $request->filled('start_date')) {
             $defaults = [];
-            if (! $request->filled('end_date')) {
+            if ($request->boolean('quick_date_defaults') || ! $request->filled('end_date')) {
                 $defaults['end_date'] = $request->string('start_date')->toString();
             }
             if (! $request->filled('reg_start')) {
                 $defaults['reg_start'] = now()->format('Y-m-d H:i:s');
             }
-            if (! $request->filled('reg_end')) {
+            if ($request->boolean('quick_date_defaults') || ! $request->filled('reg_end')) {
                 $defaults['reg_end'] = $request->string('start_date')->toString().' 23:59:00';
             }
             $request->merge($defaults);
@@ -310,6 +310,7 @@ class EventController extends Controller
             ],
             'check_in_enabled' => ['nullable', 'boolean'],
             'free_reg_end_time' => ['nullable', 'date_format:H:i'],
+            'quick_date_defaults' => ['nullable', 'boolean'],
         ];
 
         if ($creating) {
@@ -343,10 +344,12 @@ class EventController extends Controller
         }
 
         $validated = $request->validate($rules, [
+            'end_date.after_or_equal'=>'結束日期不得早於開始日期。',
             'reg_end.after_or_equal'=>'報名截止時間必須晚於或等於報名開始時間。',
             'free_reg_end_time.date_format'=>'請選擇正確的報名截止時間。',
         ]);
         unset($validated['free_reg_end_time']);
+        unset($validated['quick_date_defaults']);
         if ($creating && ! $request->user()->hasActiveOrganizerSubscription()) {
             $validated['end_date'] = $validated['start_date'];
         }

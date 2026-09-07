@@ -115,6 +115,7 @@
                 </div>
             </div>
             @if($maxArrows > 36)
+                <input id="quick-date-defaults" type="hidden" name="quick_date_defaults" value="1">
                 <button id="toggle-paid-basic-advanced" type="button" class="mt-4 min-h-11 text-sm font-semibold text-indigo-600">顯示進階設定 ↓</button>
             @endif
             <div class="mt-6 flex justify-end border-t pt-4"><button id="go-to-step-two" type="button" class="min-h-12 rounded-xl bg-indigo-600 px-6 text-sm font-semibold text-white hover:bg-indigo-500">下一步：選擇組別 →</button></div>
@@ -349,8 +350,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const setDefaultPaidDates = () => {
         if (!paidGroupBuilder || !start.value) return;
-        if (!end.value) end.value = start.value;
-        if (!regEnd.value) regEnd.value = `${start.value}T23:59`;
+        const endIsHidden = end.closest('.paid-basic-advanced')?.classList.contains('hidden');
+        const regEndIsHidden = regEnd.closest('.paid-basic-advanced')?.classList.contains('hidden');
+        if (endIsHidden || !end.value) end.value = start.value;
+        if (regEndIsHidden || !regEnd.value) regEnd.value = `${start.value}T23:59`;
     };
 
     const selectedPaidValues = group => [...document.querySelectorAll(`[data-choice-group="${group}"]:checked`)].map(input => input.value);
@@ -448,6 +451,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const fields = [...document.querySelectorAll('.paid-basic-advanced')];
             const opening = fields.some(field => field.classList.contains('hidden'));
             fields.forEach(field => field.classList.toggle('hidden', !opening));
+            document.getElementById('quick-date-defaults').value = opening ? '0' : '1';
             event.currentTarget.textContent = opening ? '收起進階設定 ↑' : '顯示進階設定 ↓';
         });
         document.querySelectorAll('.paid-event-type').forEach(button => button.addEventListener('click', () => {
