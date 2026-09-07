@@ -287,6 +287,7 @@ class EventManagementWorkflowTest extends TestCase
             ->assertSessionHas('success');
 
         $this->assertNotNull($event->fresh()->completed_at);
+        $this->assertSame('completed', $event->fresh()->status);
         $this->assertDatabaseHas('event_audit_logs', ['event_id'=>$event->id, 'action'=>'event.completed']);
         $this->assertNotSame($oldAccessToken, $target->fresh()->access_token);
         $this->get(route('scoring-stations.show', $target->fresh()->access_token))->assertStatus(410);
@@ -296,6 +297,13 @@ class EventManagementWorkflowTest extends TestCase
         $this->get(route('events.show', $event->fresh()))
             ->assertOk()
             ->assertSee('排名賽結果');
+        $this->actingAs($owner)->get(route('organizer.events.index'))
+            ->assertOk()
+            ->assertSee('已結束');
+        $this->get(route('events.index'))
+            ->assertOk()
+            ->assertSee('歷史賽事')
+            ->assertSee('已結束');
     }
 
     public function test_organizer_can_create_shared_target_station_and_submit_an_end_for_all_archers(): void

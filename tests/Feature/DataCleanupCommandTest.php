@@ -152,6 +152,24 @@ class DataCleanupCommandTest extends TestCase
         $this->assertDatabaseHas('events', ['id' => $event->id]);
     }
 
+    public function test_event_cleanup_without_ids_clears_every_event_but_keeps_users(): void
+    {
+        $user = User::factory()->create();
+        Event::factory()->count(2)->create();
+
+        $this->artisan('data:clear-events')
+            ->expectsOutputToContain('目前是預覽模式')
+            ->assertSuccessful();
+        $this->assertDatabaseCount('events', 2);
+
+        $this->artisan('data:clear-events', ['--execute'=>true, '--yes'=>true])
+            ->expectsOutputToContain('已清除 2 場賽事')
+            ->assertSuccessful();
+
+        $this->assertDatabaseCount('events', 0);
+        $this->assertDatabaseHas('users', ['id'=>$user->id]);
+    }
+
     private function makeBadge(User $owner, Event $event, string $iconPath): EventBadge
     {
         return EventBadge::create([

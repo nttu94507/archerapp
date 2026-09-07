@@ -7,7 +7,7 @@
     $rankingRegistrations = $event->registrations()->whereIn('status', ['registered', 'checked_in', 'no_show']);
     $publishedRankings = (clone $rankingRegistrations)->exists() && (clone $rankingRegistrations)->whereNull('result_published_at')->doesntExist();
     $showEliminationStage = $event->hasPlanFeature('individual_elimination') || $hasElimination;
-    $statusLabel = $officiallyCompleted ? '已完成' : ($event->cancelled_at ? '已取消' : match ($event->status) {
+    $statusLabel = $officiallyCompleted ? '已結束' : ($event->cancelled_at ? '已取消' : match ($event->status) {
         'draft', 'pending' => '草稿', 'rejected' => '已下架', 'archived' => '已封存',
         default => $completionCheck['ready'] ? '可完成賽事' : ($hasElimination && $publishedRankings ? '對抗賽進行中' : ($hasScoring ? '排名賽進行中' : '報名中')),
     });

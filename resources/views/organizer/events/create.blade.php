@@ -53,6 +53,16 @@
 
         <section id="event-step-one" class="rounded-2xl border bg-white p-4 shadow-sm sm:p-6 {{ $startAtStepTwo ? 'hidden' : '' }}">
             <div class="mb-5"><p class="text-xs font-semibold text-indigo-600">步驟 1</p><h2 class="text-lg font-semibold">賽事基本資料</h2></div>
+            @if($maxArrows > 36)
+                <div class="mb-5">
+                    <p class="mb-2 text-sm font-medium">選擇賽事套型</p>
+                    <div class="grid grid-cols-3 gap-2" id="paid-event-types">
+                        <button type="button" data-mode="outdoor" data-distance="70m" class="paid-event-type min-h-20 rounded-xl border-2 border-indigo-500 bg-indigo-50 p-3 text-left"><strong class="block text-sm">室外標準賽</strong><span class="mt-1 block text-xs text-gray-500">70／50 公尺</span></button>
+                        <button type="button" data-mode="outdoor" data-distance="30m" class="paid-event-type min-h-20 rounded-xl border-2 border-gray-200 p-3 text-left"><strong class="block text-sm">室外短距離</strong><span class="mt-1 block text-xs text-gray-500">30 公尺</span></button>
+                        <button type="button" data-mode="indoor" data-distance="18m" class="paid-event-type min-h-20 rounded-xl border-2 border-gray-200 p-3 text-left"><strong class="block text-sm">室內賽</strong><span class="mt-1 block text-xs text-gray-500">18 公尺</span></button>
+                    </div>
+                </div>
+            @endif
             <div class="grid gap-4 sm:grid-cols-2">
                 <div class="sm:col-span-2">
                     <label class="text-sm font-medium">賽事名稱 *</label>
@@ -62,20 +72,24 @@
                     <div class="sm:col-span-2"><label class="text-sm font-medium">賽事日期 *</label><input id="event-start" type="date" name="start_date" required value="{{ old('start_date') }}" class="mt-1 min-h-12 w-full rounded-xl border-gray-300"><input id="event-end" type="hidden" name="end_date" value="{{ old('end_date', old('start_date')) }}"></div>
                 @else
                     <div><label class="text-sm font-medium">開始日期 *</label><input id="event-start" type="date" name="start_date" required value="{{ old('start_date') }}" class="mt-1 min-h-12 w-full rounded-xl border-gray-300"></div>
-                    <div><label class="text-sm font-medium">結束日期 *</label><input id="event-end" type="date" name="end_date" required value="{{ old('end_date') }}" class="mt-1 min-h-12 w-full rounded-xl border-gray-300"></div>
+                    <div class="paid-basic-advanced hidden"><label class="text-sm font-medium">結束日期 *</label><input id="event-end" type="date" name="end_date" required value="{{ old('end_date', old('start_date')) }}" class="mt-1 min-h-12 w-full rounded-xl border-gray-300"></div>
                 @endif
-                <div><label class="text-sm font-medium">賽事類型 *</label><select id="event-mode" name="mode" required class="mt-1 min-h-12 w-full rounded-xl border-gray-300"><option value="outdoor" @selected(old('mode','outdoor')==='outdoor')>室外</option><option value="indoor" @selected(old('mode')==='indoor')>室內</option></select></div>
+                <div class="{{ $maxArrows > 36 ? 'paid-basic-advanced hidden' : '' }}"><label class="text-sm font-medium">賽事類型 *</label><select id="event-mode" name="mode" required class="mt-1 min-h-12 w-full rounded-xl border-gray-300"><option value="outdoor" @selected(old('mode','outdoor')==='outdoor')>室外</option><option value="indoor" @selected(old('mode')==='indoor')>室內</option></select></div>
                 <div><label class="text-sm font-medium">場地</label><input name="venue" value="{{ old('venue') }}" placeholder="例如：台北市立射箭場" class="mt-1 min-h-12 w-full rounded-xl border-gray-300"></div>
                 @if($maxArrows === 36)
                     <input id="reg-start" type="hidden" name="reg_start" value="{{ old('reg_start', now()->format('Y-m-d\TH:i')) }}">
                     <input id="reg-end" type="hidden" name="reg_end" value="{{ old('reg_end') }}">
-                    <div class="sm:col-span-2"><label class="text-sm font-medium">報名截止時間 *</label><input id="free-reg-end-time" type="time" name="free_reg_end_time" required value="{{ old('free_reg_end_time', '23:59') }}" class="mt-1 min-h-12 w-full rounded-xl border-gray-300"></div>
+                    <div class="sm:col-span-2">
+                        <label class="text-sm font-medium">比賽當日報名截止時間 *</label>
+                        <input id="free-reg-end-time" type="time" name="free_reg_end_time" required value="{{ old('free_reg_end_time', '23:59') }}" class="mt-1 min-h-12 w-full rounded-xl border-gray-300">
+                        <p id="free-reg-deadline-preview" class="mt-2 text-sm font-medium text-indigo-700" aria-live="polite"></p>
+                    </div>
                 @else
-                    <div><label class="text-sm font-medium">報名開始 *</label><input id="reg-start" type="datetime-local" name="reg_start" required value="{{ old('reg_start', now()->format('Y-m-d\TH:i')) }}" class="mt-1 min-h-12 w-full rounded-xl border-gray-300"></div>
-                    <div><label class="text-sm font-medium">報名截止 *</label><input id="reg-end" type="datetime-local" name="reg_end" required value="{{ old('reg_end') }}" class="mt-1 min-h-12 w-full rounded-xl border-gray-300"></div>
+                    <div class="paid-basic-advanced hidden"><label class="text-sm font-medium">報名開始 *</label><input id="reg-start" type="datetime-local" name="reg_start" required value="{{ old('reg_start', now()->format('Y-m-d\TH:i')) }}" class="mt-1 min-h-12 w-full rounded-xl border-gray-300"></div>
+                    <div class="paid-basic-advanced hidden"><label class="text-sm font-medium">報名截止 *</label><input id="reg-end" type="datetime-local" name="reg_end" required value="{{ old('reg_end') }}" class="mt-1 min-h-12 w-full rounded-xl border-gray-300"></div>
                 @endif
-                <div class="sm:col-span-2"><label class="text-sm font-medium">主辦單位 *</label><input name="organizer" required value="{{ old('organizer', $organizerName) }}" class="mt-1 min-h-12 w-full rounded-xl border-gray-300"></div>
-                <div class="sm:col-span-2">
+                <div class="sm:col-span-2 {{ $maxArrows > 36 ? 'paid-basic-advanced hidden' : '' }}"><label class="text-sm font-medium">主辦單位 *</label><input name="organizer" required value="{{ old('organizer', $organizerName) }}" class="mt-1 min-h-12 w-full rounded-xl border-gray-300"></div>
+                <div class="sm:col-span-2 {{ $maxArrows > 36 ? 'paid-basic-advanced hidden' : '' }}">
                     <p class="text-sm font-medium">賽事可見度</p>
                     <input type="hidden" name="visibility" value="public">
                     @if($canUseUnlisted)
@@ -87,7 +101,7 @@
                         <div class="mt-2 rounded-xl bg-gray-50 px-4 py-3 text-sm text-gray-600">免費賽事會顯示於公開列表；升級後可設定為不公開。</div>
                     @endif
                 </div>
-                <div class="sm:col-span-2">
+                <div class="sm:col-span-2 {{ $maxArrows > 36 ? 'paid-basic-advanced hidden' : '' }}">
                     <p class="text-sm font-medium">現場報到</p>
                     <input type="hidden" name="check_in_enabled" value="0">
                     @if($maxArrows > 36)
@@ -100,13 +114,49 @@
                     @endif
                 </div>
             </div>
+            @if($maxArrows > 36)
+                <button id="toggle-paid-basic-advanced" type="button" class="mt-4 min-h-11 text-sm font-semibold text-indigo-600">顯示進階設定 ↓</button>
+            @endif
             <div class="mt-6 flex justify-end border-t pt-4"><button id="go-to-step-two" type="button" class="min-h-12 rounded-xl bg-indigo-600 px-6 text-sm font-semibold text-white hover:bg-indigo-500">下一步：選擇組別 →</button></div>
         </section>
 
         <section id="event-step-two" class="rounded-2xl border bg-white p-4 shadow-sm sm:p-6 {{ $startAtStepTwo ? '' : 'hidden' }}">
-            <div class="mb-5 flex flex-wrap items-start justify-between gap-3"><div><p class="text-xs font-semibold text-indigo-600">步驟 2</p><h2 class="text-lg font-semibold">第一個報名組別</h2><p class="mt-1 text-xs text-gray-500">先建立主要組別，發布後仍可新增更多組別。</p></div><button id="back-to-step-one" type="button" class="min-h-10 rounded-xl border px-4 text-sm font-medium text-gray-700 hover:bg-gray-50">← 返回基本資料</button></div>
+            <div class="mb-5 flex flex-wrap items-start justify-between gap-3"><div><p class="text-xs font-semibold text-indigo-600">步驟 2</p><h2 class="text-lg font-semibold">{{ $maxArrows > 36 ? '勾選報名組別' : '第一個報名組別' }}</h2><p class="mt-1 text-xs text-gray-500">{{ $maxArrows > 36 ? '勾選條件後，系統會自動組合並建立組別。' : '先建立主要組別，發布後仍可新增更多組別。' }}</p></div><button id="back-to-step-one" type="button" class="min-h-10 rounded-xl border px-4 text-sm font-medium text-gray-700 hover:bg-gray-50">← 返回基本資料</button></div>
             @if($maxArrows === 36)<div class="mb-4 flex items-center justify-between gap-3 rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-800"><span>免費方案僅支援單局最多 36 箭。</span><a href="{{ route('store.index') }}" class="shrink-0 font-semibold underline">查看方案</a></div>@endif
-            <div class="mb-5">
+            @if($maxArrows > 36)
+                <div id="paid-group-builder" class="space-y-5">
+                    @foreach([
+                        ['title'=>'弓種','name'=>'quick_bows','items'=>[['recurve','反曲弓'],['compound','複合弓'],['barebow','裸弓']]],
+                        ['title'=>'距離','name'=>'quick_distances','items'=>[['70m','70 公尺'],['30m','30 公尺'],['18m','18 公尺']]],
+                        ['title'=>'組別','name'=>'quick_genders','items'=>[['open','公開'],['male','男子'],['female','女子']]],
+                    ] as $choiceGroup)
+                        <fieldset>
+                            <legend class="mb-2 text-sm font-semibold text-gray-800">{{ $choiceGroup['title'] }}</legend>
+                            <div class="grid grid-cols-3 gap-2">
+                                @foreach($choiceGroup['items'] as [$value,$label])
+                                    <label class="quick-choice flex min-h-14 cursor-pointer items-center justify-center rounded-xl border-2 border-gray-200 bg-white px-2 text-center text-sm font-semibold transition has-[:checked]:border-indigo-500 has-[:checked]:bg-indigo-50 has-[:checked]:text-indigo-800">
+                                        <input type="checkbox" data-choice-group="{{ $choiceGroup['name'] }}" value="{{ $value }}" class="sr-only" @checked(($choiceGroup['name']==='quick_bows' && $value==='recurve') || ($choiceGroup['name']==='quick_distances' && $value==='70m') || ($choiceGroup['name']==='quick_genders' && $value==='open'))>
+                                        {{ $label }}
+                                    </label>
+                                @endforeach
+                            </div>
+                        </fieldset>
+                    @endforeach
+
+                    <div class="grid gap-4 rounded-2xl bg-slate-50 p-4 sm:grid-cols-3">
+                        <label class="text-sm font-medium">排名賽局數<select id="paid-round-format" class="mt-1 min-h-12 w-full rounded-xl"><option value="single">單局</option><option value="double" selected>雙局</option></select></label>
+                        <label class="text-sm font-medium">每組名額<input id="paid-group-quota" type="number" min="1" placeholder="不限" class="mt-1 min-h-12 w-full rounded-xl"></label>
+                        <label class="text-sm font-medium">每組報名費<input id="paid-group-fee" type="number" min="0" value="0" class="mt-1 min-h-12 w-full rounded-xl"></label>
+                    </div>
+
+                    <div class="rounded-2xl border border-indigo-200 bg-indigo-50 p-4">
+                        <div class="flex items-center justify-between gap-3"><p class="font-semibold text-indigo-950">將建立 <span id="paid-group-count">1</span> 個組別</p><span id="paid-group-warning" class="text-xs font-medium text-amber-700"></span></div>
+                        <div id="paid-group-preview" class="mt-3 flex flex-wrap gap-2"></div>
+                    </div>
+                    <div id="paid-generated-groups"></div>
+                </div>
+            @endif
+            <div class="mb-5 {{ $maxArrows > 36 ? 'hidden' : '' }}" id="legacy-template-picker">
                 @if($maxArrows === 36)
                     <div class="grid gap-4 sm:grid-cols-2">
                         <label class="text-sm font-medium">弓種<select id="free-bow" class="mt-1 min-h-12 w-full rounded-xl border-gray-300"><option value="recurve">反曲弓</option><option value="compound">複合弓</option></select></label>
@@ -229,6 +279,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const end = document.getElementById('event-end');
     const regEnd = document.getElementById('reg-end');
     const freeRegEndTime = document.getElementById('free-reg-end-time');
+    const freeRegDeadlinePreview = document.getElementById('free-reg-deadline-preview');
     const preset = document.getElementById('group-preset');
     const templateButtons = [...document.querySelectorAll('.event-template')];
     const advancedSettings = document.getElementById('advanced-group-settings');
@@ -253,15 +304,105 @@ document.addEventListener('DOMContentLoaded', () => {
     const teamSettings = document.getElementById('team-settings');
     const summary = document.getElementById('competition-summary');
     const summaryNote = document.getElementById('competition-note');
+    const paidGroupBuilder = document.getElementById('paid-group-builder');
+    const paidGeneratedGroups = document.getElementById('paid-generated-groups');
+    const paidGroupPreview = document.getElementById('paid-group-preview');
+    const paidGroupCount = document.getElementById('paid-group-count');
+    const paidGroupWarning = document.getElementById('paid-group-warning');
+    const paidRoundFormat = document.getElementById('paid-round-format');
+    const paidGroupQuota = document.getElementById('paid-group-quota');
+    const paidGroupFee = document.getElementById('paid-group-fee');
 
+    const setDefaultPaidDates = () => {
+        if (!paidGroupBuilder || !start.value) return;
+        if (!end.value) end.value = start.value;
+        if (!regEnd.value) regEnd.value = `${start.value}T23:59`;
+    };
+
+    const selectedPaidValues = group => [...document.querySelectorAll(`[data-choice-group="${group}"]:checked`)].map(input => input.value);
+    const paidLabels = {
+        recurve:'反曲弓', compound:'複合弓', barebow:'裸弓',
+        open:'公開組', male:'男子組', female:'女子組',
+        '70m':'70 公尺', '30m':'30 公尺', '18m':'18 公尺',
+    };
+    const renderPaidGroups = () => {
+        if (!paidGroupBuilder) return;
+        const bows = selectedPaidValues('quick_bows');
+        const distances = selectedPaidValues('quick_distances');
+        const genders = selectedPaidValues('quick_genders');
+        const combinations = bows.flatMap(bow => distances.flatMap(groupDistance => genders.map(gender => ({ bow, distance:groupDistance, gender }))));
+        const arrowCount = mode.value === 'indoor'
+            ? (paidRoundFormat.value === 'double' ? 60 : 30)
+            : (paidRoundFormat.value === 'double' ? 72 : 36);
+        const quota = paidGroupQuota.value;
+        const fee = paidGroupFee.value || '0';
+
+        paidGroupCount.textContent = combinations.length;
+        paidGroupWarning.textContent = combinations.length === 0 ? '每一列至少勾選一項' : (combinations.length > 12 ? '組別較多，請再次確認' : '');
+        paidGroupPreview.innerHTML = combinations.map(item => `<span class="rounded-full bg-white px-3 py-1.5 text-xs font-semibold text-indigo-800 shadow-sm">${paidLabels[item.bow]} ${paidLabels[item.distance]}${paidLabels[item.gender]}</span>`).join('');
+        paidGeneratedGroups.innerHTML = combinations.map((item, index) => {
+            const name = `${paidLabels[item.bow]} ${paidLabels[item.distance]}${paidLabels[item.gender]}`;
+            const values = {
+                name, bow_type:item.bow, gender:item.gender, distance:item.distance,
+                arrow_count:arrowCount, arrows_per_end:mode.value === 'indoor' ? 3 : 6,
+                fee, quota,
+            };
+            return Object.entries(values)
+                .filter(([, value]) => value !== '')
+                .map(([key, value]) => `<input type="hidden" name="groups[${index}][${key}]" value="${value}">`)
+                .join('');
+        }).join('');
+    };
+
+    if (paidGroupBuilder) {
+        advancedSettings.querySelectorAll('[name^="groups["]').forEach(input => input.disabled = true);
+        document.querySelectorAll('[data-choice-group]').forEach(input => input.addEventListener('change', renderPaidGroups));
+        [paidRoundFormat, paidGroupQuota, paidGroupFee].forEach(input => input.addEventListener('input', renderPaidGroups));
+        document.getElementById('toggle-paid-basic-advanced')?.addEventListener('click', event => {
+            const fields = [...document.querySelectorAll('.paid-basic-advanced')];
+            const opening = fields.some(field => field.classList.contains('hidden'));
+            fields.forEach(field => field.classList.toggle('hidden', !opening));
+            event.currentTarget.textContent = opening ? '收起進階設定 ↑' : '顯示進階設定 ↓';
+        });
+        document.querySelectorAll('.paid-event-type').forEach(button => button.addEventListener('click', () => {
+            document.querySelectorAll('.paid-event-type').forEach(item => {
+                const selected = item === button;
+                item.classList.toggle('border-indigo-500', selected);
+                item.classList.toggle('bg-indigo-50', selected);
+                item.classList.toggle('border-gray-200', !selected);
+            });
+            mode.value = button.dataset.mode;
+            const allowedDistances = mode.value === 'indoor' ? ['18m'] : ['70m', '30m'];
+            document.querySelectorAll('[data-choice-group="quick_distances"]').forEach(input => {
+                input.disabled = !allowedDistances.includes(input.value);
+                input.closest('label').classList.toggle('hidden', input.disabled);
+                input.checked = input.value === button.dataset.distance;
+            });
+            setDefaultPaidDates();
+            renderPaidGroups();
+        }));
+        start.addEventListener('change', setDefaultPaidDates);
+        (document.querySelector(`.paid-event-type[data-mode="${mode.value}"]`) ?? document.querySelector('.paid-event-type'))?.click();
+    }
+
+    const updateFreeRegistrationDeadline = () => {
+        if (!freeRegEndTime || !freeRegDeadlinePreview) return;
+        if (!start.value) {
+            freeRegDeadlinePreview.textContent = '請先選擇賽事日期';
+            return;
+        }
+        const [year, month, day] = start.value.split('-');
+        const deadlineTime = freeRegEndTime.value || '23:59';
+        regEnd.value = `${start.value}T${deadlineTime}`;
+        freeRegDeadlinePreview.textContent = `實際截止：${year}/${month}/${day} ${deadlineTime}`;
+    };
     start.addEventListener('change', () => {
         if (end.type === 'hidden' || !end.value) end.value = start.value;
-        if (start.value && freeRegEndTime) regEnd.value = `${start.value}T${freeRegEndTime.value || '23:59'}`;
+        if (start.value && freeRegEndTime) updateFreeRegistrationDeadline();
         else if (!regEnd.value && start.value) regEnd.value = `${start.value}T23:59`;
     });
-    freeRegEndTime?.addEventListener('change', () => {
-        if (start.value) regEnd.value = `${start.value}T${freeRegEndTime.value}`;
-    });
+    freeRegEndTime?.addEventListener('change', updateFreeRegistrationDeadline);
+    updateFreeRegistrationDeadline();
 
     const presets = {
         r70o: { name:'反曲弓 70 公尺公開組', bow:'recurve', gender:'open', mode:'outdoor', distance:'70m' },
@@ -355,6 +496,7 @@ document.addEventListener('DOMContentLoaded', () => {
         syncArrowCount();
         syncTemplateOptions(true);
         syncFreeConfiguration();
+        renderPaidGroups();
     });
     roundFormat.value = Number(arrows.value) > (mode.value === 'indoor' ? 30 : 36) ? 'double' : 'single';
     syncPresetOptions();
@@ -384,7 +526,7 @@ document.addEventListener('DOMContentLoaded', () => {
     renderCompetition();
     syncTemplateOptions();
     if (freeBow) syncFreeConfiguration();
-    else selectTemplate(@js($startAtStepTwo) ? templateButtons.find(button => button.dataset.preset === 'custom') : templateButtons.find(button => button.dataset.preset === preset.value && !button.classList.contains('hidden')));
+    else if (!paidGroupBuilder) selectTemplate(@js($startAtStepTwo) ? templateButtons.find(button => button.dataset.preset === 'custom') : templateButtons.find(button => button.dataset.preset === preset.value && !button.classList.contains('hidden')));
 });
 </script>
 @endsection

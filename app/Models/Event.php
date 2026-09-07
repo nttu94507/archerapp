@@ -90,11 +90,11 @@ class Event extends Model
     public function eventTeams() { return $this->hasMany(EventTeam::class); }
 
     public function scopePublished($query) {
-        return $query->where('status', 'approved')->whereNotNull('published_at')->whereNull('cancelled_at');
+        return $query->whereIn('status', ['approved', 'completed'])->whereNotNull('published_at')->whereNull('cancelled_at');
     }
 
     public function isPublished(): bool {
-        return $this->status === 'approved' && $this->published_at !== null && $this->cancelled_at === null;
+        return in_array($this->status, ['approved', 'completed'], true) && $this->published_at !== null && $this->cancelled_at === null;
     }
 
     public function isOfficiallyCompleted(): bool

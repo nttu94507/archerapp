@@ -167,6 +167,7 @@ class EventController extends Controller
     public function unpublish(Request $request, Event $event): RedirectResponse
     {
         $this->authorize('update', $event);
+        abort_if($event->isOfficiallyCompleted(), 422, '已結束的賽事不能下架。');
         abort_unless($event->isPublished(), 422, '目前賽事尚未發布。');
         $event->update(['status' => 'rejected', 'published_at' => null, 'verified' => false]);
         $this->audit($event, $request, 'event.unpublished');

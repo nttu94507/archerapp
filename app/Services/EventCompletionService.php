@@ -93,7 +93,7 @@ class EventCompletionService
                     'device_user_agent'=>null,
                 ]));
 
-            $locked->update(['completed_at'=>$now]);
+            $locked->update(['status'=>'completed', 'completed_at'=>$now]);
             EventAuditLog::create([
                 'event_id'=>$locked->id,
                 'user_id'=>$actorId,

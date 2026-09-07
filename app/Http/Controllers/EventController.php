@@ -45,6 +45,7 @@ class EventController extends Controller
 
         $pastEvents = $events
             ->filter(function ($event) use ($now) {
+                if ($event->status === 'completed' || $event->completed_at !== null) return true;
                 $endDate = $event->end_date ? Carbon::parse($event->end_date) : null;
                 $startDate = $event->start_date ? Carbon::parse($event->start_date) : null;
 
@@ -55,7 +56,8 @@ class EventController extends Controller
                 return $startDate ? $startDate->lt($now->startOfDay()) : false;
             })
             ->sortByDesc(function ($event) {
-                return $event->end_date ? Carbon::parse($event->end_date) : Carbon::parse($event->start_date);
+                return $event->completed_at
+                    ?? ($event->end_date ? Carbon::parse($event->end_date) : Carbon::parse($event->start_date));
             })
             ->values();
 

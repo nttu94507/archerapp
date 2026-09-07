@@ -39,6 +39,12 @@ class ClearEventData extends Command
         $ids = $events->pluck('id')->all();
         $badgeIds = DB::table('event_badges')->whereIn('event_id', $ids)->pluck('id');
         $registrationIds = DB::table('event_registrations')->whereIn('event_id', $ids)->pluck('id');
+        $bracketIds = DB::table('event_elimination_brackets')->whereIn('event_id', $ids)->pluck('id');
+        $matchIds = $bracketIds->isEmpty() ? collect() : DB::table('event_elimination_matches')->whereIn('event_elimination_bracket_id', $bracketIds)->pluck('id');
+        $snapshotIds = DB::table('event_ranking_snapshots')->whereIn('event_id', $ids)->pluck('id');
+        $sessionIds = DB::table('event_scoring_sessions')->whereIn('event_id', $ids)->pluck('id');
+        $targetIds = $sessionIds->isEmpty() ? collect() : DB::table('event_scoring_targets')->whereIn('event_scoring_session_id', $sessionIds)->pluck('id');
+        $teamIds = DB::table('event_teams')->whereIn('event_id', $ids)->pluck('id');
         $counts = [
             '賽事' => $events->count(),
             '組別' => $this->count('event_groups', 'event_id', $ids),
@@ -49,6 +55,10 @@ class ClearEventData extends Command
             '工作團隊' => $this->count('event_staff', 'event_id', $ids),
             '成績明細' => $this->count('event_score_entries', 'event_id', $ids),
             '賽事總成績' => $this->count('scores', 'event_id', $ids),
+            '計分場次與靶位' => $sessionIds->count() + $targetIds->count(),
+            '排名快照' => $snapshotIds->count(),
+            '對抗賽與場次' => $bracketIds->count() + $matchIds->count(),
+            '賽事團隊' => $teamIds->count(),
             '操作紀錄' => $this->count('event_audit_logs', 'event_id', $ids),
             '賽事 Badge' => $badgeIds->count(),
             'Badge 發放紀錄' => $badgeIds->isEmpty()
@@ -77,8 +87,8 @@ class ClearEventData extends Command
             ? collect()
             : DB::table('event_badges')->whereIn('id', $badgeIds)->whereNotNull('icon_path')->pluck('icon_path');
 
-        Schema::withoutForeignKeyConstraints(function () use ($ids, $badgeIds, $registrationIds): void {
-            DB::transaction(function () use ($ids, $badgeIds, $registrationIds): void {
+        Schema::withoutForeignKeyConstraints(function () use ($ids, $badgeIds, $registrationIds, $bracketIds, $matchIds, $snapshotIds, $sessionIds, $targetIds, $teamIds): void {
+            DB::transaction(function () use ($ids, $badgeIds, $registrationIds, $bracketIds, $matchIds, $snapshotIds, $sessionIds, $targetIds, $teamIds): void {
                 if ($badgeIds->isNotEmpty()) {
                     DB::table('user_event_badges')->whereIn('event_badge_id', $badgeIds)->delete();
                     DB::table('event_badge_claims')->whereIn('event_badge_id', $badgeIds)->delete();
@@ -90,9 +100,25 @@ class ClearEventData extends Command
                     DB::table('event_payment_audits')->whereIn('event_registration_id', $registrationIds)->delete();
                 }
 
+                if ($matchIds->isNotEmpty()) {
+                    $this->deleteWhereIn('event_elimination_shoot_offs', 'event_elimination_match_id', $matchIds->all());
+                    $this->deleteWhereIn('event_elimination_match_sets', 'event_elimination_match_id', $matchIds->all());
+                    $this->deleteWhereIn('event_elimination_match_ends', 'event_elimination_match_id', $matchIds->all());
+                    $this->deleteWhereIn('event_elimination_matches', 'id', $matchIds->all());
+                }
+                $this->deleteWhereIn('event_elimination_brackets', 'id', $bracketIds->all());
+                $this->deleteWhereIn('event_ranking_snapshot_entries', 'event_ranking_snapshot_id', $snapshotIds->all());
+                $this->deleteWhereIn('event_ranking_snapshots', 'id', $snapshotIds->all());
+                $this->deleteWhereIn('event_scoring_assignments', 'event_scoring_target_id', $targetIds->all());
+                $this->deleteWhereIn('event_scoring_targets', 'id', $targetIds->all());
+                $this->deleteWhereIn('event_scoring_sessions', 'id', $sessionIds->all());
+                $this->deleteWhereIn('event_team_members', 'event_team_id', $teamIds->all());
+                $this->deleteWhereIn('event_teams', 'id', $teamIds->all());
+
                 $this->deleteByEventId('event_score_entries', $ids);
                 $this->deleteByEventId('scores', $ids);
                 $this->deleteByEventId('event_audit_logs', $ids);
+                $this->deleteByEventId('event_phases', $ids);
                 $this->deleteByEventId('event_registrations', $ids);
                 $this->deleteByEventId('event_staff', $ids);
                 $this->deleteByEventId('event_groups', $ids);
@@ -118,6 +144,13 @@ class ClearEventData extends Command
     {
         if (Schema::hasTable($table)) {
             DB::table($table)->whereIn('event_id', $ids)->delete();
+        }
+    }
+
+    private function deleteWhereIn(string $table, string $column, array $ids): void
+    {
+        if ($ids && Schema::hasTable($table)) {
+            DB::table($table)->whereIn($column, $ids)->delete();
         }
     }
 }
