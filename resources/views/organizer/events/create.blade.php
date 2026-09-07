@@ -127,12 +127,12 @@
                 <div id="paid-group-builder" class="space-y-5">
                     @foreach([
                         ['title'=>'弓種','name'=>'quick_bows','items'=>[['recurve','反曲弓'],['compound','複合弓'],['barebow','裸弓']]],
-                        ['title'=>'距離','name'=>'quick_distances','items'=>[['70m','70 公尺'],['30m','30 公尺'],['18m','18 公尺']]],
+                        ['title'=>'距離','name'=>'quick_distances','items'=>[['70m','70 公尺'],['50m','50 公尺'],['30m','30 公尺'],['18m','18 公尺']]],
                         ['title'=>'組別','name'=>'quick_genders','items'=>[['open','公開'],['male','男子'],['female','女子']]],
                     ] as $choiceGroup)
                         <fieldset>
                             <legend class="mb-2 text-sm font-semibold text-gray-800">{{ $choiceGroup['title'] }}</legend>
-                            <div class="grid grid-cols-3 gap-2">
+                            <div class="grid grid-cols-2 gap-2 sm:grid-cols-{{ $choiceGroup['name'] === 'quick_distances' ? '4' : '3' }}">
                                 @foreach($choiceGroup['items'] as [$value,$label])
                                     <label class="quick-choice flex min-h-14 cursor-pointer items-center justify-center rounded-xl border-2 border-gray-200 bg-white px-2 text-center text-sm font-semibold transition has-[:checked]:border-indigo-500 has-[:checked]:bg-indigo-50 has-[:checked]:text-indigo-800">
                                         <input type="checkbox" data-choice-group="{{ $choiceGroup['name'] }}" value="{{ $value }}" class="sr-only" @checked(($choiceGroup['name']==='quick_bows' && $value==='recurve') || ($choiceGroup['name']==='quick_distances' && $value==='70m') || ($choiceGroup['name']==='quick_genders' && $value==='open'))>
@@ -144,7 +144,14 @@
                     @endforeach
 
                     <div class="grid gap-4 rounded-2xl bg-slate-50 p-4 sm:grid-cols-3">
-                        <label class="text-sm font-medium">排名賽局數<select id="paid-round-format" class="mt-1 min-h-12 w-full rounded-xl"><option value="single">單局</option><option value="double" selected>雙局</option></select></label>
+                        <fieldset>
+                            <legend class="text-sm font-medium">排名賽局數</legend>
+                            <input id="paid-round-format" type="hidden" value="double">
+                            <div class="mt-1 grid grid-cols-2 gap-2">
+                                <button type="button" data-paid-round="single" class="paid-round-choice min-h-12 rounded-xl border-2 border-gray-200 bg-white px-3 text-sm font-semibold text-gray-700">單局</button>
+                                <button type="button" data-paid-round="double" class="paid-round-choice min-h-12 rounded-xl border-2 border-indigo-500 bg-indigo-50 px-3 text-sm font-semibold text-indigo-800">雙局</button>
+                            </div>
+                        </fieldset>
                         <label class="text-sm font-medium">每組名額<input id="paid-group-quota" type="number" min="1" placeholder="不限" class="mt-1 min-h-12 w-full rounded-xl"></label>
                         <label class="text-sm font-medium">每組報名費<input id="paid-group-fee" type="number" min="0" value="0" class="mt-1 min-h-12 w-full rounded-xl"></label>
                     </div>
@@ -323,7 +330,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const paidLabels = {
         recurve:'反曲弓', compound:'複合弓', barebow:'裸弓',
         open:'公開組', male:'男子組', female:'女子組',
-        '70m':'70 公尺', '30m':'30 公尺', '18m':'18 公尺',
+        '70m':'70 公尺', '50m':'50 公尺', '30m':'30 公尺', '18m':'18 公尺',
     };
     const renderPaidGroups = () => {
         if (!paidGroupBuilder) return;
@@ -357,7 +364,21 @@ document.addEventListener('DOMContentLoaded', () => {
     if (paidGroupBuilder) {
         advancedSettings.querySelectorAll('[name^="groups["]').forEach(input => input.disabled = true);
         document.querySelectorAll('[data-choice-group]').forEach(input => input.addEventListener('change', renderPaidGroups));
-        [paidRoundFormat, paidGroupQuota, paidGroupFee].forEach(input => input.addEventListener('input', renderPaidGroups));
+        [paidGroupQuota, paidGroupFee].forEach(input => input.addEventListener('input', renderPaidGroups));
+        document.querySelectorAll('[data-paid-round]').forEach(button => button.addEventListener('click', () => {
+            paidRoundFormat.value = button.dataset.paidRound;
+            document.querySelectorAll('[data-paid-round]').forEach(item => {
+                const selected = item === button;
+                item.classList.toggle('border-indigo-500', selected);
+                item.classList.toggle('bg-indigo-50', selected);
+                item.classList.toggle('text-indigo-800', selected);
+                item.classList.toggle('border-gray-200', !selected);
+                item.classList.toggle('bg-white', !selected);
+                item.classList.toggle('text-gray-700', !selected);
+                item.setAttribute('aria-pressed', selected ? 'true' : 'false');
+            });
+            renderPaidGroups();
+        }));
         document.getElementById('toggle-paid-basic-advanced')?.addEventListener('click', event => {
             const fields = [...document.querySelectorAll('.paid-basic-advanced')];
             const opening = fields.some(field => field.classList.contains('hidden'));
@@ -372,7 +393,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 item.classList.toggle('border-gray-200', !selected);
             });
             mode.value = button.dataset.mode;
-            const allowedDistances = mode.value === 'indoor' ? ['18m'] : ['70m', '30m'];
+            const allowedDistances = mode.value === 'indoor' ? ['18m'] : ['70m', '50m', '30m'];
             document.querySelectorAll('[data-choice-group="quick_distances"]').forEach(input => {
                 input.disabled = !allowedDistances.includes(input.value);
                 input.closest('label').classList.toggle('hidden', input.disabled);
