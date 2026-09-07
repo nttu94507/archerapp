@@ -256,6 +256,11 @@
                                 <a href="{{ route('admin.users.index') }}" class="flex min-h-10 items-center rounded-lg px-3 text-sm hover:bg-gray-50 {{ request()->routeIs('admin.users.*') ? 'bg-gray-50 font-semibold text-gray-900' : 'text-gray-700' }}" role="menuitem">使用者管理</a>
                             @endif
 
+                            <div class="mt-2 border-t px-3 pb-1 pt-3 text-xs font-medium text-gray-400">聯絡與支援</div>
+                            <a href="mailto:baichuanarcheryteam@gmail.com" class="flex min-h-10 items-center rounded-lg px-3 text-sm text-indigo-700 hover:bg-indigo-50" role="menuitem">
+                                baichuanarcheryteam@gmail.com
+                            </a>
+
                             <form method="POST" action="{{ route('logout') }}" class="mt-2 border-t pt-2" role="none">
                                 @csrf
                                 <button type="submit"
@@ -326,6 +331,11 @@
                     <a href="{{ route('admin.users.index') }}" class="flex min-h-11 items-center rounded-lg px-3 hover:bg-gray-50 {{ request()->routeIs('admin.users.*') ? 'bg-gray-50 font-semibold text-gray-900' : 'text-gray-700' }}">使用者管理</a>
                 @endif
             @endauth
+
+            <div class="mt-3 border-t px-3 pb-1 pt-4 text-xs font-medium text-gray-400">聯絡與支援</div>
+            <a href="mailto:baichuanarcheryteam@gmail.com" class="flex min-h-11 items-center break-all rounded-lg px-3 text-indigo-700 hover:bg-indigo-50">
+                baichuanarcheryteam@gmail.com
+            </a>
         </nav>
 
         <div class="mt-auto border-t p-3">
@@ -352,8 +362,14 @@
     @yield('content')
 </main>
 
-<footer class="mt-10 py-6 text-center text-sm text-gray-500">
-    &copy; {{ date('Y') }} Arrow Track
+<footer class="mt-10 border-t border-gray-200 bg-white px-4 py-6 text-center text-sm text-gray-500">
+    <p>&copy; {{ date('Y') }} Arrow Track</p>
+    <p class="mt-2">
+        聯絡與支援：
+        <a href="mailto:baichuanarcheryteam@gmail.com" class="font-medium text-indigo-600 hover:text-indigo-500 hover:underline">
+            baichuanarcheryteam@gmail.com
+        </a>
+    </p>
 </footer>
 
 {{-- 下拉選單（桌機）與 側邊欄（手機）控制腳本 --}}
