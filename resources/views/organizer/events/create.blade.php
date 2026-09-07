@@ -290,6 +290,8 @@ document.addEventListener('DOMContentLoaded', () => {
         window.scrollTo({ top: form.offsetTop, behavior: 'smooth' });
     };
     const advanceToStepTwo = () => {
+        // iOS/iPadOS 的日期選擇器可能到失焦時才觸發 change；驗證前先主動同步隱藏日期。
+        if (typeof setDefaultPaidDates === 'function') setDefaultPaidDates();
         const invalidField = stepOne.querySelector(':invalid');
         if (invalidField) {
             invalidField.reportValidity();

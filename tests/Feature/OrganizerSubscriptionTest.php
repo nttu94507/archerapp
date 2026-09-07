@@ -307,6 +307,30 @@ class OrganizerSubscriptionTest extends TestCase
         $this->travelBack();
     }
 
+    public function test_paid_quick_event_derives_hidden_date_defaults_on_first_submission(): void
+    {
+        $organizer = $this->approvedOrganizer('付費快速建立主辦方');
+        OrganizerSubscription::create([
+            'user_id'=>$organizer->id,
+            'plan_code'=>EventPlanCatalog::SUBSCRIPTION,
+            'status'=>OrganizerSubscription::STATUS_ACTIVE,
+            'starts_at'=>now(),
+        ]);
+        $startDate = now()->addMonth()->toDateString();
+
+        $this->actingAs($organizer)->post(route('organizer.events.store'), [
+            'name'=>'第一次送出即可建立',
+            'start_date'=>$startDate,
+            'mode'=>'outdoor',
+            'organizer'=>'付費快速建立主辦方',
+            'submit_mode'=>'draft',
+        ])->assertRedirect()->assertSessionDoesntHaveErrors();
+
+        $event = Event::where('name', '第一次送出即可建立')->firstOrFail();
+        $this->assertSame($startDate, $event->end_date->toDateString());
+        $this->assertSame($startDate.' 23:59', $event->reg_end->format('Y-m-d H:i'));
+    }
+
     private function approvedOrganizer(string $organizationName): User
     {
         $user = User::factory()->create();

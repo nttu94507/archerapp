@@ -280,6 +280,19 @@ class EventController extends Controller
                 'reg_end'=>$request->string('start_date')->toString().' '.$deadlineTime,
             ]);
         }
+        if ($creating && $maxArrows > 36 && $request->filled('start_date')) {
+            $defaults = [];
+            if (! $request->filled('end_date')) {
+                $defaults['end_date'] = $request->string('start_date')->toString();
+            }
+            if (! $request->filled('reg_start')) {
+                $defaults['reg_start'] = now()->format('Y-m-d H:i:s');
+            }
+            if (! $request->filled('reg_end')) {
+                $defaults['reg_end'] = $request->string('start_date')->toString().' 23:59:00';
+            }
+            $request->merge($defaults);
+        }
         $rules = [
             'name' => ['required', 'string', 'max:120'], 'start_date' => ['required', 'date'],
             'end_date' => ['required', 'date', 'after_or_equal:start_date'], 'mode' => ['required', 'in:indoor,outdoor'],
