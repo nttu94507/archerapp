@@ -109,17 +109,22 @@ class EventControllerTest extends TestCase
             'name'=>'尚未開放預告賽事', 'start_date'=>today()->addDays(5), 'end_date'=>today()->addDays(5),
             'reg_start'=>now()->addDay(), 'reg_end'=>now()->addDays(3),
         ]);
+        $closed = Event::factory()->create([
+            'name'=>'報名截止賽事', 'start_date'=>today()->addDays(7), 'end_date'=>today()->addDays(7),
+            'reg_start'=>now()->subDays(3), 'reg_end'=>now()->subDay(),
+        ]);
         $past = Event::factory()->create(['name'=>'最近歷史賽事', 'start_date'=>today()->subDays(3), 'end_date'=>today()->subDays(2)]);
-        foreach ([$ongoing, $open, $upcoming, $past] as $event) {
+        foreach ([$ongoing, $open, $upcoming, $closed, $past] as $event) {
             EventGroup::factory()->create(['event_id'=>$event->id]);
         }
 
         $response = $this->get(route('events.index'));
         $response->assertOk()
-            ->assertSeeInOrder(['現在值得關注', '今日進行中賽事', '目前開放報名賽事', '尚未開放預告賽事', '歷史賽事', '最近歷史賽事'])
-            ->assertSee('現正進行')
+            ->assertSeeInOrder(['近期賽事', '今日進行中賽事', '目前開放報名賽事', '報名截止賽事', '尚未開放預告賽事', '歷史賽事', '最近歷史賽事'])
+            ->assertSee('比賽中')
             ->assertSee('報名中')
-            ->assertSee('即將開始');
+            ->assertSee('報名截止')
+            ->assertSee('即將開放');
 
         $this->assertSame(1, substr_count($response->getContent(), '今日進行中賽事'));
         $this->assertSame(1, substr_count($response->getContent(), '目前開放報名賽事'));

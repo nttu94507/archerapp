@@ -169,6 +169,21 @@
                         </div>
                     </fieldset>
 
+                    <fieldset>
+                        <legend class="mb-2 text-sm font-semibold text-gray-800">團體賽項目</legend>
+                        <div class="grid gap-2 sm:grid-cols-2">
+                            <label class="flex min-h-16 cursor-pointer items-center gap-3 rounded-xl border-2 border-gray-200 bg-white px-4 transition has-[:checked]:border-violet-500 has-[:checked]:bg-violet-50">
+                                <input id="paid-standard-team" type="checkbox" class="h-5 w-5 rounded border-gray-300 text-violet-600">
+                                <span><strong class="block text-sm">三人團體賽</strong><span class="block text-xs text-gray-500">每隊可登記 4 人，排名取最高 3 人</span></span>
+                            </label>
+                            <label class="flex min-h-16 cursor-pointer items-center gap-3 rounded-xl border-2 border-gray-200 bg-white px-4 transition has-[:checked]:border-violet-500 has-[:checked]:bg-violet-50">
+                                <input id="paid-mixed-team" type="checkbox" class="h-5 w-5 rounded border-gray-300 text-violet-600">
+                                <span><strong class="block text-sm">男女混雙</strong><span class="block text-xs text-gray-500">固定一男一女，僅套用公開組</span></span>
+                            </label>
+                        </div>
+                        <p id="paid-mixed-team-warning" class="mt-2 hidden text-xs font-semibold text-amber-700">目前沒有公開組，男女混雙不會套用到任何組別。</p>
+                    </fieldset>
+
                     <div class="grid gap-4 rounded-2xl bg-slate-50 p-4 sm:grid-cols-3">
                         <fieldset>
                             <legend class="text-sm font-medium">排名賽局數</legend>
@@ -347,6 +362,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const paidRoundFormat = document.getElementById('paid-round-format');
     const paidGroupQuota = document.getElementById('paid-group-quota');
     const paidGroupFee = document.getElementById('paid-group-fee');
+    const paidStandardTeam = document.getElementById('paid-standard-team');
+    const paidMixedTeam = document.getElementById('paid-mixed-team');
+    const paidMixedTeamWarning = document.getElementById('paid-mixed-team-warning');
 
     const setDefaultPaidDates = () => {
         if (!paidGroupBuilder || !start.value) return;
@@ -389,20 +407,36 @@ document.addEventListener('DOMContentLoaded', () => {
             : (paidRoundFormat.value === 'double' ? 72 : 36);
         const quota = paidGroupQuota.value;
         const fee = paidGroupFee.value || '0';
+        const standardTeamEnabled = paidStandardTeam.checked;
+        const hasOpenGroup = combinations.some(item => item.gender === 'open');
+        paidMixedTeamWarning.classList.toggle('hidden', !paidMixedTeam.checked || hasOpenGroup);
 
         paidGroupCount.textContent = combinations.length;
         paidGroupWarning.textContent = combinations.length === 0 ? '請至少選擇一項賽制與組別' : (combinations.length > 12 ? '組別較多，請再次確認' : '');
-        paidGroupPreview.innerHTML = combinations.map(item => `<div class="flex min-h-11 items-center justify-between gap-2 rounded-xl bg-white px-3 text-sm font-semibold text-indigo-900 shadow-sm"><span>${paidLabels[item.bow]} ${paidLabels[item.distance]}${paidLabels[item.gender]}</span><button type="button" data-remove-paid-group="${item.key}:${item.gender}" class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-lg text-gray-400 hover:bg-red-50 hover:text-red-600" aria-label="移除此組別">×</button></div>`).join('');
+        paidGroupPreview.innerHTML = combinations.map(item => {
+            const mixedTeamEnabled = paidMixedTeam.checked && item.gender === 'open';
+            const badges = ['<span class="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] text-emerald-800">個人</span>'];
+            if (standardTeamEnabled) badges.push('<span class="rounded-full bg-violet-100 px-2 py-0.5 text-[10px] text-violet-800">團體</span>');
+            if (mixedTeamEnabled) badges.push('<span class="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] text-amber-800">混雙</span>');
+            return `<div class="flex min-h-14 items-center justify-between gap-2 rounded-xl bg-white px-3 text-sm font-semibold text-indigo-900 shadow-sm"><span><span class="block">${paidLabels[item.bow]} ${paidLabels[item.distance]}${paidLabels[item.gender]}</span><span class="mt-1 flex flex-wrap gap-1">${badges.join('')}</span></span><button type="button" data-remove-paid-group="${item.key}:${item.gender}" class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-lg text-gray-400 hover:bg-red-50 hover:text-red-600" aria-label="移除此組別">×</button></div>`;
+        }).join('');
         paidGroupPreview.querySelectorAll('[data-remove-paid-group]').forEach(button => button.addEventListener('click', () => {
             excludedPaidGroups.add(button.dataset.removePaidGroup);
             renderPaidGroups();
         }));
         paidGeneratedGroups.innerHTML = combinations.map((item, index) => {
             const name = `${paidLabels[item.bow]} ${paidLabels[item.distance]}${paidLabels[item.gender]}`;
+            const mixedTeamEnabled = paidMixedTeam.checked && item.gender === 'open';
             const values = {
                 name, bow_type:item.bow, gender:item.gender, distance:item.distance,
                 arrow_count:arrowCount, arrows_per_end:mode.value === 'indoor' ? 3 : 6,
                 fee, quota,
+                standard_team_enabled:standardTeamEnabled ? 1 : 0,
+                mixed_team_enabled:mixedTeamEnabled ? 1 : 0,
+                is_team:standardTeamEnabled || mixedTeamEnabled ? 1 : 0,
+                team_type:mixedTeamEnabled && !standardTeamEnabled ? 'mixed' : 'standard',
+                team_size:mixedTeamEnabled && !standardTeamEnabled ? 2 : 3,
+                team_substitute_limit:standardTeamEnabled ? 1 : 0,
             };
             return Object.entries(values)
                 .filter(([, value]) => value !== '')
@@ -433,6 +467,7 @@ document.addEventListener('DOMContentLoaded', () => {
             applyFormatPreset(presetName);
         }));
         [paidGroupQuota, paidGroupFee].forEach(input => input.addEventListener('input', renderPaidGroups));
+        [paidStandardTeam, paidMixedTeam].forEach(input => input.addEventListener('change', renderPaidGroups));
         document.querySelectorAll('[data-paid-round]').forEach(button => button.addEventListener('click', () => {
             paidRoundFormat.value = button.dataset.paidRound;
             document.querySelectorAll('[data-paid-round]').forEach(item => {

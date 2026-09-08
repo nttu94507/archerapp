@@ -50,10 +50,10 @@ class EventController extends Controller
                 $startDate = $event->start_date ? Carbon::parse($event->start_date) : null;
 
                 if ($endDate) {
-                    return $endDate->lt($now->startOfDay());
+                    return $endDate->lt($now->copy()->startOfDay());
                 }
 
-                return $startDate ? $startDate->lt($now->startOfDay()) : false;
+                return $startDate ? $startDate->lt($now->copy()->startOfDay()) : false;
             })
             ->sortByDesc(function ($event) {
                 return $event->completed_at
@@ -67,13 +67,18 @@ class EventController extends Controller
                 $start = Carbon::parse($event->start_date)->startOfDay();
                 $end = Carbon::parse($event->end_date ?? $event->start_date)->endOfDay();
                 $ongoing = $now->between($start, $end);
-                $registrationOpen = ! $ongoing && $event->registrationStatus($now) === 'open';
+                $registrationStatus = $event->registrationStatus($now);
 
-                $event->listing_status = $ongoing ? 'ongoing' : ($registrationOpen ? 'registration_open' : 'upcoming');
+                $event->listing_status = $ongoing ? 'ongoing' : match ($registrationStatus) {
+                    'open' => 'registration_open',
+                    'closed' => 'registration_closed',
+                    default => 'upcoming',
+                };
                 $event->listing_sort_key = match ($event->listing_status) {
                     'ongoing' => '0-'.$end->format('YmdHis'),
                     'registration_open' => '1-'.($event->registrationClosesAt() ?? $start)->format('YmdHis'),
-                    default => '2-'.$start->format('YmdHis'),
+                    'registration_closed' => '2-'.$start->format('YmdHis'),
+                    default => '3-'.$start->format('YmdHis'),
                 };
 
                 return $event;
