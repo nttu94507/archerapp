@@ -20,10 +20,9 @@
         @auth @if(auth()->user()->isAdmin())<a href="{{ route('events.create') }}" class="inline-flex min-h-11 items-center justify-center rounded-xl bg-indigo-600 px-4 text-sm font-medium text-white">新增賽事</a>@endif @endauth
     </header>
 
-    <form method="GET" action="{{ route('events.index') }}" class="grid gap-3 rounded-2xl border bg-white p-4 shadow-sm sm:grid-cols-[minmax(0,1fr)_10rem_auto]">
-        <label><span class="sr-only">搜尋賽事</span><input name="q" value="{{ request('q') }}" class="min-h-12 w-full rounded-xl border-gray-300 text-base" placeholder="搜尋賽事、主辦方或地點"></label>
-        <label><span class="sr-only">場地類型</span><select name="mode" class="min-h-12 w-full rounded-xl border-gray-300 text-base"><option value="">全部類型</option><option value="outdoor" @selected(request('mode')==='outdoor')>室外賽</option><option value="indoor" @selected(request('mode')==='indoor')>室內賽</option></select></label>
-        <button class="min-h-12 rounded-xl bg-gray-900 px-5 text-sm font-semibold text-white">搜尋</button>
+    <form id="event-search-form" method="GET" action="{{ route('events.index') }}" class="grid gap-3 rounded-2xl border bg-white p-4 shadow-sm sm:grid-cols-[minmax(0,1fr)_10rem]">
+        <label><span class="sr-only">搜尋賽事</span><input id="event-search-input" name="q" value="{{ request('q') }}" autocomplete="off" class="min-h-12 w-full rounded-xl border-gray-300 text-base" placeholder="搜尋賽事、主辦方或地點"></label>
+        <label><span class="sr-only">場地類型</span><select id="event-mode-filter" name="mode" class="min-h-12 w-full rounded-xl border-gray-300 text-base"><option value="">全部類型</option><option value="outdoor" @selected(request('mode')==='outdoor')>室外賽</option><option value="indoor" @selected(request('mode')==='indoor')>室內賽</option></select></label>
     </form>
 
     <section class="space-y-4">
@@ -65,4 +64,29 @@
         @endif
     </section>
 </main>
+<script>
+    (() => {
+        const form = document.getElementById('event-search-form');
+        const input = document.getElementById('event-search-input');
+        const mode = document.getElementById('event-mode-filter');
+        if (!form || !input || !mode) return;
+
+        let timer;
+        let composing = false;
+        const submit = () => form.requestSubmit();
+        const schedule = () => {
+            if (composing) return;
+            window.clearTimeout(timer);
+            timer = window.setTimeout(submit, 500);
+        };
+
+        input.addEventListener('compositionstart', () => composing = true);
+        input.addEventListener('compositionend', () => {
+            composing = false;
+            schedule();
+        });
+        input.addEventListener('input', schedule);
+        mode.addEventListener('change', submit);
+    })();
+</script>
 @endsection

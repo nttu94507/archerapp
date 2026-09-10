@@ -144,6 +144,18 @@
         && $event instanceof \App\Models\Event
         && $event->isOfficiallyCompleted()
         && (request()->routeIs('organizer.events.*') || request()->routeIs('events.groups.*'));
+    $navHasSubscription = auth()->check() && auth()->user()->hasActiveOrganizerSubscription();
+    $navTrialRemaining = auth()->check() && ! $navHasSubscription
+        ? auth()->user()->remainingEventTrials()
+        : 0;
+    $createEventUrl = $navTrialRemaining > 0
+        ? route('organizer.events.create', ['plan'=>'trial'])
+        : route('organizer.events.create');
+    $createEventLabel = $navHasSubscription
+        ? '建立完整賽事'
+        : ($navTrialRemaining > 0
+            ? '建立完整賽事（試用剩 '.$navTrialRemaining.' 次）'
+            : '建立免費賽事（試用已用完）');
 @endphp
 
 <div id="modal-root"></div>
@@ -241,7 +253,7 @@
                             <div class="mt-2 border-t px-3 pb-1 pt-3 text-xs font-medium text-gray-400">主辦方工具</div>
                             @if(auth()->user()->canCreateEvents())
                                 <a href="{{ route('organizer.events.index') }}" class="flex min-h-10 items-center rounded-lg px-3 text-sm hover:bg-gray-50 {{ request()->routeIs('organizer.events.index') || request()->routeIs('organizer.events.show') ? 'bg-gray-50 font-semibold text-gray-900' : 'text-gray-700' }}" role="menuitem">我的主辦賽事</a>
-                                <a href="{{ route('organizer.events.create') }}" class="flex min-h-10 items-center rounded-lg px-3 text-sm hover:bg-gray-50 {{ request()->routeIs('organizer.events.create') ? 'bg-gray-50 font-semibold text-gray-900' : 'text-gray-700' }}" role="menuitem">建立賽事</a>
+                                <a href="{{ $createEventUrl }}" class="flex min-h-10 items-center rounded-lg px-3 text-sm hover:bg-gray-50 {{ request()->routeIs('organizer.events.create') ? 'bg-gray-50 font-semibold text-gray-900' : 'text-gray-700' }}" role="menuitem">{{ $createEventLabel }}</a>
                                 <a href="{{ route('organizer.badges.index') }}" class="flex min-h-10 items-center rounded-lg px-3 text-sm hover:bg-gray-50 {{ request()->routeIs('organizer.badges.*') ? 'bg-gray-50 font-semibold text-gray-900' : 'text-gray-700' }}" role="menuitem">Badge 列表</a>
                                 @unless(auth()->user()->isVerifiedOrganizer())<a href="{{ route('organizer.qualification.show') }}" class="flex min-h-10 items-center rounded-lg px-3 text-sm text-indigo-700 hover:bg-indigo-50 {{ request()->routeIs('organizer.qualification.*') ? 'bg-indigo-50 font-semibold' : '' }}" role="menuitem">申請官方主辦方認證</a>@endunless
                             @else
@@ -317,7 +329,7 @@
                 @if(auth()->user()->canCreateEvents())
                     <a href="{{ route('organizer.events.index') }}" class="flex min-h-11 items-center rounded-lg px-3 hover:bg-gray-50 {{ request()->routeIs('organizer.events.index') || request()->routeIs('organizer.events.show') ? 'bg-gray-50 font-semibold text-gray-900' : 'text-gray-700' }}">我的主辦賽事</a>
                     <a href="{{ route('organizer.badges.index') }}" class="flex min-h-11 items-center rounded-lg px-3 hover:bg-gray-50 {{ request()->routeIs('organizer.badges.*') ? 'bg-gray-50 font-semibold text-gray-900' : 'text-gray-700' }}">Badge 列表</a>
-                    <a href="{{ route('organizer.events.create') }}" class="flex min-h-11 items-center rounded-lg px-3 hover:bg-gray-50 {{ request()->routeIs('organizer.events.create') ? 'bg-gray-50 font-semibold text-gray-900' : 'text-gray-700' }}">建立賽事</a>
+                    <a href="{{ $createEventUrl }}" class="flex min-h-11 items-center rounded-lg px-3 hover:bg-gray-50 {{ request()->routeIs('organizer.events.create') ? 'bg-gray-50 font-semibold text-gray-900' : 'text-gray-700' }}">{{ $createEventLabel }}</a>
                     @unless(auth()->user()->isVerifiedOrganizer())<a href="{{ route('organizer.qualification.show') }}" class="flex min-h-11 items-center rounded-lg px-3 text-indigo-700 hover:bg-indigo-50 {{ request()->routeIs('organizer.qualification.*') ? 'bg-indigo-50 font-semibold' : '' }}">申請官方主辦方認證</a>@endunless
                 @else
                     <a href="{{ route('organizer.qualification.show') }}" class="flex min-h-11 items-center rounded-lg px-3 text-red-700 hover:bg-red-50 {{ request()->routeIs('organizer.qualification.*') ? 'bg-red-50 font-semibold' : '' }}">查看主辦方資格狀態</a>

@@ -22,8 +22,24 @@
 
     @if($canApproveResults)<form id="verify-form" method="POST" action="{{ route('organizer.events.results.verify', $event) }}" class="hidden">@csrf</form>@endif
 
-    <div class="space-y-5">
-        @foreach($event->groups as $group)
+    @php
+        $approvedGroups = $event->groups->filter(function ($group) use ($groupStates) {
+            $state = $groupStates->get($group->id);
+            return $state['registrations']->isNotEmpty() && $state['unverified'] === 0;
+        });
+        $pendingGroups = $event->groups->reject(fn ($group) => $approvedGroups->contains('id', $group->id));
+    @endphp
+
+    <section class="space-y-4">
+        <div class="flex items-center justify-between gap-3">
+            <h2 class="text-lg font-bold text-gray-900">待核准組別</h2>
+            <span class="rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-800">{{ $pendingGroups->count() }} 組</span>
+        </div>
+        @if($pendingGroups->isEmpty())
+            <div class="rounded-2xl border border-emerald-200 bg-emerald-50 p-6 text-center text-sm font-medium text-emerald-800">所有組別成績皆已核准。</div>
+        @endif
+        <div class="space-y-5">
+        @foreach($pendingGroups as $group)
             @php
                 $state = $groupStates->get($group->id);
                 $items = $state['registrations'];
@@ -126,6 +142,58 @@
                 @endif
             </section>
         @endforeach
-    </div>
+        </div>
+    </section>
+
+    @if($approvedGroups->isNotEmpty())
+    <section class="space-y-4 border-t pt-6">
+        <div class="flex items-center justify-between gap-3">
+            <h2 class="text-lg font-bold text-gray-900">已全部核准</h2>
+            <span class="rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700">{{ $approvedGroups->count() }} 組</span>
+        </div>
+        <div class="space-y-5">
+        @foreach($approvedGroups as $group)
+            @php
+                $state = $groupStates->get($group->id);
+                $items = $state['registrations'];
+                $rankingSnapshot = $currentSnapshots->get($group->id);
+                $canPublish = $items->isNotEmpty()
+                    && $state['has_session']
+                    && $state['has_targets']
+                    && $state['unconfirmed_targets'] === 0
+                    && $state['unverified'] === 0
+                    && !$state['published'];
+            @endphp
+            <section class="overflow-hidden rounded-2xl border border-emerald-200 bg-white shadow-sm">
+                <div class="flex flex-col gap-4 border-b bg-emerald-50/60 p-4 sm:flex-row sm:items-start sm:justify-between">
+                    <div class="min-w-0 flex-1">
+                        <div class="flex flex-wrap items-center justify-between gap-3">
+                            <h2 class="text-lg font-semibold">{{ $group->name }}</h2>
+                            @if($event->isFreePlan())
+                                <a href="{{ route('events.live', $event) }}" class="inline-flex min-h-11 items-center rounded-xl border bg-white px-4 text-sm font-medium text-indigo-600">查看公開戰況</a>
+                            @elseif($canManageResults)
+                                <form method="POST" action="{{ route('organizer.events.results.live-visibility', [$event, $group]) }}">@csrf @method('PATCH')<input type="hidden" name="visible" value="{{ $group->live_results_visible ? 0 : 1 }}"><button class="min-h-11 rounded-xl border bg-white px-4 text-sm font-medium">{{ $group->live_results_visible ? '停止公開戰況' : '公開戰況' }}</button></form>
+                            @endif
+                        </div>
+                        <div class="mt-2 flex flex-wrap gap-2 text-xs"><span class="rounded-lg bg-white px-2.5 py-1.5 text-gray-600">選手 {{ $items->count() }} 人</span><span class="rounded-lg bg-white px-2.5 py-1.5 text-emerald-700">尚未核准 0</span></div>
+                    </div>
+                    @if(!$state['published'] && $canManageResults)
+                        <form method="POST" action="{{ route('organizer.events.results.publish', [$event, $group]) }}" onsubmit="return confirm('確定發布「{{ $group->name }}」的正式成績？發布後選手即可從我的賽事查看。')">@csrf<button @disabled(!$canPublish) class="min-h-11 rounded-xl px-4 text-sm font-medium {{ $canPublish ? 'bg-green-600 text-white hover:bg-green-500' : 'cursor-not-allowed bg-gray-200 text-gray-400' }}">發布本組正式成績</button></form>
+                    @elseif($state['published'] && $canManageResults && !$rankingSnapshot)
+                        <form method="POST" action="{{ route('organizer.events.results.ranking-snapshot', [$event, $group]) }}" onsubmit="return confirm('確定補建排名種子快照？')">@csrf<button class="min-h-11 rounded-xl bg-violet-600 px-4 text-sm font-medium text-white">補建排名種子快照</button></form>
+                    @endif
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="min-w-full text-sm"><thead class="bg-white text-left text-xs text-gray-500"><tr><th class="p-3">選手</th><th class="p-3">總分</th><th class="p-3">10</th><th class="p-3">X</th><th class="p-3">發布狀態</th><th class="p-3">操作</th></tr></thead><tbody class="divide-y">
+                    @foreach($items->sortByDesc('calculated_total') as $registration)
+                        <tr><td class="p-3 font-medium">{{ $registration->name }}</td><td class="p-3 font-semibold">{{ $registration->calculated_total }}</td><td class="p-3">{{ $registration->calculated_ten_count }}</td><td class="p-3">{{ $registration->calculated_x_count }}</td><td class="p-3">{{ $registration->result_published_at ? '已發布' : '待發布' }}</td><td class="p-3"><a href="{{ route('organizer.events.results.registrations.edit', [$event, $registration]) }}" class="whitespace-nowrap font-medium text-indigo-600 hover:underline">查看明細</a></td></tr>
+                    @endforeach
+                    </tbody></table>
+                </div>
+            </section>
+        @endforeach
+        </div>
+    </section>
+    @endif
 </div>
 @endsection

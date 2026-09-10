@@ -25,7 +25,6 @@
     @elseif(!$myRegistration)
         <div class="rounded-xl bg-amber-50 p-4 text-sm text-amber-800">完成此組別的個人報名後，才能建立或加入隊伍。</div>
     @endif
-    @if($canManage && $group->teamFormationIsOpen())<div class="flex flex-wrap justify-end gap-2">@foreach(['standard'=>'自動配對3人團體','mixed'=>'自動配對男女混雙'] as $format=>$label)@if($group->hasTeamFormat($format))<form method="POST" action="{{ route('events.teams.auto-match',[$event,$group]) }}" onsubmit="return confirm('系統只會使用尚未參加任何團體形式的選手建立完整隊伍，確定？')">@csrf<input type="hidden" name="team_format" value="{{ $format }}"><button class="min-h-11 rounded-xl border border-violet-200 bg-white px-4 text-sm font-medium text-violet-700">{{ $label }}</button></form>@endif @endforeach</div>@endif
 
     @if($myMembership)
         <section class="rounded-2xl border bg-white p-4 shadow-sm sm:p-5">
