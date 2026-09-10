@@ -27,18 +27,23 @@ class EventVisibilityTest extends TestCase
         $this->get(route('events.show', $event))->assertOk()->assertSee($event->name);
     }
 
-    public function test_free_organizer_cannot_create_an_unlisted_event(): void
+    public function test_free_organizer_event_is_forced_unlisted_even_when_public_is_requested(): void
     {
         $organizer = $this->approvedOrganizer();
 
         $this->actingAs($organizer)
-            ->post(route('organizer.events.store'), $this->payload('免費隱藏賽事'))
+            ->post(route('organizer.events.store'), array_merge($this->payload('免費隱藏賽事'), ['visibility'=>'public']))
             ->assertSessionHasErrors('visibility');
 
         $this->assertDatabaseMissing('events', ['name' => '免費隱藏賽事']);
+
+        $this->actingAs($organizer)
+            ->post(route('organizer.events.store'), $this->payload('免費連結限定賽事'))
+            ->assertRedirect();
+        $this->assertDatabaseHas('events', ['name'=>'免費連結限定賽事', 'visibility'=>'unlisted']);
     }
 
-    public function test_subscriber_can_create_an_unlisted_event(): void
+    public function test_subscriber_can_choose_a_public_event(): void
     {
         $organizer = $this->approvedOrganizer();
         OrganizerSubscription::create([
@@ -49,12 +54,12 @@ class EventVisibilityTest extends TestCase
         ]);
 
         $this->actingAs($organizer)
-            ->post(route('organizer.events.store'), $this->payload('訂閱隱藏賽事'))
+            ->post(route('organizer.events.store'), array_merge($this->payload('訂閱公開賽事'), ['visibility'=>'public']))
             ->assertRedirect();
 
         $this->assertDatabaseHas('events', [
-            'name' => '訂閱隱藏賽事',
-            'visibility' => 'unlisted',
+            'name' => '訂閱公開賽事',
+            'visibility' => 'public',
             'plan_code' => EventPlanCatalog::SUBSCRIPTION,
         ]);
     }

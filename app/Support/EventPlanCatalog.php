@@ -7,6 +7,7 @@ use InvalidArgumentException;
 final class EventPlanCatalog
 {
     public const FREE = 'free';
+    public const TRIAL = 'trial';
     public const EVENT_PASS = 'event_pass';
     public const SUBSCRIPTION = 'subscription';
     public const LEGACY = 'legacy';
@@ -27,6 +28,15 @@ final class EventPlanCatalog
                 'athletes'=>16,
                 'targets'=>8,
                 'arrows_per_phase'=>36,
+                'badges'=>1,
+            ],
+            self::TRIAL => [
+                'active_events'=>null,
+                'groups'=>2,
+                'staff_members'=>5,
+                'athletes'=>32,
+                'targets'=>16,
+                'arrows_per_phase'=>72,
                 'badges'=>1,
             ],
             self::EVENT_PASS, self::SUBSCRIPTION, self::LEGACY => [
@@ -72,7 +82,7 @@ final class EventPlanCatalog
                 'multiple_rounds'=>false,
                 'live_results'=>true,
                 'internal_visibility'=>true,
-                'public_visibility'=>true,
+                'public_visibility'=>false,
                 'advanced_judging'=>false,
                 'score_audit_log'=>false,
                 'data_export'=>false,
@@ -81,6 +91,11 @@ final class EventPlanCatalog
                 'unlisted_visibility'=>false,
                 'team_competition'=>false,
             ],
+            self::TRIAL => array_replace($paid, [
+                'data_export'=>false,
+                'advanced_badges'=>false,
+                'custom_branding'=>false,
+            ]),
             self::EVENT_PASS, self::SUBSCRIPTION, self::LEGACY => $paid,
             default => throw new InvalidArgumentException('Unknown event plan: '.$plan),
         };
@@ -88,6 +103,6 @@ final class EventPlanCatalog
 
     public static function isKnown(string $plan): bool
     {
-        return in_array($plan, [self::FREE, self::EVENT_PASS, self::SUBSCRIPTION, self::LEGACY], true);
+        return in_array($plan, [self::FREE, self::TRIAL, self::EVENT_PASS, self::SUBSCRIPTION, self::LEGACY], true);
     }
 }

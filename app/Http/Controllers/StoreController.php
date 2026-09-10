@@ -24,7 +24,8 @@ class StoreController extends Controller
             fn (Event $event) => $event->isFreePlan() && ! $event->canUpgradeToEventPass()
         )->values();
         $subscription = $request->user()->activeOrganizerSubscription();
+        $trialRemaining = $request->user()->remainingEventTrials();
 
-        return view('store.index', compact('events', 'selectedEvent', 'upgradeableEvents', 'unavailableFreeEvents', 'subscription'));
+        return view('store.index', compact('events', 'selectedEvent', 'upgradeableEvents', 'unavailableFreeEvents', 'subscription', 'trialRemaining'));
     }
 }

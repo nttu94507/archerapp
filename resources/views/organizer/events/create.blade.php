@@ -36,7 +36,7 @@
     <div class="mb-6">
         <a href="{{ route('organizer.events.index') }}" class="inline-flex min-h-11 items-center text-sm font-medium text-indigo-600">← 我的主辦賽事</a>
         <p class="text-xs font-semibold uppercase tracking-widest text-indigo-600">Organizer</p>
-        <h1 class="mt-1 text-2xl font-bold">快速建立賽事</h1>
+        <div class="mt-1 flex flex-wrap items-center gap-2"><h1 class="text-2xl font-bold">快速建立賽事</h1>@if($creationPlan === \App\Support\EventPlanCatalog::TRIAL)<span class="rounded-full bg-violet-100 px-3 py-1 text-xs font-semibold text-violet-700">完整功能試用・剩 {{ $trialRemaining }} 次</span>@endif</div>
         <p class="mt-1 text-sm text-gray-500">填寫基本資料與第一個組別，就能直接發布並開始收件。</p>
     </div>
 
@@ -50,6 +50,7 @@
     @php($startAtStepTwo = collect($errors->keys())->contains(fn ($key) => str_starts_with($key, 'groups.')))
     <form method="POST" action="{{ route('organizer.events.store') }}" class="space-y-5" id="quick-event-form">
         @csrf
+        <input type="hidden" name="creation_plan" value="{{ $creationPlan }}">
 
         <section id="event-step-one" class="rounded-2xl border bg-white p-4 shadow-sm sm:p-6 {{ $startAtStepTwo ? 'hidden' : '' }}">
             <div class="mb-5"><p class="text-xs font-semibold text-indigo-600">步驟 1</p><h2 class="text-lg font-semibold">賽事基本資料</h2></div>
@@ -91,14 +92,14 @@
                 <div class="sm:col-span-2 {{ $maxArrows > 36 ? 'paid-basic-advanced hidden' : '' }}"><label class="text-sm font-medium">主辦單位 *</label><input name="organizer" required value="{{ old('organizer', $organizerName) }}" class="mt-1 min-h-12 w-full rounded-xl border-gray-300"></div>
                 <div class="sm:col-span-2 {{ $maxArrows > 36 ? 'paid-basic-advanced hidden' : '' }}">
                     <p class="text-sm font-medium">賽事可見度</p>
-                    <input type="hidden" name="visibility" value="public">
-                    @if($canUseUnlisted)
-                        <label for="event-unlisted" class="mt-2 flex min-h-14 cursor-pointer items-center gap-3 rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 transition hover:border-indigo-300 hover:bg-indigo-50">
-                            <input id="event-unlisted" type="checkbox" name="visibility" value="unlisted" @checked(old('visibility') === 'unlisted') class="h-6 w-6 shrink-0 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
-                            <span><span class="block text-sm font-semibold text-gray-800">不顯示於公開賽事列表</span><span class="mt-0.5 block text-xs text-gray-500">僅持 UUID 網址或 QR Code 的人可以進入、報名及查看戰況。</span></span>
+                    <input type="hidden" name="visibility" value="unlisted">
+                    @if($canChoosePublicVisibility)
+                        <label for="event-public" class="mt-2 flex min-h-14 cursor-pointer items-center gap-3 rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 transition hover:border-indigo-300 hover:bg-indigo-50">
+                            <input id="event-public" type="checkbox" name="visibility" value="public" @checked(old('visibility') === 'public') class="h-6 w-6 shrink-0 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
+                            <span><span class="block text-sm font-semibold text-gray-800">顯示於公開賽事列表</span><span class="mt-0.5 block text-xs text-gray-500">未勾選時，僅持賽事連結或 QR Code 的人可以進入。</span></span>
                         </label>
                     @else
-                        <div class="mt-2 rounded-xl bg-gray-50 px-4 py-3 text-sm text-gray-600">免費賽事會顯示於公開列表；升級後可設定為不公開。</div>
+                        <div class="mt-2 rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-600">免費賽事不顯示於公開列表，請分享賽事連結或 QR Code；升級後可選擇公開。</div>
                     @endif
                 </div>
                 <div class="sm:col-span-2 {{ $maxArrows > 36 ? 'paid-basic-advanced hidden' : '' }}">
@@ -125,6 +126,7 @@
             <div class="mb-5 flex flex-wrap items-start justify-between gap-3"><div><p class="text-xs font-semibold text-indigo-600">步驟 2</p><h2 class="text-lg font-semibold">{{ $maxArrows > 36 ? '勾選報名組別' : '第一個報名組別' }}</h2><p class="mt-1 text-xs text-gray-500">{{ $maxArrows > 36 ? '勾選條件後，系統會自動組合並建立組別。' : '先建立主要組別，發布後仍可新增更多組別。' }}</p></div><button id="back-to-step-one" type="button" class="min-h-10 rounded-xl border px-4 text-sm font-medium text-gray-700 hover:bg-gray-50">← 返回基本資料</button></div>
             @if($maxArrows === 36)<div class="mb-4 flex items-center justify-between gap-3 rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-800"><span>免費方案僅支援單局最多 36 箭。</span><a href="{{ route('store.index') }}" class="shrink-0 font-semibold underline">查看方案</a></div>@endif
             @if($maxArrows > 36)
+                @if($creationPlan === \App\Support\EventPlanCatalog::TRIAL)<div class="mb-4 rounded-xl border border-violet-200 bg-violet-50 px-4 py-3 text-sm text-violet-800">本次可建立最多 {{ $maxGroups }} 組、每組最多 32 人、72 箭雙局；建立成功後扣除 1 次試用。</div>@endif
                 <div id="paid-group-builder" class="space-y-5">
                     <div>
                         <p class="mb-2 text-sm font-semibold text-gray-800">一鍵套用</p>

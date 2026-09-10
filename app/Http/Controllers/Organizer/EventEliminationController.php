@@ -11,6 +11,8 @@ use App\Services\IndividualEliminationBracketService;
 use App\Services\TeamEliminationBracketService;
 use App\Services\EliminationShootOffService;
 use App\Services\EliminationMatchProgressionService;
+use App\Support\EventPlanCatalog;
+use Illuminate\Validation\ValidationException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -67,6 +69,15 @@ class EventEliminationController extends Controller
         $group = EventGroup::query()
             ->where('event_id', $event->id)
             ->findOrFail($data['event_group_id']);
+
+        if ($event->plan_code === EventPlanCatalog::TRIAL) {
+            if ((int) $data['bracket_size'] > 64) {
+                throw ValidationException::withMessages(['bracket_size'=>'完整功能試用最多建立 64 人對抗表。']);
+            }
+            if ($event->eliminationBrackets()->exists()) {
+                throw ValidationException::withMessages(['category'=>'完整功能試用每場限建立一種對抗表。']);
+            }
+        }
 
         $category=$data['category']??'individual';
         if ($category === 'individual') {

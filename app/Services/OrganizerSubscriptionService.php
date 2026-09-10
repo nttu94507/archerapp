@@ -39,7 +39,7 @@ class OrganizerSubscriptionService
         abort_unless($subscription->user_id === $user->id && $subscription->isActive(), 422, '訂閱目前無效，無法同步賽事權益。');
 
         return Event::query()
-            ->where('plan_code', EventPlanCatalog::FREE)
+            ->whereIn('plan_code', [EventPlanCatalog::FREE, EventPlanCatalog::TRIAL])
             ->whereNull('cancelled_at')
             ->whereNull('completed_at')
             ->whereDoesntHave('auditLogs', fn ($query) => $query->where('action', 'event.completed'))

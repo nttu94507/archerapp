@@ -61,12 +61,6 @@ class SeedDemoEvent extends Command
 
             return self::INVALID;
         }
-        if ($free && $unlisted) {
-            $this->error('免費版不支援不公開賽事，請移除 --unlisted 或不要使用 --free。');
-
-            return self::INVALID;
-        }
-
         $groupCount = $free ? 1 : $requestedGroups;
         $batch = now()->format('YmdHis').'-'.Str::lower(Str::random(4));
         $ownerEmail = mb_strtolower(trim((string) $this->option('owner')));
@@ -94,7 +88,7 @@ class SeedDemoEvent extends Command
                     'mode'=>$mode, 'verified'=>true, 'level'=>'local',
                     'organizer'=>'Demo 測試主辦方', 'venue'=>'Demo 測試射箭場',
                     'reg_start'=>now()->subDay(), 'reg_end'=>now()->addDays(6),
-                    'status'=>'approved', 'published_at'=>now(), 'visibility'=>$unlisted ? 'unlisted' : 'public',
+                    'status'=>'approved', 'published_at'=>now(), 'visibility'=>($free || $unlisted) ? 'unlisted' : 'public',
                     'check_in_enabled'=>$checkIn,
                     'plan_code'=>$plan, 'plan_status'=>EventPlanCatalog::STATUS_ACTIVE,
                     'plan_limits_snapshot'=>EventPlanCatalog::limits($plan),

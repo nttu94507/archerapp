@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Event;
 use App\Models\EventAuditLog;
 use App\Models\EventStaff;
+use App\Models\EventTrialUsage;
 use App\Models\User;
 use App\Services\EventBadgeAwardService;
 use App\Services\EventCompletionService;
@@ -18,6 +19,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\URL;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
 class EventController extends Controller
@@ -34,23 +36,37 @@ class EventController extends Controller
             ->orderByDesc('id')
             ->paginate(15);
 
-        return view('organizer.events.index', compact('events'));
+        $trialRemaining = $request->user()->remainingEventTrials();
+        $hasSubscription = $request->user()->hasActiveOrganizerSubscription();
+
+        return view('organizer.events.index', compact('events', 'trialRemaining', 'hasSubscription'));
     }
 
     public function create(): View
     {
         abort_unless(request()->user()->canCreateEvents(),403);
+        $plan = request()->user()->hasActiveOrganizerSubscription()
+            ? EventPlanCatalog::SUBSCRIPTION
+            : (request('plan') === EventPlanCatalog::TRIAL ? EventPlanCatalog::TRIAL : EventPlanCatalog::FREE);
+        if ($plan === EventPlanCatalog::TRIAL && request()->user()->remainingEventTrials() < 1) {
+            abort(422, '兩次完整賽事試用皆已使用完畢。');
+        }
+        $maxArrows = EventPlanCatalog::limits($plan)['arrows_per_phase'] ?? 180;
         return view('organizer.events.create', [
             'organizerName' => request()->user()->organizerProfile?->organization_name,
-            'maxArrows' => request()->user()->hasActiveOrganizerSubscription() ? 180 : 36,
-            'canUseUnlisted' => request()->user()->hasActiveOrganizerSubscription(),
+            'maxArrows' => $maxArrows,
+            'maxGroups' => EventPlanCatalog::limits($plan)['groups'],
+            'creationPlan' => $plan,
+            'trialRemaining' => request()->user()->remainingEventTrials(),
+            'canChoosePublicVisibility' => EventPlanCatalog::features($plan)['public_visibility'],
         ]);
     }
 
     public function store(Request $request, EventBadgeAwardService $badges): RedirectResponse
     {
         abort_unless($request->user()->canCreateEvents(),403);
-        $validated = $this->validateEvent($request, true);
+        $creationPlan = $this->creationPlan($request);
+        $validated = $this->validateEvent($request, true, $creationPlan);
         $groups = $validated['groups'] ?? [];
         $publish = ($validated['submit_mode'] ?? 'draft') === 'publish';
         unset($validated['groups'], $validated['submit_mode']);
@@ -59,17 +75,25 @@ class EventController extends Controller
         $validated['verified'] = $publish;
 
         $subscription = $request->user()->activeOrganizerSubscription();
-        if ($subscription) {
-            $validated['plan_code'] = EventPlanCatalog::SUBSCRIPTION;
+        if ($creationPlan !== EventPlanCatalog::FREE) {
+            $validated['plan_code'] = $creationPlan;
             $validated['plan_status'] = EventPlanCatalog::STATUS_ACTIVE;
-            $validated['plan_limits_snapshot'] = EventPlanCatalog::limits(EventPlanCatalog::SUBSCRIPTION);
-            $validated['plan_features_snapshot'] = EventPlanCatalog::features(EventPlanCatalog::SUBSCRIPTION);
+            $validated['plan_limits_snapshot'] = EventPlanCatalog::limits($creationPlan);
+            $validated['plan_features_snapshot'] = EventPlanCatalog::features($creationPlan);
             $validated['plan_activated_at'] = now();
             $validated['plan_expires_at'] = null;
-            $validated['plan_order_reference'] = 'subscription:'.$subscription->id;
+            $validated['plan_order_reference'] = $creationPlan === EventPlanCatalog::SUBSCRIPTION
+                ? 'subscription:'.$subscription->id
+                : 'trial:user:'.$request->user()->id;
         }
 
-        $event = DB::transaction(function () use ($validated, $groups, $request, $publish, $badges) {
+        $event = DB::transaction(function () use ($validated, $groups, $request, $publish, $badges, $creationPlan) {
+            if ($creationPlan === EventPlanCatalog::TRIAL) {
+                User::query()->lockForUpdate()->findOrFail($request->user()->id);
+                if (EventTrialUsage::where('user_id', $request->user()->id)->count() >= 2) {
+                    throw ValidationException::withMessages(['creation_plan'=>'兩次完整賽事試用皆已使用完畢。']);
+                }
+            }
             $event = Event::create($validated);
             $event->staff()->create([
                 'user_id' => $request->user()->id, 'role' => 'owner', 'status' => 'active',
@@ -80,6 +104,9 @@ class EventController extends Controller
             }
             if ($event->isFreePlan()) {
                 $badges->ensureFreeFinisherBadge($event, $request->user()->id);
+            }
+            if ($creationPlan === EventPlanCatalog::TRIAL) {
+                EventTrialUsage::create(['user_id'=>$request->user()->id, 'event_id'=>$event->id, 'consumed_at'=>now()]);
             }
             $this->audit($event, $request, 'event.created');
             if ($publish) {
@@ -219,6 +246,10 @@ class EventController extends Controller
     public function addStaff(Request $request, Event $event, EventBadgeAwardService $badges): RedirectResponse
     {
         $this->authorize('manageStaff', $event);
+        $staffLimit = $event->planLimit('staff_members');
+        if ($staffLimit !== null && $event->staff()->where('status', 'active')->count() >= $staffLimit) {
+            throw ValidationException::withMessages(['email'=>'目前方案最多可有 '.$staffLimit.' 位工作人員（包含主辦人）。']);
+        }
         $validated = $request->validate(['email' => ['required', 'email', 'exists:users,email'], 'role' => ['required', 'in:manager,staff,score_manager,judge,chief_judge,volunteer,viewer']]);
         $user = User::where('email', $validated['email'])->firstOrFail();
         $staff = EventStaff::updateOrCreate(['event_id' => $event->id, 'user_id' => $user->id], [
@@ -254,6 +285,11 @@ class EventController extends Controller
         $inviter = User::findOrFail($request->integer('inviter'));
         abort_unless($inviter->can('manageStaff', $event), 403, '這份邀請已失效。');
         abort_if($event->staff()->where('user_id', $request->user()->id)->where('role', 'owner')->exists(), 422, '賽事擁有者不需要加入邀請。');
+        $alreadyActive = $event->staff()->where('user_id', $request->user()->id)->where('status', 'active')->exists();
+        $staffLimit = $event->planLimit('staff_members');
+        if (! $alreadyActive && $staffLimit !== null && $event->staff()->where('status', 'active')->count() >= $staffLimit) {
+            throw ValidationException::withMessages(['invitation'=>'此賽事的工作人員名額已滿。']);
+        }
 
         $staff = EventStaff::updateOrCreate(['event_id' => $event->id, 'user_id' => $request->user()->id], [
             'role' => $role, 'status' => 'active', 'invited_by' => $inviter->id,
@@ -265,14 +301,16 @@ class EventController extends Controller
         return redirect()->route('organizer.events.show', $event)->with('success', '已加入 '.$event->name.' 的工作團隊。');
     }
 
-    private function validateEvent(Request $request, bool $creating = false): array
+    private function validateEvent(Request $request, bool $creating = false, ?string $creationPlan = null): array
     {
-        $maxArrows = $request->user()->hasActiveOrganizerSubscription() ? 180 : 36;
-        $maxGroups = $request->user()->hasActiveOrganizerSubscription() ? null : 1;
         $event = $request->route('event');
-        $canUseUnlisted = $creating
-            ? $request->user()->hasActiveOrganizerSubscription()
-            : $event instanceof Event && $event->hasPlanFeature('unlisted_visibility');
+        $plan = $creating ? ($creationPlan ?? EventPlanCatalog::FREE) : ($event instanceof Event ? $event->plan_code : EventPlanCatalog::FREE);
+        $maxArrows = EventPlanCatalog::limits($plan)['arrows_per_phase'] ?? 180;
+        $maxGroups = EventPlanCatalog::limits($plan)['groups'];
+        $hasAdvancedPlan = $plan !== EventPlanCatalog::FREE;
+        $canChoosePublicVisibility = $creating
+            ? EventPlanCatalog::features($plan)['public_visibility']
+            : $event instanceof Event && ! $event->isFreePlan();
         if ($creating && $maxArrows === 36 && $request->filled('start_date') && $request->filled('free_reg_end_time')) {
             $deadlineTime = $request->string('free_reg_end_time', '23:59')->toString();
             $request->merge([
@@ -302,9 +340,9 @@ class EventController extends Controller
             'lat' => ['nullable', 'numeric', 'between:-90,90'], 'lng' => ['nullable', 'numeric', 'between:-180,180'],
             'visibility' => [
                 'nullable', 'in:public,unlisted',
-                function (string $attribute, mixed $value, \Closure $fail) use ($canUseUnlisted): void {
-                    if ($value === 'unlisted' && ! $canUseUnlisted) {
-                        $fail('不公開賽事為單場升級或訂閱方案功能。');
+                function (string $attribute, mixed $value, \Closure $fail) use ($canChoosePublicVisibility): void {
+                    if ($value === 'public' && ! $canChoosePublicVisibility) {
+                        $fail('公開賽事列表為單場升級或訂閱方案功能。');
                     }
                 },
             ],
@@ -350,16 +388,18 @@ class EventController extends Controller
         ]);
         unset($validated['free_reg_end_time']);
         unset($validated['quick_date_defaults']);
-        if ($creating && ! $request->user()->hasActiveOrganizerSubscription()) {
+        $validated['visibility'] = $canChoosePublicVisibility
+            ? ($validated['visibility'] ?? 'unlisted')
+            : 'unlisted';
+        if ($creating && ! $hasAdvancedPlan) {
             $validated['end_date'] = $validated['start_date'];
         }
         if ($creating) {
-            $isSubscriber = $request->user()->hasActiveOrganizerSubscription();
-            $validated['groups'] = collect($validated['groups'] ?? [])->map(function (array $group) use ($validated, $isSubscriber): array {
+            $validated['groups'] = collect($validated['groups'] ?? [])->map(function (array $group) use ($validated, $hasAdvancedPlan, $plan): array {
                 $group['arrows_per_end'] = $validated['mode'] === 'indoor' ? 3 : 6;
-                $group['fee'] = $isSubscriber ? ($group['fee'] ?? 0) : 0;
-                $group['quota'] = $isSubscriber ? ($group['quota'] ?? null) : 16;
-                $group['live_results_visible'] = ! $isSubscriber;
+                $group['fee'] = $hasAdvancedPlan ? ($group['fee'] ?? 0) : 0;
+                $group['quota'] = $plan === EventPlanCatalog::TRIAL ? min((int) ($group['quota'] ?? 32), 32) : ($hasAdvancedPlan ? ($group['quota'] ?? null) : 16);
+                $group['live_results_visible'] = ! $hasAdvancedPlan;
                 $group['standard_team_enabled'] = ! empty($group['standard_team_enabled']);
                 $group['mixed_team_enabled'] = ! empty($group['mixed_team_enabled']);
                 $group['is_team'] = $group['standard_team_enabled'] || $group['mixed_team_enabled'] || ! empty($group['is_team']);
@@ -367,10 +407,10 @@ class EventController extends Controller
             })->all();
         }
         if ($creating && collect($validated['groups'] ?? [])->contains(fn ($group) => ! empty($group['is_team']))
-            && ! $request->user()->hasActiveOrganizerSubscription()) {
+            && ! $hasAdvancedPlan) {
             throw \Illuminate\Validation\ValidationException::withMessages(['groups'=>'團體賽為訂閱或單場升級功能。']);
         }
-        if ($creating && ! $request->user()->hasActiveOrganizerSubscription()) {
+        if ($creating && ! $hasAdvancedPlan) {
             $allowedTemplates = $validated['mode'] === 'indoor'
                 ? [
                     ['bow_type'=>'recurve', 'gender'=>'open', 'distance'=>'18m', 'arrow_count'=>30],
@@ -391,11 +431,20 @@ class EventController extends Controller
             }
         }
         $canUseCheckIn = $creating
-            ? $request->user()->hasActiveOrganizerSubscription()
+            ? EventPlanCatalog::features($plan)['check_in']
             : $event instanceof Event && $event->hasPlanFeature('check_in');
         $validated['check_in_enabled'] = $canUseCheckIn && $request->boolean('check_in_enabled');
 
         return $validated;
+    }
+
+    private function creationPlan(Request $request): string
+    {
+        if ($request->user()->hasActiveOrganizerSubscription()) return EventPlanCatalog::SUBSCRIPTION;
+
+        return $request->string('creation_plan')->toString() === EventPlanCatalog::TRIAL
+            ? EventPlanCatalog::TRIAL
+            : EventPlanCatalog::FREE;
     }
 
     /** @param array{ready:bool,blockers:array<int,string>} $completionCheck */

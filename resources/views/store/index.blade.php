@@ -7,8 +7,15 @@
     <section class="overflow-hidden rounded-3xl bg-gradient-to-br from-indigo-700 via-violet-700 to-purple-800 px-6 py-8 text-white shadow-lg sm:px-10 sm:py-10">
         <span class="inline-flex rounded-full bg-white/15 px-3 py-1 text-xs font-semibold ring-1 ring-white/20">ArrowTrack 方案商店</span>
         <h1 class="mt-4 text-3xl font-bold tracking-tight sm:text-4xl">依照賽事規模選擇功能</h1>
-        <p class="mt-3 max-w-2xl text-sm leading-6 text-indigo-100 sm:text-base">免費方案適合公開的社團排名賽；需要不公開分享、多組別、第二局或個人對抗賽時，可為單場賽事升級進階方案。</p>
+        <p class="mt-3 max-w-2xl text-sm leading-6 text-indigo-100 sm:text-base">免費方案適合連結限定的小型排名賽；可先用兩次完整功能試用，再依舉辦頻率選擇單場升級或訂閱。</p>
     </section>
+
+    @unless($subscription)
+        <section class="flex flex-col gap-4 rounded-2xl border border-violet-200 bg-violet-50 p-5 sm:flex-row sm:items-center sm:justify-between">
+            <div><p class="font-bold text-violet-950">完整功能試用</p><p class="mt-1 text-sm text-violet-800">可使用 2 組、32 人、72 箭雙局、報到、團體／混雙與一種對抗表。</p></div>
+            <a href="{{ route('organizer.events.create',['plan'=>'trial']) }}" class="inline-flex min-h-11 shrink-0 items-center justify-center rounded-xl bg-violet-700 px-5 text-sm font-semibold text-white {{ $trialRemaining < 1 ? 'pointer-events-none opacity-50' : '' }}">{{ $trialRemaining > 0 ? '開始試用（剩 '.$trialRemaining.' 次）' : '試用次數已用完' }}</a>
+        </section>
+    @endunless
 
     @if($events->isNotEmpty())
         <section class="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm sm:p-6">
@@ -34,7 +41,7 @@
             @elseif($selectedEvent)
                 <div class="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl {{ $selectedEvent->eventPassUpgradeBlockReason() && $selectedEvent->isFreePlan() ? 'bg-amber-50' : 'bg-indigo-50' }} px-4 py-3">
                     <div><p class="font-semibold {{ $selectedEvent->eventPassUpgradeBlockReason() && $selectedEvent->isFreePlan() ? 'text-amber-950' : 'text-indigo-950' }}">{{ $selectedEvent->name }}</p><p class="mt-0.5 text-xs {{ $selectedEvent->eventPassUpgradeBlockReason() && $selectedEvent->isFreePlan() ? 'text-amber-700' : 'text-indigo-700' }}">{{ $selectedEvent->eventPassUpgradeBlockReason() ?? '目前方案：免費方案・可升級' }}</p></div>
-                    @unless($selectedEvent->isFreePlan())<span class="rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700">已啟用進階功能</span>@endunless
+                    @if(!$selectedEvent->canUpgradeToEventPass() && !$selectedEvent->isFreePlan())<span class="rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700">已啟用完整進階功能</span>@elseif($selectedEvent->plan_code === \App\Support\EventPlanCatalog::TRIAL)<span class="rounded-full bg-violet-100 px-3 py-1 text-xs font-semibold text-violet-700">試用賽事・可升級</span>@endif
                 </div>
             @endif
 
@@ -60,7 +67,7 @@
                 <li>✓ 最多 2 位工作人員、8 個靶位</li>
                 <li>✓ 1 枚賽事 Badge</li>
                 <li>✓ 排名賽與即時戰況</li>
-                <li>✓ 公開顯示於賽事列表</li>
+                <li>✓ 連結限定，不顯示於公開列表</li>
             </ul>
             <div class="mt-7 min-h-11 rounded-xl bg-gray-100 px-4 py-3 text-center text-sm font-semibold text-gray-600">建立賽事即可使用</div>
         </article>
@@ -78,7 +85,7 @@
                 <li>✓ 加射判定、完整成績稽核與進階 Badge</li>
                 <li>✓ 可設為不公開，僅持連結者可進入</li>
             </ul>
-            @if($selectedEvent && !$selectedEvent->isFreePlan())
+            @if($selectedEvent && !$selectedEvent->canUpgradeToEventPass() && !$selectedEvent->isFreePlan())
                 <div class="mt-7 min-h-11 rounded-xl bg-emerald-100 px-4 py-3 text-center text-sm font-semibold text-emerald-700">這場賽事已啟用</div>
             @elseif($selectedEvent && !$selectedEvent->canUpgradeToEventPass())
                 <div class="mt-7 min-h-11 rounded-xl bg-amber-100 px-4 py-3 text-center text-sm font-semibold text-amber-800">{{ $selectedEvent->eventPassUpgradeBlockReason() }}</div>

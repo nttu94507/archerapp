@@ -105,14 +105,14 @@ class Event extends Model
 
     public function canUpgradeToEventPass(): bool
     {
-        return $this->isFreePlan()
+        return in_array($this->plan_code, [EventPlanCatalog::FREE, EventPlanCatalog::TRIAL], true)
             && $this->cancelled_at === null
             && ! $this->isOfficiallyCompleted();
     }
 
     public function eventPassUpgradeBlockReason(): ?string
     {
-        if (! $this->isFreePlan()) return '這場賽事已啟用進階功能。';
+        if (! in_array($this->plan_code, [EventPlanCatalog::FREE, EventPlanCatalog::TRIAL], true)) return '這場賽事已啟用進階功能。';
         if ($this->cancelled_at !== null) return '賽事已取消，無法購買單場升級。';
         if ($this->isOfficiallyCompleted()) return '賽事已正式完成，無法再套用執行中的進階功能。';
 

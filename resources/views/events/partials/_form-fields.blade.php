@@ -88,17 +88,17 @@
                     @error('level') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
                 </div>
 
-                @php($canUseUnlisted = auth()->user()?->isAdmin() || ($existing && $existing->hasPlanFeature('unlisted_visibility')))
+                @php($canChoosePublicVisibility = auth()->user()?->isAdmin() || ($existing && ! $existing->isFreePlan()))
                 <div>
                     <p class="block text-sm font-medium text-gray-700">賽事可見度</p>
-                    <input type="hidden" name="visibility" value="public">
-                    @if($canUseUnlisted)
-                        <label for="event-unlisted" class="mt-2 flex min-h-14 cursor-pointer items-center gap-3 rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 transition hover:border-indigo-300 hover:bg-indigo-50">
-                            <input id="event-unlisted" type="checkbox" name="visibility" value="unlisted" @checked(old('visibility', $existing?->visibility ?? 'public') === 'unlisted') class="h-6 w-6 shrink-0 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
-                            <span><span class="block text-sm font-semibold text-gray-800">不顯示於公開賽事列表</span><span class="mt-0.5 block text-xs text-gray-500">僅持 UUID 網址或 QR Code 的人可以進入、報名及查看戰況。</span></span>
+                    <input type="hidden" name="visibility" value="unlisted">
+                    @if($canChoosePublicVisibility)
+                        <label for="event-public" class="mt-2 flex min-h-14 cursor-pointer items-center gap-3 rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 transition hover:border-indigo-300 hover:bg-indigo-50">
+                            <input id="event-public" type="checkbox" name="visibility" value="public" @checked(old('visibility', $existing?->visibility ?? 'unlisted') === 'public') class="h-6 w-6 shrink-0 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
+                            <span><span class="block text-sm font-semibold text-gray-800">顯示於公開賽事列表</span><span class="mt-0.5 block text-xs text-gray-500">未勾選時，僅持賽事連結或 QR Code 的人可以進入。</span></span>
                         </label>
                     @else
-                        <div class="mt-2 rounded-xl bg-gray-50 px-4 py-3 text-sm text-gray-600">免費賽事會顯示於公開列表；升級後可設定為不公開。</div>
+                        <div class="mt-2 rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-600">免費賽事固定為不公開；升級後可顯示於公開列表。</div>
                     @endif
                     @error('visibility') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
                 </div>

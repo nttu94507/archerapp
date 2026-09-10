@@ -98,6 +98,16 @@ class User extends Authenticatable
         return $this->hasOne(OrganizerSubscription::class);
     }
 
+    public function eventTrialUsages(): HasMany
+    {
+        return $this->hasMany(EventTrialUsage::class);
+    }
+
+    public function remainingEventTrials(): int
+    {
+        return max(0, 2 - $this->eventTrialUsages()->count());
+    }
+
     public function activeOrganizerSubscription(): ?OrganizerSubscription
     {
         return $this->organizerSubscription()->active()->first();
