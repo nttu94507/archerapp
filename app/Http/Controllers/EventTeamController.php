@@ -14,6 +14,17 @@ use Illuminate\View\View;
 
 class EventTeamController extends Controller
 {
+    public function overview(Request $request, Event $event): View
+    {
+        $this->authorize('viewManagement', $event);
+        $event->load(['groups'=>fn ($query) => $query->where('is_team', true)->with([
+            'eventTeams'=>fn ($teams) => $teams->where('status', '!=', 'disbanded')
+                ->with(['captainRegistration', 'memberships.registration']),
+        ])]);
+
+        return view('organizer.teams.overview', compact('event'));
+    }
+
     public function index(Request $request, Event $event, EventGroup $group): View
     {
         $this->assertGroup($event, $group);

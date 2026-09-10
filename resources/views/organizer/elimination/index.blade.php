@@ -24,17 +24,21 @@
     <section class="rounded-2xl border bg-white p-4 shadow-sm sm:p-5">
         <div><h2 class="font-semibold">建立對抗表</h2><p class="mt-1 text-sm text-gray-500">建立後會鎖定本次籤表；如有同分待判定，系統會先阻止生成。</p></div>
         <form method="POST" action="{{ route('organizer.events.elimination.store', $event) }}" class="mt-4 grid gap-4 md:grid-cols-[10rem_minmax(0,1fr)_12rem_auto] md:items-end">@csrf
-            <label class="text-sm font-medium">類型<select name="category" class="mt-1 min-h-12 w-full rounded-xl border-gray-300"><option value="individual">個人對抗</option><option value="team">3人團體對抗</option><option value="mixed_team">男女混雙對抗</option></select></label>
+            <label class="text-sm font-medium">類型<select id="elimination-category" name="category" class="mt-1 min-h-12 w-full rounded-xl border-gray-300"><option value="individual">個人對抗</option><option value="team">3人團體對抗</option><option value="mixed_team">男女混雙對抗</option></select></label>
             <label class="text-sm font-medium">組別
-                <select name="event_group_id" required class="mt-1 min-h-12 w-full rounded-xl border-gray-300 text-base">
+                <select id="elimination-group" name="event_group_id" required class="mt-1 min-h-12 w-full rounded-xl border-gray-300 text-base">
                     <option value="">請選擇</option>
                     @foreach($event->groups as $group)
                         @php
                             $snapshot = $snapshots->get($group->id);
                         @endphp
-                        <option value="{{ $group->id }}" @selected(old('event_group_id') == $group->id)>{{ $group->name }}（{{ $snapshot ? $snapshot->entries->where('is_eligible', true)->count().' 名有效種子' : '尚無排名快照' }}{{ $group->is_team ? '・開放團體' : '' }}）</option>
+                        @php
+                            $counts = $teamCounts->get($group->id);
+                        @endphp
+                        <option value="{{ $group->id }}" data-individual="{{ $snapshot ? $snapshot->entries->where('is_eligible', true)->count() : 0 }}" data-team-total="{{ $counts['standard']['total'] }}" data-team-eligible="{{ $counts['standard']['eligible'] }}" data-mixed-total="{{ $counts['mixed']['total'] }}" data-mixed-eligible="{{ $counts['mixed']['eligible'] }}" @selected(old('event_group_id') == $group->id)>{{ $group->name }}（個人 {{ $snapshot ? $snapshot->entries->where('is_eligible', true)->count() : 0 }}・團體 {{ $counts['standard']['eligible'] }}/{{ $counts['standard']['total'] }}・混雙 {{ $counts['mixed']['eligible'] }}/{{ $counts['mixed']['total'] }}）</option>
                     @endforeach
                 </select>
+                <p id="elimination-seed-summary" class="mt-1 text-xs font-semibold text-indigo-700"></p>
             </label>
             <label class="text-sm font-medium">籤表規模
                 <select name="bracket_size" class="mt-1 min-h-12 w-full rounded-xl border-gray-300 text-base">@foreach($sizes as $size)<option value="{{ $size }}" @selected(old('bracket_size', 8) == $size)>{{ $size }} 人制／隊制</option>@endforeach</select>
@@ -122,4 +126,22 @@
     @endif
     @endcan
 </div>
+<script>
+    (() => {
+        const category = document.getElementById('elimination-category');
+        const group = document.getElementById('elimination-group');
+        const summary = document.getElementById('elimination-seed-summary');
+        if (!category || !group || !summary) return;
+        const update = () => {
+            const option = group.selectedOptions[0];
+            if (!option?.value) { summary.textContent = ''; return; }
+            if (category.value === 'individual') summary.textContent = `可用個人種子 ${option.dataset.individual} 名`;
+            else if (category.value === 'team') summary.textContent = `團體共 ${option.dataset.teamTotal} 隊，其中 ${option.dataset.teamEligible} 隊名單完整且成績已發布`;
+            else summary.textContent = `混雙共 ${option.dataset.mixedTotal} 隊，其中 ${option.dataset.mixedEligible} 隊名單完整且成績已發布`;
+        };
+        category.addEventListener('change', update);
+        group.addEventListener('change', update);
+        update();
+    })();
+</script>
 @endsection

@@ -118,7 +118,9 @@
                             </tr></thead>
                             <tbody class="divide-y">
                             @foreach($items->sortByDesc('calculated_total') as $registration)
-                                @php($complete = $registration->score_submitted_at && $registration->scoreEntries->count() >= $state['required_ends'])
+                                @php
+                                    $complete = $registration->score_submitted_at && $registration->scoreEntries->count() >= $state['required_ends'];
+                                @endphp
                                 <tr>
                                     <td class="p-3">@if($canApproveResults && !$registration->score_verified_at)<input form="verify-form" class="{{ $checkClass }} rounded" type="checkbox" name="registration_ids[]" value="{{ $registration->id }}">@endif</td>
                                     <td class="p-3 font-medium">{{ $registration->name }}</td>

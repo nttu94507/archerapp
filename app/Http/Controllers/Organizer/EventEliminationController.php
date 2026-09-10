@@ -30,8 +30,11 @@ class EventEliminationController extends Controller
         $this->authorize('viewResults', $event);
 
         $event->load([
-            'groups'=>fn ($query) => $query->with(['eliminationBrackets'=>fn ($brackets) => $brackets
-                ->with(['rankingSnapshot', 'matches.participantOneEntry', 'matches.participantTwoEntry', 'matches.participantOneTeam', 'matches.participantTwoTeam', 'matches.sets', 'matches.ends', 'matches.shootOffs'])]),
+            'groups'=>fn ($query) => $query->with([
+                'eliminationBrackets'=>fn ($brackets) => $brackets
+                    ->with(['rankingSnapshot', 'matches.participantOneEntry', 'matches.participantTwoEntry', 'matches.participantOneTeam', 'matches.participantTwoTeam', 'matches.sets', 'matches.ends', 'matches.shootOffs']),
+                'eventTeams'=>fn ($teams) => $teams->where('status', '!=', 'disbanded')->with('memberships.registration'),
+            ]),
         ]);
         $snapshots = EventRankingSnapshot::query()
             ->where('event_id', $event->id)
@@ -45,11 +48,26 @@ class EventEliminationController extends Controller
         $selectedBracket = $brackets->firstWhere('uuid', $request->string('bracket')->toString())
             ?? $brackets->first();
 
+        $teamCounts = $event->groups->mapWithKeys(function (EventGroup $group): array {
+            $summary = [];
+            foreach (['standard', 'mixed'] as $format) {
+                $teams = $group->eventTeams->where('team_format', $format);
+                $eligible = $teams->filter(function ($team): bool {
+                    $members = $team->memberships->where('status', 'active');
+                    return $members->count() === $team->requiredSize()
+                        && $members->every(fn ($member) => $member->registration?->result_published_at !== null);
+                });
+                $summary[$format] = ['total'=>$teams->count(), 'eligible'=>$eligible->count()];
+            }
+            return [$group->id=>$summary];
+        });
+
         return view('organizer.elimination.index', [
             'event'=>$event,
             'snapshots'=>$snapshots,
             'sizes'=>IndividualEliminationBracketService::SIZES,
             'selectedBracket'=>$selectedBracket,
+            'teamCounts'=>$teamCounts,
         ]);
     }
 
