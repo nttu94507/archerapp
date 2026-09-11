@@ -56,6 +56,36 @@ class EventEliminationBracketTest extends TestCase
         $this->assertSame(0, $bracket->matches()->where('match_type', 'bronze')->count());
     }
 
+    public function test_three_byes_and_one_completed_quarterfinal_make_both_semifinals_available(): void
+    {
+        [$event, $group] = $this->publishedRanking(range(60, 56), 'recurve', true);
+        $bracket = app(IndividualEliminationBracketService::class)->create($event, $group, 8, false);
+        $quarterfinal = $bracket->matches()
+            ->where('match_type', 'main')
+            ->where('round_number', 1)
+            ->where('status', 'ready')
+            ->firstOrFail();
+
+        foreach (range(1, 3) as $_) {
+            $quarterfinal = app(RecurveSetMatchService::class)->recordSet(
+                $quarterfinal,
+                ['10', '10', '10'],
+                ['8', '8', '8'],
+                null,
+            );
+        }
+
+        app(\App\Services\EliminationMatchProgressionService::class)->synchronizeBracket($bracket);
+
+        $semifinals = $bracket->matches()
+            ->where('match_type', 'main')
+            ->where('round_number', 2)
+            ->get();
+        $this->assertCount(2, $semifinals);
+        $this->assertTrue($semifinals->every(fn ($match) => $match->participant_one_registration_id && $match->participant_two_registration_id));
+        $this->assertTrue($semifinals->every(fn ($match) => in_array($match->status, ['ready', 'in_progress', 'completed'], true)));
+    }
+
     public function test_bracket_engine_supports_128_and_is_ready_for_256(): void
     {
         [$event128, $group128] = $this->publishedRanking([40, 30, 20, 10], 'recurve', true);

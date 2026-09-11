@@ -33,7 +33,7 @@
             @php
                 $entryName = $teamMatch ? $entry?->name : $entry?->athlete_name;
             @endphp
-            <p class="truncate text-sm font-semibold">{{ $entryName ?? ($match->round_number === 1 ? '輪空' : '等待前場勝者') }}</p>
+            <p class="truncate text-sm font-semibold">{{ $entryName ?? ($match->round_number === 1 ? '輪空' : '等待前一輪勝者') }}</p>
             @if($entry && ($roundTotals->isNotEmpty() || $shootOffArrow !== null))
                 <div class="mt-1 flex flex-wrap gap-1" aria-label="{{ $entryName }}各輪分數">
                     @foreach($roundTotals as $roundIndex => $roundResult)

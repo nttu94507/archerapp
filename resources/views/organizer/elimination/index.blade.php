@@ -11,7 +11,7 @@
 
     @php
         $brackets = $event->groups->flatMap->eliminationBrackets;
-        $statusNames = ['pending'=>'等待前場', 'ready'=>'等待比賽', 'in_progress'=>'比賽中', 'awaiting_shoot_off'=>'等待加射', 'awaiting_judge'=>'等待主裁判', 'walkover'=>'輪空晉級', 'completed'=>'已完成'];
+        $statusNames = ['pending'=>'等待前一輪勝者', 'ready'=>'等待比賽', 'in_progress'=>'比賽中', 'awaiting_shoot_off'=>'等待加射', 'awaiting_judge'=>'等待主裁判', 'walkover'=>'輪空晉級', 'completed'=>'已完成'];
         $categoryNames = ['individual'=>'個人對抗', 'team'=>'3 人團體對抗', 'mixed_team'=>'男女混雙對抗'];
     @endphp
 

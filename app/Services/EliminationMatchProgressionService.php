@@ -2,11 +2,47 @@
 
 namespace App\Services;
 
+use App\Models\EventEliminationBracket;
 use App\Models\EventEliminationMatch;
 use App\Models\EventRankingSnapshotEntry;
+use Illuminate\Support\Facades\DB;
 
 class EliminationMatchProgressionService
 {
+    /**
+     * Rebuild every derived next-round slot from completed matches and walkovers.
+     * This is intentionally idempotent so an older bracket that missed one
+     * progression update can recover when it is opened again.
+     */
+    public function synchronizeBracket(EventEliminationBracket $bracket): void
+    {
+        DB::transaction(function () use ($bracket): void {
+            $matches = $bracket->matches()
+                ->with(['participantOneEntry', 'participantTwoEntry'])
+                ->orderBy('round_number')
+                ->orderBy('position')
+                ->lockForUpdate()
+                ->get();
+
+            foreach ($matches as $match) {
+                if (! in_array($match->status, ['completed', 'walkover'], true)) {
+                    continue;
+                }
+
+                if (in_array($bracket->category, ['team', 'mixed_team'], true)) {
+                    if ($match->winner_team_id) {
+                        $this->advanceTeam($match, (int) $match->winner_team_id);
+                    }
+                    continue;
+                }
+
+                if ($match->winner_registration_id) {
+                    $this->advance($match, (int) $match->winner_registration_id);
+                }
+            }
+        });
+    }
+
     public function advance(EventEliminationMatch $match, int $winnerId): void
     {
         if (in_array($match->bracket->category, ['team','mixed_team'], true)) {

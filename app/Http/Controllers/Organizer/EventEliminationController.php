@@ -10,6 +10,7 @@ use App\Models\EventRankingSnapshot;
 use App\Services\IndividualEliminationBracketService;
 use App\Services\TeamEliminationBracketService;
 use App\Services\EliminationShootOffService;
+use App\Services\EliminationMatchProgressionService;
 use App\Support\EventPlanCatalog;
 use Illuminate\Validation\ValidationException;
 use Illuminate\Http\RedirectResponse;
@@ -24,9 +25,13 @@ use BaconQrCode\Writer;
 
 class EventEliminationController extends Controller
 {
-    public function index(Request $request, Event $event): View
+    public function index(Request $request, Event $event, EliminationMatchProgressionService $progression): View
     {
         $this->authorize('viewResults', $event);
+
+        $event->eliminationBrackets()->get()->each(
+            fn ($bracket) => $progression->synchronizeBracket($bracket)
+        );
 
         $event->load([
             'groups'=>fn ($query) => $query->with([
