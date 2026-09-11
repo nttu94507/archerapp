@@ -181,7 +181,7 @@ class EventEliminationBracketTest extends TestCase
         $this->assertSame('pending', $bronze->status);
     }
 
-    public function test_only_eligible_semifinal_loser_automatically_wins_bronze_by_walkover(): void
+    public function test_single_bronze_participant_is_not_automatically_awarded_third_place(): void
     {
         [$event, $group] = $this->publishedRanking([30, 20, 10], 'recurve', true);
         $bracket = app(IndividualEliminationBracketService::class)->create($event, $group, 4, true);
@@ -202,41 +202,19 @@ class EventEliminationBracketTest extends TestCase
         }
 
         $bronze = $bracket->matches()->where('match_type', 'bronze')->firstOrFail()->fresh();
-        $this->assertSame('walkover', $bronze->status);
-        $this->assertSame($expectedBronzeWinner, $bronze->winner_registration_id);
-        $this->assertNull($bronze->loser_registration_id);
-        $this->assertNotNull($bronze->completed_at);
-        $this->assertDatabaseHas('event_audit_logs', [
+        $this->assertSame('pending', $bronze->status);
+        $this->assertNull($bronze->winner_registration_id);
+        $this->assertNull($bronze->completed_at);
+        $this->assertDatabaseMissing('event_audit_logs', [
             'event_id'=>$event->id,
             'action'=>'elimination.bronze_walkover_completed',
-            'subject_id'=>$bronze->id,
         ]);
 
         $bracket->update(['visibility'=>'public', 'published_at'=>now()]);
         $event->update(['status'=>'approved', 'published_at'=>now()]);
         $this->get(route('events.elimination', $event))
             ->assertOk()
-            ->assertSee('輪空取得季軍');
-
-        // Existing tournaments may have become stuck before automatic reconciliation existed.
-        $bronze->update([
-            'status'=>'pending',
-            'winner_registration_id'=>null,
-            'completed_at'=>null,
-        ]);
-        $owner = User::factory()->create();
-        EventStaff::create([
-            'event_id'=>$event->id,
-            'user_id'=>$owner->id,
-            'role'=>'owner',
-            'status'=>'active',
-            'invited_by'=>$owner->id,
-        ]);
-        $this->actingAs($owner)
-            ->post(route('organizer.events.elimination.bronze-walkover', [$event, $bracket]))
-            ->assertRedirect()
-            ->assertSessionHas('success');
-        $this->assertSame($expectedBronzeWinner, $bronze->fresh()->winner_registration_id);
+            ->assertDontSee('輪空取得季軍');
     }
 
     public function test_compound_match_counts_all_five_ends_before_declaring_winner(): void

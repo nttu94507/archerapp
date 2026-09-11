@@ -592,8 +592,12 @@ class EventController extends Controller
             $mainMatches = $bracket->matches->where('match_type', 'main');
             $final = $mainMatches->sortByDesc('round_number')->first();
             $bronze = $bracket->matches->firstWhere('match_type', 'bronze');
+            $bronzeParticipants = $bronze ? collect([
+                $bronze->participant_one_registration_id, $bronze->participant_two_registration_id,
+                $bronze->participant_one_team_id, $bronze->participant_two_team_id,
+            ])->filter()->unique()->count() : 0;
             $completed = (bool) ($final?->winner_registration_id || $final?->winner_team_id)
-                && (! $bronze || (bool) ($bronze->winner_registration_id || $bronze->winner_team_id));
+                && (! $bronze || $bronzeParticipants < 2 || (bool) ($bronze->winner_registration_id || $bronze->winner_team_id));
             $active = $bracket->matches->whereIn('status', [
                 'ready', 'in_progress', 'awaiting_shoot_off', 'awaiting_judge',
             ])->count();

@@ -42,13 +42,17 @@ class EventCompletionService
             ])->count();
 
             $finalHasWinner = $final && ($final->winner_registration_id || $final->winner_team_id);
-            $bronzeHasWinner = ! $bronze || $bronze->winner_registration_id || $bronze->winner_team_id;
+            $bronzeParticipants = $bronze ? collect([
+                $bronze->participant_one_registration_id, $bronze->participant_two_registration_id,
+                $bronze->participant_one_team_id, $bronze->participant_two_team_id,
+            ])->filter()->unique()->count() : 0;
+            $bronzeHasWinner = ! $bronze || $bronzeParticipants < 2 || $bronze->winner_registration_id || $bronze->winner_team_id;
 
             if (! $finalHasWinner) {
                 $blockers[] = $bracket->group->name.'：冠軍賽尚未完成。';
             }
             if (! $bronzeHasWinner) {
-                $blockers[] = $bracket->group->name.'：季軍賽尚未完成或尚未判定輪空。';
+                $blockers[] = $bracket->group->name.'：季軍賽尚未完成。';
             }
             if ($unresolved > 0) {
                 $blockers[] = $bracket->group->name.'：仍有 '.$unresolved.' 場對抗賽進行中或等待判定。';

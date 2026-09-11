@@ -2,7 +2,6 @@
 
 namespace App\Services;
 
-use App\Models\EventAuditLog;
 use App\Models\EventEliminationMatch;
 use App\Models\EventRankingSnapshotEntry;
 
@@ -20,7 +19,6 @@ class EliminationMatchProgressionService
 
         $this->placeParticipant($match->nextMatch, $match->next_slot, $winnerEntry);
         $this->placeParticipant($match->loserNextMatch, $match->loser_next_slot, $loserEntry);
-        $this->reconcileBronzeWalkover($match->loserNextMatch);
     }
 
     private function advanceTeam(EventEliminationMatch $match, int $winnerId): void
@@ -29,7 +27,6 @@ class EliminationMatchProgressionService
         $this->placeTeam($match->nextMatch,$match->next_slot,$winnerId,$winnerIsOne?$match->participant_one_seed:$match->participant_two_seed);
         $loserId=$winnerIsOne?$match->participant_two_team_id:$match->participant_one_team_id;
         $this->placeTeam($match->loserNextMatch,$match->loser_next_slot,$loserId,$winnerIsOne?$match->participant_two_seed:$match->participant_one_seed);
-        $this->reconcileBronzeWalkover($match->loserNextMatch);
     }
 
     private function placeTeam(?EventEliminationMatch $destination, ?int $slot, ?int $teamId, ?int $seed): void
@@ -54,46 +51,4 @@ class EliminationMatchProgressionService
         }
     }
 
-    public function reconcileBronzeWalkover(?EventEliminationMatch $bronze): bool
-    {
-        if (! $bronze || $bronze->match_type !== 'bronze') return false;
-
-        $bronze->refresh();
-        if ($bronze->winner_registration_id || $bronze->status === 'completed') return false;
-
-        $feeders = EventEliminationMatch::query()
-            ->where('loser_next_match_id', $bronze->id)
-            ->get();
-        if ($feeders->isEmpty() || $feeders->contains(
-            fn (EventEliminationMatch $match) => ! in_array($match->status, ['completed', 'walkover'], true)
-        )) return false;
-
-        $teamMatch=in_array($bronze->bracket->category,['team','mixed_team'],true);
-        $participants = collect($teamMatch ? [$bronze->participant_one_team_id,$bronze->participant_two_team_id] : [
-            $bronze->participant_one_registration_id,$bronze->participant_two_registration_id,
-        ])->filter()->unique()->values();
-        if ($participants->count() !== 1) return false;
-
-        $winnerId = (int) $participants->first();
-        $bronze->update([
-            'status'=>'walkover',
-            'winner_registration_id'=>$teamMatch?null:$winnerId,
-            'winner_team_id'=>$teamMatch?$winnerId:null,
-            'loser_registration_id'=>null,
-            'completed_at'=>now(),
-        ]);
-
-        EventAuditLog::create([
-            'event_id'=>$bronze->bracket->event_id,
-            'action'=>'elimination.bronze_walkover_completed',
-            'subject_type'=>EventEliminationMatch::class,
-            'subject_id'=>$bronze->id,
-            'metadata'=>[
-                $teamMatch?'winner_team_id':'winner_registration_id'=>$winnerId,
-                'reason'=>'only_eligible_semifinal_loser',
-            ],
-        ]);
-
-        return true;
-    }
 }

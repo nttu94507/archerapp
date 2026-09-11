@@ -1,5 +1,5 @@
 <article class="w-full overflow-hidden rounded-xl border bg-white shadow-sm">
-    <div class="flex items-center justify-between bg-gray-50 px-3 py-2 text-xs text-gray-500"><span>#{{ $match->position }}</span><span>{{ $match->match_type === 'bronze' && $match->status === 'walkover' ? '輪空取得季軍' : ($statusNames[$match->status] ?? $match->status) }}</span></div>
+    <div class="flex items-center justify-between bg-gray-50 px-3 py-2 text-xs text-gray-500"><span>#{{ $match->position }}</span><span>{{ $statusNames[$match->status] ?? $match->status }}</span></div>
     @php
         $teamMatch = in_array($bracket->category, ['team', 'mixed_team'], true);
     @endphp

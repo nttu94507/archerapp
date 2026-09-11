@@ -1,6 +1,9 @@
 @php
     $mainRounds = $bracket->matches->where('match_type', 'main')->groupBy('round_number')->sortKeys();
     $bronze = $bracket->matches->firstWhere('match_type', 'bronze');
+    $mainMatchesFinished = $bracket->matches->where('match_type', 'main')->every(fn ($match) => in_array($match->status, ['completed', 'walkover'], true));
+    $bronzeParticipantCount = $bronze ? collect([$bronze->participant_one_registration_id, $bronze->participant_two_registration_id, $bronze->participant_one_team_id, $bronze->participant_two_team_id])->filter()->unique()->count() : 0;
+    if ($mainMatchesFinished && $bronzeParticipantCount < 2) $bronze = null;
     $firstRoundCount = max(1, $mainRounds->first()?->count() ?? 1);
     $gridRows = $firstRoundCount * 2;
 @endphp
