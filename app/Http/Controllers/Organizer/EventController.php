@@ -388,6 +388,7 @@ class EventController extends Controller
         }
 
         $validated = $request->validate($rules, [
+            'organizer.required'=>'請填寫主辦單位名稱。',
             'groups.max'=>'目前最多可建立 '.$maxGroups.' 個組別，請減少勾選的賽制或組別劃分。',
             'end_date.after_or_equal'=>'結束日期不得早於開始日期。',
             'reg_end.after_or_equal'=>'報名截止時間必須晚於或等於報名開始時間。',

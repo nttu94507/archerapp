@@ -89,7 +89,7 @@
                     <div class="paid-basic-advanced hidden"><label class="text-sm font-medium">報名開始 *</label><input id="reg-start" type="datetime-local" name="reg_start" required value="{{ old('reg_start', now()->format('Y-m-d\TH:i')) }}" class="mt-1 min-h-12 w-full rounded-xl border-gray-300"></div>
                     <div class="paid-basic-advanced hidden"><label class="text-sm font-medium">報名截止 *</label><input id="reg-end" type="datetime-local" name="reg_end" required value="{{ old('reg_end') }}" class="mt-1 min-h-12 w-full rounded-xl border-gray-300"></div>
                 @endif
-                <div class="sm:col-span-2 {{ $maxArrows > 36 ? 'paid-basic-advanced hidden' : '' }}"><label class="text-sm font-medium">主辦單位 *</label><input name="organizer" required value="{{ old('organizer', $organizerName) }}" class="mt-1 min-h-12 w-full rounded-xl border-gray-300"></div>
+                <div class="sm:col-span-2"><label for="event-organizer" class="text-sm font-medium">主辦單位名稱 *</label><input id="event-organizer" name="organizer" required value="{{ old('organizer', $organizerName) }}" class="mt-1 min-h-12 w-full rounded-xl border-gray-300" placeholder="請輸入主辦單位名稱"></div>
                 <div class="sm:col-span-2 {{ $maxArrows > 36 ? 'paid-basic-advanced hidden' : '' }}">
                     <p class="text-sm font-medium">賽事可見度</p>
                     <input type="hidden" name="visibility" value="unlisted">
