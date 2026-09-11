@@ -153,7 +153,7 @@
         ? route('organizer.events.create', ['plan'=>'trial'])
         : route('organizer.events.create'));
     $createEventLabel = $mvpMode
-        ? '建立免費 MVP 賽事'
+        ? '建立賽事'
         : ($navHasSubscription
         ? '建立完整賽事'
         : ($navTrialRemaining > 0
