@@ -325,6 +325,12 @@ document.addEventListener('DOMContentLoaded', () => {
         if (currentStep === 1) {
             event.preventDefault();
             advanceToStepTwo();
+            return;
+        }
+        if (maximumGroupCount && renderedPaidGroupCount > maximumGroupCount) {
+            event.preventDefault();
+            paidGroupWarning.textContent = `最多 ${maximumGroupCount} 組，請先移除 ${renderedPaidGroupCount - maximumGroupCount} 組再建立賽事`;
+            paidGroupWarning.scrollIntoView({ behavior:'smooth', block:'center' });
         }
     });
     const start = document.getElementById('event-start');
@@ -358,6 +364,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const summaryNote = document.getElementById('competition-note');
     const paidGroupBuilder = document.getElementById('paid-group-builder');
     const paidGeneratedGroups = document.getElementById('paid-generated-groups');
+    const maximumGroupCount = @js($maxGroups);
+    let renderedPaidGroupCount = 0;
     const paidGroupPreview = document.getElementById('paid-group-preview');
     const paidGroupCount = document.getElementById('paid-group-count');
     const paidGroupWarning = document.getElementById('paid-group-warning');
@@ -413,8 +421,13 @@ document.addEventListener('DOMContentLoaded', () => {
         const hasOpenGroup = combinations.some(item => item.gender === 'open');
         paidMixedTeamWarning.classList.toggle('hidden', !paidMixedTeam.checked || hasOpenGroup);
 
+        renderedPaidGroupCount = combinations.length;
         paidGroupCount.textContent = combinations.length;
-        paidGroupWarning.textContent = combinations.length === 0 ? '請至少選擇一項賽制與組別' : (combinations.length > 12 ? '組別較多，請再次確認' : '');
+        paidGroupWarning.textContent = combinations.length === 0
+            ? '請至少選擇一項賽制與組別'
+            : (maximumGroupCount && combinations.length > maximumGroupCount
+                ? `最多 ${maximumGroupCount} 組，請移除 ${combinations.length - maximumGroupCount} 組`
+                : '');
         paidGroupPreview.innerHTML = combinations.map(item => {
             const mixedTeamEnabled = paidMixedTeam.checked && item.gender === 'open';
             const badges = ['<span class="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] text-emerald-800">個人</span>'];

@@ -25,6 +25,7 @@ class EventTrialTest extends TestCase
         $this->assertSame(EventPlanCatalog::MVP, $event->plan_code);
         $this->assertTrue($event->hasPlanFeature('individual_elimination'));
         $this->assertFalse($event->hasPlanFeature('team_competition'));
+        $this->assertSame(6, $event->planLimit('groups'));
         $this->assertDatabaseCount('event_trial_usages', 0);
         $this->assertSame(2, $user->remainingEventTrials());
     }

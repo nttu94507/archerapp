@@ -42,7 +42,7 @@ final class EventPlanCatalog
             ],
             self::MVP => [
                 'active_events'=>null,
-                'groups'=>2,
+                'groups'=>6,
                 'staff_members'=>5,
                 'athletes'=>32,
                 'targets'=>16,
