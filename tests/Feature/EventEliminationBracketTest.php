@@ -384,6 +384,30 @@ class EventEliminationBracketTest extends TestCase
             ->assertSee('送出主裁判判定');
     }
 
+    public function test_judging_workspace_recovers_pending_shoot_off_when_match_status_is_out_of_sync(): void
+    {
+        $match = $this->compoundMatchAwaitingShootOff();
+        $waiting = app(EliminationShootOffService::class)->record($match, '10', '10', null);
+        $waiting->update(['status'=>'awaiting_shoot_off']);
+        $event = $waiting->bracket->event;
+        $judge = User::factory()->create();
+        EventStaff::create([
+            'event_id'=>$event->id,
+            'user_id'=>$judge->id,
+            'role'=>'chief_judge',
+            'status'=>'active',
+            'invited_by'=>$judge->id,
+        ]);
+
+        $this->actingAs($judge)
+            ->get(route('organizer.events.judging.index', $event))
+            ->assertOk()
+            ->assertSee($waiting->participantOneEntry->athlete_name)
+            ->assertSee('進入判定');
+
+        $this->assertSame('awaiting_judge', $waiting->fresh()->status);
+    }
+
     public function test_public_elimination_page_is_hidden_until_bracket_is_explicitly_published(): void
     {
         [$event, $group] = $this->publishedRanking([40, 30, 20, 10], 'recurve', true);

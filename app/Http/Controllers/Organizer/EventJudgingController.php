@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Organizer;
 use App\Http\Controllers\Controller;
 use App\Models\Event;
 use App\Models\EventAuditLog;
+use App\Models\EventEliminationMatch;
 use App\Models\EventScoringTarget;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -32,8 +33,30 @@ class EventJudgingController extends Controller
         $role = $this->role($request, $event);
         $canConfirm = $request->user()->isAdmin() || in_array($role, ['owner', 'manager', 'chief_judge'], true);
         $canAdjudicateShootOff = $request->user()->can('adjudicateShootOff', $event);
+        $pendingEliminationJudgements = collect();
 
-        return view('organizer.judging.index', compact('event', 'role', 'canConfirm', 'canAdjudicateShootOff'));
+        if ($canAdjudicateShootOff) {
+            $pendingEliminationJudgements = EventEliminationMatch::query()
+                ->whereHas('bracket', fn ($query) => $query->where('event_id', $event->id))
+                ->whereHas('shootOffs', fn ($query) => $query->where('status', 'pending_judge'))
+                ->with([
+                    'bracket.group',
+                    'participantOneEntry', 'participantTwoEntry',
+                    'participantOneTeam', 'participantTwoTeam',
+                    'shootOffs' => fn ($query) => $query->where('status', 'pending_judge'),
+                ])
+                ->orderBy('round_number')
+                ->orderBy('position')
+                ->get();
+
+            // Repair older/inconsistent rows: a pending judge record is the source
+            // of truth and the match must be adjudicatable from the workspace.
+            $pendingEliminationJudgements
+                ->where('status', '!=', 'awaiting_judge')
+                ->each(fn (EventEliminationMatch $match) => $match->update(['status'=>'awaiting_judge']));
+        }
+
+        return view('organizer.judging.index', compact('event', 'role', 'canConfirm', 'canAdjudicateShootOff', 'pendingEliminationJudgements'));
     }
 
     public function update(Request $request, Event $event, EventScoringTarget $target): RedirectResponse
