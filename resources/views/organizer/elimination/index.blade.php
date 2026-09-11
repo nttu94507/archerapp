@@ -3,7 +3,7 @@
 @section('content')
 <div class="mx-auto max-w-7xl space-y-6 px-4 py-6 sm:px-6 sm:py-8">
     <header class="flex flex-wrap items-start justify-between gap-4">
-        <div><a href="{{ route('organizer.events.show', $event) }}" class="inline-flex min-h-11 items-center text-sm font-medium text-indigo-600">← 返回賽事管理</a><h1 class="text-2xl font-bold">對抗賽管理</h1><p class="mt-1 text-sm text-gray-500">{{ $event->name }}・個人與團體籤表</p></div>
+        <div><a href="{{ route('organizer.events.show', $event) }}" class="inline-flex min-h-11 items-center text-sm font-medium text-indigo-600">← 返回賽事管理</a><h1 class="text-2xl font-bold">{{ config('product.mvp_mode', true) ? '個人對抗賽' : '對抗賽管理' }}</h1><p class="mt-1 text-sm text-gray-500">{{ $event->name }}</p></div>
     </header>
 
     @if(session('success'))<div class="rounded-xl border border-green-200 bg-green-50 p-4 text-sm text-green-700">{{ session('success') }}</div>@endif
@@ -24,7 +24,7 @@
     <section class="rounded-2xl border bg-white p-4 shadow-sm sm:p-5">
         <div><h2 class="font-semibold">建立對抗表</h2><p class="mt-1 text-sm text-gray-500">建立後會鎖定本次籤表；如有同分待判定，系統會先阻止生成。</p></div>
         <form method="POST" action="{{ route('organizer.events.elimination.store', $event) }}" class="mt-4 grid gap-4 md:grid-cols-[10rem_minmax(0,1fr)_12rem_auto] md:items-end">@csrf
-            <label class="text-sm font-medium">類型<select id="elimination-category" name="category" class="mt-1 min-h-12 w-full rounded-xl border-gray-300"><option value="individual">個人對抗</option><option value="team">3人團體對抗</option><option value="mixed_team">男女混雙對抗</option></select></label>
+            <label class="text-sm font-medium">類型<select id="elimination-category" name="category" class="mt-1 min-h-12 w-full rounded-xl border-gray-300"><option value="individual">個人對抗</option>@unless(config('product.mvp_mode', true))<option value="team">3人團體對抗</option><option value="mixed_team">男女混雙對抗</option>@endunless</select></label>
             <label class="text-sm font-medium">組別
                 <select id="elimination-group" name="event_group_id" required class="mt-1 min-h-12 w-full rounded-xl border-gray-300 text-base">
                     <option value="">請選擇</option>
@@ -35,13 +35,13 @@
                         @php
                             $counts = $teamCounts->get($group->id);
                         @endphp
-                        <option value="{{ $group->id }}" data-individual="{{ $snapshot ? $snapshot->entries->where('is_eligible', true)->count() : 0 }}" data-team-total="{{ $counts['standard']['total'] }}" data-team-eligible="{{ $counts['standard']['eligible'] }}" data-mixed-total="{{ $counts['mixed']['total'] }}" data-mixed-eligible="{{ $counts['mixed']['eligible'] }}" @selected(old('event_group_id') == $group->id)>{{ $group->name }}（個人 {{ $snapshot ? $snapshot->entries->where('is_eligible', true)->count() : 0 }}・團體 {{ $counts['standard']['eligible'] }}/{{ $counts['standard']['total'] }}・混雙 {{ $counts['mixed']['eligible'] }}/{{ $counts['mixed']['total'] }}）</option>
+                        <option value="{{ $group->id }}" data-individual="{{ $snapshot ? $snapshot->entries->where('is_eligible', true)->count() : 0 }}" data-team-total="{{ $counts['standard']['total'] }}" data-team-eligible="{{ $counts['standard']['eligible'] }}" data-mixed-total="{{ $counts['mixed']['total'] }}" data-mixed-eligible="{{ $counts['mixed']['eligible'] }}" @selected(old('event_group_id') == $group->id)>{{ $group->name }}（個人 {{ $snapshot ? $snapshot->entries->where('is_eligible', true)->count() : 0 }}@unless(config('product.mvp_mode', true))・團體 {{ $counts['standard']['eligible'] }}/{{ $counts['standard']['total'] }}・混雙 {{ $counts['mixed']['eligible'] }}/{{ $counts['mixed']['total'] }}@endunless）</option>
                     @endforeach
                 </select>
                 <p id="elimination-seed-summary" class="mt-1 text-xs font-semibold text-indigo-700"></p>
             </label>
             <label class="text-sm font-medium">籤表規模
-                <select name="bracket_size" class="mt-1 min-h-12 w-full rounded-xl border-gray-300 text-base">@foreach($sizes as $size)<option value="{{ $size }}" @selected(old('bracket_size', 8) == $size)>{{ $size }} 人制／隊制</option>@endforeach</select>
+                <select name="bracket_size" class="mt-1 min-h-12 w-full rounded-xl border-gray-300 text-base">@foreach($sizes as $size)@if(!config('product.mvp_mode', true) || $size <= 64)<option value="{{ $size }}" @selected(old('bracket_size', 8) == $size)>{{ $size }} 人制</option>@endif @endforeach</select>
             </label>
             <div class="grid gap-2"><label class="inline-flex min-h-8 items-center gap-2 text-sm"><input type="hidden" name="bronze_match_enabled" value="0"><input type="checkbox" name="bronze_match_enabled" value="1" checked class="rounded border-gray-300 text-indigo-600">建立季軍賽</label><button class="min-h-12 rounded-xl bg-indigo-600 px-5 font-medium text-white">建立並鎖定</button></div>
         </form>
@@ -70,7 +70,7 @@
             @include('events._elimination-bracket-tree', ['bracket'=>$bracket, 'statusNames'=>$statusNames])
         </section>
     @else
-        <section class="rounded-2xl border border-dashed bg-white p-8 text-center"><h2 class="font-semibold">尚未建立對抗表</h2><p class="mt-1 text-sm text-gray-500">先完成排名賽成績發布，再依鎖定的種子快照建立個人、團體或混雙對抗表。</p></section>
+        <section class="rounded-2xl border border-dashed bg-white p-8 text-center"><h2 class="font-semibold">尚未建立對抗表</h2><p class="mt-1 text-sm text-gray-500">先完成排名賽成績發布，再依鎖定的種子快照建立個人對抗表。</p></section>
     @endif
 
     @can('manageScores', $event)

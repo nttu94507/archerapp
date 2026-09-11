@@ -142,7 +142,10 @@ class EventController extends Controller
         $staffInviteQrs = [];
         if ($request->user()->can('manageStaff', $event)) {
             $writer = new Writer(new ImageRenderer(new RendererStyle(280, 2), new SvgImageBackEnd));
-            foreach (['manager', 'staff', 'score_manager', 'judge', 'chief_judge', 'volunteer', 'viewer'] as $role) {
+            $inviteRoles = config('product.mvp_mode', true)
+                ? ['manager', 'score_manager', 'chief_judge']
+                : ['manager', 'staff', 'score_manager', 'judge', 'chief_judge', 'volunteer', 'viewer'];
+            foreach ($inviteRoles as $role) {
                 $url = URL::temporarySignedRoute('organizer.staff-invitations.show', now()->addDay(), [
                     'event' => $event, 'role' => $role, 'inviter' => $request->user()->id,
                 ]);

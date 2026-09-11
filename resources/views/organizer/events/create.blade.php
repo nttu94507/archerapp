@@ -171,7 +171,7 @@
                         </div>
                     </fieldset>
 
-                    <fieldset>
+                    <fieldset class="{{ config('product.mvp_mode', true) ? 'hidden' : '' }}">
                         <legend class="mb-2 text-sm font-semibold text-gray-800">團體賽項目</legend>
                         <div class="grid gap-2 sm:grid-cols-2">
                             <label class="flex min-h-16 cursor-pointer items-center gap-3 rounded-xl border-2 border-gray-200 bg-white px-4 transition has-[:checked]:border-violet-500 has-[:checked]:bg-violet-50">
@@ -225,7 +225,7 @@
                 <div id="selected-template-summary" class="mt-3 rounded-xl bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800">已選擇：反曲弓 70 公尺公開組</div>
             </div>
             <div id="advanced-group-settings" class="hidden">
-            <div class="mb-5 rounded-2xl border border-slate-200 bg-slate-50 p-4 sm:p-5">
+            <div class="mb-5 rounded-2xl border border-slate-200 bg-slate-50 p-4 sm:p-5 {{ config('product.mvp_mode', true) ? 'hidden' : '' }}">
                 <div class="flex flex-wrap items-start justify-between gap-3">
                     <div><h3 class="font-semibold text-slate-950">賽事內容</h3><p class="mt-1 text-xs text-slate-600">選擇這個組別除了個人排名賽，還要開放哪一種團體賽。</p></div>
                     @if($maxArrows === 36)<a href="{{ route('store.index') }}" class="text-xs font-semibold text-indigo-600">團體賽需升級 →</a>@endif

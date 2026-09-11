@@ -144,6 +144,7 @@
         && $event instanceof \App\Models\Event
         && $event->isOfficiallyCompleted()
         && (request()->routeIs('organizer.events.*') || request()->routeIs('events.groups.*'));
+    $mvpMode = config('product.mvp_mode', true);
     $navHasSubscription = auth()->check() && auth()->user()->hasActiveOrganizerSubscription();
     $navTrialRemaining = auth()->check() && ! $navHasSubscription
         ? auth()->user()->remainingEventTrials()
@@ -181,7 +182,7 @@
                 二手市集
             </a>
             @auth
-                @unless($hideStoreForCompletedEvent)<a href="{{ route('store.index') }}" class="px-2 py-1 rounded-lg hover:bg-gray-100 {{ request()->routeIs('store.*') ? 'text-gray-900' : 'text-gray-600' }}">商店</a>@endunless
+                @if(!$mvpMode && !$hideStoreForCompletedEvent)<a href="{{ route('store.index') }}" class="px-2 py-1 rounded-lg hover:bg-gray-100 {{ request()->routeIs('store.*') ? 'text-gray-900' : 'text-gray-600' }}">商店</a>@endif
             @endauth
 {{--            <a href="{{ route('events.index') }}"--}}
 {{--               class="px-2 py-1 rounded-lg hover:bg-gray-100 {{ request()->routeIs('events.*') ? 'text-gray-900' : 'text-gray-600' }}">--}}
@@ -254,7 +255,7 @@
                             @if(auth()->user()->canCreateEvents())
                                 <a href="{{ route('organizer.events.index') }}" class="flex min-h-10 items-center rounded-lg px-3 text-sm hover:bg-gray-50 {{ request()->routeIs('organizer.events.index') || request()->routeIs('organizer.events.show') ? 'bg-gray-50 font-semibold text-gray-900' : 'text-gray-700' }}" role="menuitem">我的主辦賽事</a>
                                 <a href="{{ $createEventUrl }}" class="flex min-h-10 items-center rounded-lg px-3 text-sm hover:bg-gray-50 {{ request()->routeIs('organizer.events.create') ? 'bg-gray-50 font-semibold text-gray-900' : 'text-gray-700' }}" role="menuitem">{{ $createEventLabel }}</a>
-                                <a href="{{ route('organizer.badges.index') }}" class="flex min-h-10 items-center rounded-lg px-3 text-sm hover:bg-gray-50 {{ request()->routeIs('organizer.badges.*') ? 'bg-gray-50 font-semibold text-gray-900' : 'text-gray-700' }}" role="menuitem">Badge 列表</a>
+                                @unless($mvpMode)<a href="{{ route('organizer.badges.index') }}" class="flex min-h-10 items-center rounded-lg px-3 text-sm hover:bg-gray-50 {{ request()->routeIs('organizer.badges.*') ? 'bg-gray-50 font-semibold text-gray-900' : 'text-gray-700' }}" role="menuitem">Badge 列表</a>@endunless
                                 @unless(auth()->user()->isVerifiedOrganizer())<a href="{{ route('organizer.qualification.show') }}" class="flex min-h-10 items-center rounded-lg px-3 text-sm text-indigo-700 hover:bg-indigo-50 {{ request()->routeIs('organizer.qualification.*') ? 'bg-indigo-50 font-semibold' : '' }}" role="menuitem">申請官方主辦方認證</a>@endunless
                             @else
                                 <a href="{{ route('organizer.qualification.show') }}" class="flex min-h-10 items-center rounded-lg px-3 text-sm text-red-700 hover:bg-red-50 {{ request()->routeIs('organizer.qualification.*') ? 'bg-red-50 font-semibold' : '' }}" role="menuitem">查看主辦方資格狀態</a>
@@ -322,13 +323,13 @@
             <div class="mt-3 border-t px-3 pb-1 pt-4 text-xs font-medium text-gray-400">探索</div>
             <a href="{{ route('events.index') }}" class="flex min-h-11 items-center rounded-lg px-3 hover:bg-gray-50 {{ request()->routeIs('events.index') || request()->routeIs('events.show') ? 'bg-gray-50 font-semibold text-gray-900' : 'text-gray-700' }}">賽事</a>
             <a href="{{ route('second-hand.index') }}" class="flex min-h-11 items-center rounded-lg px-3 hover:bg-gray-50 {{ request()->routeIs('second-hand.*') ? 'bg-gray-50 font-semibold text-gray-900' : 'text-gray-700' }}">二手市集</a>
-            @auth @unless($hideStoreForCompletedEvent)<a href="{{ route('store.index') }}" class="flex min-h-11 items-center rounded-lg px-3 hover:bg-gray-50 {{ request()->routeIs('store.*') ? 'bg-gray-50 font-semibold text-gray-900' : 'text-gray-700' }}">商店</a>@endunless @endauth
+            @auth @if(!$mvpMode && !$hideStoreForCompletedEvent)<a href="{{ route('store.index') }}" class="flex min-h-11 items-center rounded-lg px-3 hover:bg-gray-50 {{ request()->routeIs('store.*') ? 'bg-gray-50 font-semibold text-gray-900' : 'text-gray-700' }}">商店</a>@endif @endauth
 
             @auth
                 <div class="mt-3 border-t px-3 pb-1 pt-4 text-xs font-medium text-gray-400">主辦方工具</div>
                 @if(auth()->user()->canCreateEvents())
                     <a href="{{ route('organizer.events.index') }}" class="flex min-h-11 items-center rounded-lg px-3 hover:bg-gray-50 {{ request()->routeIs('organizer.events.index') || request()->routeIs('organizer.events.show') ? 'bg-gray-50 font-semibold text-gray-900' : 'text-gray-700' }}">我的主辦賽事</a>
-                    <a href="{{ route('organizer.badges.index') }}" class="flex min-h-11 items-center rounded-lg px-3 hover:bg-gray-50 {{ request()->routeIs('organizer.badges.*') ? 'bg-gray-50 font-semibold text-gray-900' : 'text-gray-700' }}">Badge 列表</a>
+                    @unless($mvpMode)<a href="{{ route('organizer.badges.index') }}" class="flex min-h-11 items-center rounded-lg px-3 hover:bg-gray-50 {{ request()->routeIs('organizer.badges.*') ? 'bg-gray-50 font-semibold text-gray-900' : 'text-gray-700' }}">Badge 列表</a>@endunless
                     <a href="{{ $createEventUrl }}" class="flex min-h-11 items-center rounded-lg px-3 hover:bg-gray-50 {{ request()->routeIs('organizer.events.create') ? 'bg-gray-50 font-semibold text-gray-900' : 'text-gray-700' }}">{{ $createEventLabel }}</a>
                     @unless(auth()->user()->isVerifiedOrganizer())<a href="{{ route('organizer.qualification.show') }}" class="flex min-h-11 items-center rounded-lg px-3 text-indigo-700 hover:bg-indigo-50 {{ request()->routeIs('organizer.qualification.*') ? 'bg-indigo-50 font-semibold' : '' }}">申請官方主辦方認證</a>@endunless
                 @else

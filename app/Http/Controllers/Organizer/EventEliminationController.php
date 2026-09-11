@@ -83,6 +83,9 @@ class EventEliminationController extends Controller
             'bronze_match_enabled'=>['nullable', 'boolean'],
             'category'=>['nullable','in:individual,team,mixed_team'],
         ]);
+        if (config('product.mvp_mode', true) && ($data['category'] ?? 'individual') !== 'individual') {
+            throw ValidationException::withMessages(['category'=>'MVP 模式目前只開放個人對抗賽。']);
+        }
         $group = EventGroup::query()
             ->where('event_id', $event->id)
             ->findOrFail($data['event_group_id']);

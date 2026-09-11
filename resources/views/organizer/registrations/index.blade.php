@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', $event->name.' 報名與繳費')
+@section('title', $event->name.(config('product.mvp_mode', true) ? ' 選手名單' : ' 報名與繳費'))
 
 @section('content')
 @php
@@ -13,8 +13,8 @@
     <div>
         <a href="{{ $selectedGroup ? route('organizer.events.registrations.index',$event) : route('organizer.events.show',$event) }}" class="inline-flex min-h-11 items-center text-sm font-medium text-indigo-600">← {{ $selectedGroup ? '全部組別' : '返回賽事工作台' }}</a>
         <p class="text-xs font-semibold uppercase tracking-widest text-indigo-600">Registration</p>
-        <h1 class="mt-1 text-2xl font-bold">{{ $selectedGroup ? $selectedGroup->name : '報名與繳費' }}</h1>
-        <p class="mt-1 text-sm text-gray-500">{{ $selectedGroup ? '管理此組別的選手報名與繳費狀態。' : '先選擇組別，再處理該組選手。' }}</p>
+        <h1 class="mt-1 text-2xl font-bold">{{ $selectedGroup ? $selectedGroup->name : (config('product.mvp_mode', true) ? '選手名單' : '報名與繳費') }}</h1>
+        <p class="mt-1 text-sm text-gray-500">{{ $selectedGroup ? (config('product.mvp_mode', true) ? '查看此組別的報名選手。' : '管理此組別的選手報名與繳費狀態。') : '先選擇組別，再處理該組選手。' }}</p>
     </div>
 
     @if(session('success'))<div class="rounded-xl bg-green-50 p-4 text-sm text-green-700">{{ session('success') }}</div>@endif

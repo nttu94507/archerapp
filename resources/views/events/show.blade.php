@@ -112,11 +112,11 @@
                                 <h3 class="break-words font-semibold text-gray-900">{{ $g->name }}</h3>
                                 <div class="mt-2 flex flex-wrap gap-1.5 text-xs font-medium">
                                     <span class="rounded-full bg-gray-100 px-2.5 py-1 text-gray-700">{{ $roundLabel }}・{{ $g->arrow_count }} 箭</span>
-                                    @if($g->standard_team_enabled)<span class="rounded-full bg-violet-100 px-2.5 py-1 text-violet-700">團體</span>@endif
-                                    @if($g->mixed_team_enabled)<span class="rounded-full bg-amber-100 px-2.5 py-1 text-amber-700">混雙</span>@endif
+                                    @if(!config('product.mvp_mode', true) && $g->standard_team_enabled)<span class="rounded-full bg-violet-100 px-2.5 py-1 text-violet-700">團體</span>@endif
+                                    @if(!config('product.mvp_mode', true) && $g->mixed_team_enabled)<span class="rounded-full bg-amber-100 px-2.5 py-1 text-amber-700">混雙</span>@endif
                                 </div>
                                 <p class="mt-2 text-sm text-gray-600">{{ (int) $g->fee > 0 ? 'NT$ '.number_format($g->fee) : '免費' }}・{{ $cap ? $registered.' / '.$cap.' 人' : '已報名 '.$registered.' 人' }}</p>
-                                @if($g->is_team)<a href="{{ route('events.teams.index',[$event,$g]) }}" class="mt-2 inline-flex min-h-10 items-center text-xs font-semibold text-violet-700">團體組隊・{{ $g->active_teams_count }} 隊 →</a>@endif
+                                @if(!config('product.mvp_mode', true) && $g->is_team)<a href="{{ route('events.teams.index',[$event,$g]) }}" class="mt-2 inline-flex min-h-10 items-center text-xs font-semibold text-violet-700">團體組隊・{{ $g->active_teams_count }} 隊 →</a>@endif
                             </div>
                             <div class="shrink-0">
                                 @if($already)
