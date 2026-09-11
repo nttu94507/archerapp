@@ -98,7 +98,7 @@ class EventRegistrationController extends Controller
                 if ($lockedEvent->scoringSessions()->exists()) {
                     abort(422, '賽事已完成排靶，報名已截止。');
                 }
-                $athleteLimit = $lockedEvent->isFreePlan() ? 16 : $lockedEvent->planLimit('athletes');
+                $athleteLimit = $lockedEvent->planLimit('athletes');
                 $activeRegistrations = $lockedEvent->registrations()->whereIn('status', ['registered', 'checked_in'])->count();
                 if ($athleteLimit !== null && $activeRegistrations >= $athleteLimit) {
                     abort(422, '免費賽事最多 16 位選手，目前名額已滿。');
@@ -124,7 +124,7 @@ class EventRegistrationController extends Controller
 
     private function hasReachedEventAthleteLimit(Event $event): bool
     {
-        $limit = $event->isFreePlan() ? 16 : $event->planLimit('athletes');
+        $limit = $event->planLimit('athletes');
 
         return $limit !== null && $event->registrations()
             ->whereIn('status', ['registered', 'checked_in'])

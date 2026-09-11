@@ -7,6 +7,7 @@ use InvalidArgumentException;
 final class EventPlanCatalog
 {
     public const FREE = 'free';
+    public const MVP = 'mvp';
     public const TRIAL = 'trial';
     public const EVENT_PASS = 'event_pass';
     public const SUBSCRIPTION = 'subscription';
@@ -31,6 +32,15 @@ final class EventPlanCatalog
                 'badges'=>1,
             ],
             self::TRIAL => [
+                'active_events'=>null,
+                'groups'=>2,
+                'staff_members'=>5,
+                'athletes'=>32,
+                'targets'=>16,
+                'arrows_per_phase'=>72,
+                'badges'=>1,
+            ],
+            self::MVP => [
                 'active_events'=>null,
                 'groups'=>2,
                 'staff_members'=>5,
@@ -96,6 +106,12 @@ final class EventPlanCatalog
                 'advanced_badges'=>false,
                 'custom_branding'=>false,
             ]),
+            self::MVP => array_replace($paid, [
+                'data_export'=>false,
+                'advanced_badges'=>false,
+                'custom_branding'=>false,
+                'team_competition'=>false,
+            ]),
             self::EVENT_PASS, self::SUBSCRIPTION, self::LEGACY => $paid,
             default => throw new InvalidArgumentException('Unknown event plan: '.$plan),
         };
@@ -103,6 +119,6 @@ final class EventPlanCatalog
 
     public static function isKnown(string $plan): bool
     {
-        return in_array($plan, [self::FREE, self::TRIAL, self::EVENT_PASS, self::SUBSCRIPTION, self::LEGACY], true);
+        return in_array($plan, [self::FREE, self::MVP, self::TRIAL, self::EVENT_PASS, self::SUBSCRIPTION, self::LEGACY], true);
     }
 }

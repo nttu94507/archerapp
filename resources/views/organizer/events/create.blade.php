@@ -196,7 +196,7 @@
                             </div>
                         </fieldset>
                         <label class="text-sm font-medium">每組名額<input id="paid-group-quota" type="number" min="1" placeholder="不限" class="mt-1 min-h-12 w-full rounded-xl"></label>
-                        <label class="text-sm font-medium">每組報名費<input id="paid-group-fee" type="number" min="0" value="0" class="mt-1 min-h-12 w-full rounded-xl"></label>
+                        <label class="text-sm font-medium {{ config('product.mvp_mode', true) ? 'hidden' : '' }}">每組報名費<input id="paid-group-fee" type="number" min="0" value="0" class="mt-1 min-h-12 w-full rounded-xl"></label>
                     </div>
 
                     <div class="rounded-2xl border border-indigo-200 bg-indigo-50 p-4">
@@ -267,7 +267,7 @@
                     <div><label class="text-sm font-medium">名額</label><div class="mt-1 flex min-h-12 items-center rounded-xl border border-gray-200 bg-gray-50 px-3 text-gray-700">16 人</div><input type="hidden" name="groups[0][quota]" value="16"></div>
                 @endif
                 @if($maxArrows > 36)
-                    <div><label class="text-sm font-medium">報名費</label><input type="number" min="0" name="groups[0][fee]" value="{{ old('groups.0.fee',0) }}" class="mt-1 min-h-12 w-full rounded-xl border-gray-300"></div>
+                    <div class="{{ config('product.mvp_mode', true) ? 'hidden' : '' }}"><label class="text-sm font-medium">報名費</label><input type="number" min="0" name="groups[0][fee]" value="{{ old('groups.0.fee',0) }}" class="mt-1 min-h-12 w-full rounded-xl border-gray-300"></div>
                 @else
                     <input type="hidden" name="groups[0][fee]" value="0">
                 @endif

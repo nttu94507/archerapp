@@ -121,6 +121,9 @@ class Event extends Model
 
     public function hasPlanFeature(string $feature): bool
     {
+        if (config('product.mvp_mode', true)) {
+            return (bool) (EventPlanCatalog::features(EventPlanCatalog::MVP)[$feature] ?? false);
+        }
         if (! $this->planIsActive()) {
             return false;
         }
@@ -137,6 +140,10 @@ class Event extends Model
 
     public function planLimit(string $resource): ?int
     {
+        if (config('product.mvp_mode', true)) {
+            $mvpValue = EventPlanCatalog::limits(EventPlanCatalog::MVP)[$resource] ?? null;
+            return $mvpValue === null ? null : (int) $mvpValue;
+        }
         $value = $this->plan_limits_snapshot[$resource]
             ?? EventPlanCatalog::limits($this->plan_code)[$resource]
             ?? null;

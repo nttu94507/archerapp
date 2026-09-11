@@ -145,18 +145,20 @@
         && $event->isOfficiallyCompleted()
         && (request()->routeIs('organizer.events.*') || request()->routeIs('events.groups.*'));
     $mvpMode = config('product.mvp_mode', true);
-    $navHasSubscription = auth()->check() && auth()->user()->hasActiveOrganizerSubscription();
-    $navTrialRemaining = auth()->check() && ! $navHasSubscription
+    $navHasSubscription = !$mvpMode && auth()->check() && auth()->user()->hasActiveOrganizerSubscription();
+    $navTrialRemaining = !$mvpMode && auth()->check() && ! $navHasSubscription
         ? auth()->user()->remainingEventTrials()
         : 0;
-    $createEventUrl = $navTrialRemaining > 0
+    $createEventUrl = $mvpMode ? route('organizer.events.create') : ($navTrialRemaining > 0
         ? route('organizer.events.create', ['plan'=>'trial'])
-        : route('organizer.events.create');
-    $createEventLabel = $navHasSubscription
+        : route('organizer.events.create'));
+    $createEventLabel = $mvpMode
+        ? '建立免費 MVP 賽事'
+        : ($navHasSubscription
         ? '建立完整賽事'
         : ($navTrialRemaining > 0
             ? '建立完整賽事（試用剩 '.$navTrialRemaining.' 次）'
-            : '建立免費賽事（試用已用完）');
+            : '建立免費賽事（試用已用完）'));
 @endphp
 
 <div id="modal-root"></div>

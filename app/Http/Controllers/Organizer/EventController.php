@@ -38,16 +38,19 @@ class EventController extends Controller
 
         $trialRemaining = $request->user()->remainingEventTrials();
         $hasSubscription = $request->user()->hasActiveOrganizerSubscription();
+        $mvpMode = config('product.mvp_mode', true);
 
-        return view('organizer.events.index', compact('events', 'trialRemaining', 'hasSubscription'));
+        return view('organizer.events.index', compact('events', 'trialRemaining', 'hasSubscription', 'mvpMode'));
     }
 
     public function create(): View
     {
         abort_unless(request()->user()->canCreateEvents(),403);
-        $plan = request()->user()->hasActiveOrganizerSubscription()
+        $plan = config('product.mvp_mode', true)
+            ? EventPlanCatalog::MVP
+            : (request()->user()->hasActiveOrganizerSubscription()
             ? EventPlanCatalog::SUBSCRIPTION
-            : (request('plan') === EventPlanCatalog::TRIAL ? EventPlanCatalog::TRIAL : EventPlanCatalog::FREE);
+            : (request('plan') === EventPlanCatalog::TRIAL ? EventPlanCatalog::TRIAL : EventPlanCatalog::FREE));
         if ($plan === EventPlanCatalog::TRIAL && request()->user()->remainingEventTrials() < 1) {
             abort(422, '兩次完整賽事試用皆已使用完畢。');
         }
@@ -400,17 +403,22 @@ class EventController extends Controller
         if ($creating) {
             $validated['groups'] = collect($validated['groups'] ?? [])->map(function (array $group) use ($validated, $hasAdvancedPlan, $plan): array {
                 $group['arrows_per_end'] = $validated['mode'] === 'indoor' ? 3 : 6;
-                $group['fee'] = $hasAdvancedPlan ? ($group['fee'] ?? 0) : 0;
-                $group['quota'] = $plan === EventPlanCatalog::TRIAL ? min((int) ($group['quota'] ?? 32), 32) : ($hasAdvancedPlan ? ($group['quota'] ?? null) : 16);
+                $group['fee'] = $plan === EventPlanCatalog::MVP ? 0 : ($hasAdvancedPlan ? ($group['fee'] ?? 0) : 0);
+                $group['quota'] = in_array($plan, [EventPlanCatalog::MVP, EventPlanCatalog::TRIAL], true) ? min((int) ($group['quota'] ?? 32), 32) : ($hasAdvancedPlan ? ($group['quota'] ?? null) : 16);
                 $group['live_results_visible'] = ! $hasAdvancedPlan;
                 $group['standard_team_enabled'] = ! empty($group['standard_team_enabled']);
                 $group['mixed_team_enabled'] = ! empty($group['mixed_team_enabled']);
                 $group['is_team'] = $group['standard_team_enabled'] || $group['mixed_team_enabled'] || ! empty($group['is_team']);
+                if ($plan === EventPlanCatalog::MVP) {
+                    $group['standard_team_enabled'] = false;
+                    $group['mixed_team_enabled'] = false;
+                    $group['is_team'] = false;
+                }
                 return $group;
             })->all();
         }
         if ($creating && collect($validated['groups'] ?? [])->contains(fn ($group) => ! empty($group['is_team']))
-            && ! $hasAdvancedPlan) {
+            && (! $hasAdvancedPlan || $plan === EventPlanCatalog::MVP)) {
             throw \Illuminate\Validation\ValidationException::withMessages(['groups'=>'團體賽為訂閱或單場升級功能。']);
         }
         if ($creating && ! $hasAdvancedPlan) {
@@ -443,6 +451,7 @@ class EventController extends Controller
 
     private function creationPlan(Request $request): string
     {
+        if (config('product.mvp_mode', true)) return EventPlanCatalog::MVP;
         if ($request->user()->hasActiveOrganizerSubscription()) return EventPlanCatalog::SUBSCRIPTION;
 
         return $request->string('creation_plan')->toString() === EventPlanCatalog::TRIAL

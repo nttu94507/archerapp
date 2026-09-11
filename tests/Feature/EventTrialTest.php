@@ -12,6 +12,23 @@ class EventTrialTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_mvp_mode_gives_every_user_free_personal_elimination_without_consuming_trial(): void
+    {
+        config()->set('product.mvp_mode', true);
+        $user = User::factory()->create();
+        $payload = $this->payload('免費 MVP 賽事');
+        unset($payload['creation_plan']);
+
+        $this->actingAs($user)->post(route('organizer.events.store'), $payload)->assertRedirect();
+
+        $event = Event::where('name', '免費 MVP 賽事')->firstOrFail();
+        $this->assertSame(EventPlanCatalog::MVP, $event->plan_code);
+        $this->assertTrue($event->hasPlanFeature('individual_elimination'));
+        $this->assertFalse($event->hasPlanFeature('team_competition'));
+        $this->assertDatabaseCount('event_trial_usages', 0);
+        $this->assertSame(2, $user->remainingEventTrials());
+    }
+
     public function test_user_can_create_two_trial_events_and_third_is_rejected(): void
     {
         $user = User::factory()->create();
