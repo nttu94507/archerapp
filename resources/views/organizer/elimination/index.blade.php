@@ -11,7 +11,7 @@
 
     @php
         $brackets = $event->groups->flatMap->eliminationBrackets;
-        $statusNames = ['pending'=>'等待前一輪勝者', 'ready'=>'等待比賽', 'in_progress'=>'比賽中', 'awaiting_shoot_off'=>'等待加射', 'awaiting_judge'=>'等待主裁判', 'walkover'=>'輪空晉級', 'completed'=>'已完成'];
+        $statusNames = ['pending'=>'等待前一輪勝者', 'ready'=>'等待比賽', 'in_progress'=>'比賽中', 'awaiting_shoot_off'=>'等待加射', 'awaiting_judge'=>'等待現場判定', 'walkover'=>'輪空晉級', 'completed'=>'已完成'];
         $categoryNames = ['individual'=>'個人對抗', 'team'=>'3 人團體對抗', 'mixed_team'=>'男女混雙對抗'];
     @endphp
 
@@ -80,7 +80,16 @@
         @php
             $matchIsReadyForDevice = fn ($match) => ($match->participant_one_registration_id && $match->participant_two_registration_id)
                 || ($match->participant_one_team_id && $match->participant_two_team_id);
-            $deviceMatches = $selectedBracket?->matches->filter($matchIsReadyForDevice) ?? collect();
+            $unfinished = fn ($match) => ! in_array($match->status, ['completed', 'walkover'], true);
+            $currentRound = $selectedBracket?->matches
+                ->where('match_type', 'main')
+                ->filter($unfinished)
+                ->min('round_number');
+            $currentRound ??= $selectedBracket?->matches->filter($unfinished)->min('round_number');
+            $deviceMatches = $selectedBracket?->matches
+                ->filter($matchIsReadyForDevice)
+                ->filter($unfinished)
+                ->filter(fn ($match) => (int) $match->round_number === (int) $currentRound) ?? collect();
         @endphp
         @if($selectedBracket && $deviceMatches->isNotEmpty())
             @php

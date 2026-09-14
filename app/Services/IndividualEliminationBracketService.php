@@ -60,7 +60,7 @@ class IndividualEliminationBracketService
                 throw ValidationException::withMessages(['event_group_id'=>'至少需要 2 名具備有效排名的選手才能建立對抗表。']);
             }
             if ($entrants->contains('requires_tiebreak', true)) {
-                throw ValidationException::withMessages(['event_group_id'=>'種子範圍內仍有同分選手，請先完成加射或主裁判判定。']);
+                throw ValidationException::withMessages(['event_group_id'=>'種子範圍內仍有同分選手，請先完成加射判定。']);
             }
 
             $now = now();

@@ -38,8 +38,7 @@ class EventResultController extends Controller
             ->whereNull('superseded_at')
             ->get()
             ->keyBy('event_group_id');
-        $requiresJudgeReview = $event->staff()->where('status', 'active')->whereIn('role', ['judge', 'chief_judge'])->exists();
-        $groupStates = $event->groups->mapWithKeys(function (EventGroup $group) use ($registrations, $event, $requiresJudgeReview): array {
+        $groupStates = $event->groups->mapWithKeys(function (EventGroup $group) use ($registrations, $event): array {
             $items = $registrations->where('event_group_id', $group->id)->values();
             $totalArrows = $group->arrow_count ?: ($event->mode === 'indoor' ? 30 : 36);
             $arrowsPerEnd = $group->arrows_per_end ?: 6;
@@ -53,8 +52,8 @@ class EventResultController extends Controller
                 'has_session'=>$group->scoringSessions->isNotEmpty(),
                 'has_targets'=>$targets->isNotEmpty(),
                 'unfinished_targets'=>$scoringTargets->where('status', '!=', 'completed')->count(),
-                'requires_judge_review'=>$requiresJudgeReview,
-                'unconfirmed_targets'=>$requiresJudgeReview ? $scoringTargets->where('judge_status', '!=', 'confirmed')->count() : 0,
+                'requires_judge_review'=>false,
+                'unconfirmed_targets'=>0,
                 'incomplete_scores'=>$items->filter(fn ($item) => ! $item->score_verified_at && $item->scoreEntries->count() < $requiredEnds)->count(),
                 'unverified'=>$items->whereNull('score_verified_at')->count(),
                 'published'=>$items->isNotEmpty() && $items->every(fn ($item) => $item->result_published_at !== null),
@@ -322,13 +321,8 @@ class EventResultController extends Controller
             abort_if($sessions->isEmpty(), 422, '此組別尚未建立排靶與計分場次。');
             $targets = $sessions->flatMap->targets;
             abort_if($targets->isEmpty(), 422, '此組別尚未建立任何靶位。');
-            $requiresJudgeReview = $event->staff()->where('status', 'active')->whereIn('role', ['judge', 'chief_judge'])->exists();
-            if ($requiresJudgeReview) {
-                $unconfirmedTargets = $targets->where('status', '!=', 'dns')->where('judge_status', '!=', 'confirmed')->count();
-                abort_if($unconfirmedTargets > 0, 422, '此組別還有 '.$unconfirmedTargets.' 個靶位尚未經主裁判簽核。');
-            }
             $unverified = $registrations->whereNull('score_verified_at')->count();
-            abort_if($unverified > 0, 422, '此組別還有 '.$unverified.' 位選手尚未經賽事主辦、成績管理員或主裁判核准。');
+            abort_if($unverified > 0, 422, '此組別還有 '.$unverified.' 位選手尚未經賽事管理員或成績管理員核准。');
 
             $now = now();
             $unpublished = $registrations->whereNull('result_published_at');

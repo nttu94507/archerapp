@@ -9,7 +9,7 @@
     $arrowCount = $teamMatch ? ($match->bracket->category === 'mixed_team' ? 4 : 6) : 3;
     $maxSets = $teamMatch ? 4 : 5;
     $canEnter = in_array($match->status, ['ready', 'in_progress'], true) && $match->sets->count() < $maxSets;
-    $statusNames = ['ready'=>'等待比賽', 'in_progress'=>'比賽中', 'awaiting_shoot_off'=>'等待加射', 'awaiting_judge'=>'等待主裁判', 'completed'=>'比賽完成'];
+    $statusNames = ['ready'=>'等待比賽', 'in_progress'=>'比賽中', 'awaiting_shoot_off'=>'等待加射', 'awaiting_judge'=>'等待現場判定', 'completed'=>'比賽完成'];
 @endphp
 <div class="mx-auto flex min-h-[calc(100dvh-4rem)] max-w-5xl flex-col gap-4 bg-gray-50 px-3 py-4 sm:px-5">
     <header class="rounded-2xl border bg-white p-4 shadow-sm">
@@ -46,6 +46,7 @@
     </form>
     @endif
     @endif
+    @include('organizer.elimination._recovery')
 </div>
 @if($canEnter)
 <script>(()=>{const form=document.getElementById('set-form');if(!form)return;const inputs=[...document.querySelectorAll('.score-input')];let active=0;const value=v=>v==='X'?10:(v==='M'||!v?0:Number(v));const select=i=>{active=Math.max(0,Math.min(inputs.length-1,i));inputs.forEach(x=>x.classList.remove('ring-2','ring-indigo-500','bg-indigo-50'));inputs[active].classList.add('ring-2','ring-indigo-500','bg-indigo-50')};const totals=()=>document.querySelectorAll('.athlete-row').forEach(row=>row.querySelector('.row-total').textContent=[...row.querySelectorAll('.score-input')].reduce((sum,x)=>sum+value(x.value),0));inputs.forEach((x,i)=>x.addEventListener('pointerdown',e=>{e.preventDefault();select(i)}));document.querySelectorAll('.score-key').forEach(key=>key.addEventListener('click',()=>{const action=key.dataset.key;if(action==='SUBMIT'){inputs.forEach(x=>{if(!x.value)x.value='M'});totals();if(confirm('確認雙方本局 {{ $arrowCount }} 箭都已核對？送出後即計算正式局分。'))form.requestSubmit();return}if(action==='BKSP'){const i=inputs[active].value?active:Math.max(0,active-1);inputs[i].value='';select(i);totals();return}inputs[active].value=action;totals();if(active<inputs.length-1)select(active+1)}));select(0);totals()})();</script>

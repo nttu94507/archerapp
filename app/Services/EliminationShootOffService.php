@@ -19,6 +19,14 @@ class EliminationShootOffService
 
         return DB::transaction(function () use ($match, $oneArrow, $twoArrow, $actorId): EventEliminationMatch {
             $match = EventEliminationMatch::query()->with('bracket')->lockForUpdate()->findOrFail($match->id);
+            if ($match->status === 'awaiting_judge') {
+                $latest = $match->shootOffs()->where('status', 'pending_judge')->latest('attempt_number')->first();
+                if ($latest
+                    && $latest->participant_one_arrow === $oneArrow
+                    && $latest->participant_two_arrow === $twoArrow) {
+                    return $match->fresh(['shootOffs', 'participantOneEntry', 'participantTwoEntry']);
+                }
+            }
             if ($match->status !== 'awaiting_shoot_off') {
                 throw ValidationException::withMessages(['shoot_off'=>'此場目前不需要輸入加射。']);
             }
@@ -66,6 +74,12 @@ class EliminationShootOffService
         $oneArrows=$this->normalizeArrows($oneArrows,$required);$twoArrows=$this->normalizeArrows($twoArrows,$required);
         return DB::transaction(function() use($match,$oneArrows,$twoArrows,$actorId){
             $match=EventEliminationMatch::with('bracket')->lockForUpdate()->findOrFail($match->id);
+            if($match->status==='awaiting_judge'){
+                $latest=$match->shootOffs()->where('status','pending_judge')->latest('attempt_number')->first();
+                if($latest && $latest->participant_one_arrows===$oneArrows && $latest->participant_two_arrows===$twoArrows){
+                    return $match->fresh(['shootOffs','participantOneTeam','participantTwoTeam']);
+                }
+            }
             if($match->status!=='awaiting_shoot_off')throw ValidationException::withMessages(['shoot_off'=>'此場目前不需要輸入加射。']);
             $attempt=((int)$match->shootOffs()->max('attempt_number'))+1;$oneValue=collect($oneArrows)->sum(fn($a)=>$this->value($a));$twoValue=collect($twoArrows)->sum(fn($a)=>$this->value($a));
             $winnerId=$oneValue===$twoValue?null:($oneValue>$twoValue?$match->participant_one_team_id:$match->participant_two_team_id);
@@ -76,19 +90,19 @@ class EliminationShootOffService
         });
     }
 
-    public function adjudicate(EventEliminationMatch $match, string $decision, string $note, int $judgeId): EventEliminationMatch
+    public function adjudicate(EventEliminationMatch $match, string $decision, string $note, ?int $judgeId): EventEliminationMatch
     {
         if (! in_array($decision, ['participant_one', 'participant_two', 're_shoot'], true)) {
-            throw ValidationException::withMessages(['decision'=>'主裁判判定選項無效。']);
+            throw ValidationException::withMessages(['decision'=>'加射判定選項無效。']);
         }
         if (trim($note) === '') {
-            throw ValidationException::withMessages(['decision_note'=>'主裁判必須填寫判定說明。']);
+            throw ValidationException::withMessages(['decision_note'=>'必須留下加射判定說明。']);
         }
 
         return DB::transaction(function () use ($match, $decision, $note, $judgeId): EventEliminationMatch {
             $match = EventEliminationMatch::query()->with('bracket')->lockForUpdate()->findOrFail($match->id);
             if ($match->status !== 'awaiting_judge') {
-                throw ValidationException::withMessages(['decision'=>'此場目前不需要主裁判判定。']);
+                throw ValidationException::withMessages(['decision'=>'此場目前不需要進行加射判定。']);
             }
             $shootOff = $match->shootOffs()->where('status', 'pending_judge')->lockForUpdate()->latest('attempt_number')->firstOrFail();
             $teamMatch=in_array($match->bracket->category,['team','mixed_team'],true);

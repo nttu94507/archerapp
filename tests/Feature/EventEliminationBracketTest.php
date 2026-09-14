@@ -86,6 +86,33 @@ class EventEliminationBracketTest extends TestCase
         $this->assertTrue($semifinals->every(fn ($match) => in_array($match->status, ['ready', 'in_progress', 'completed'], true)));
     }
 
+    public function test_bracket_synchronization_does_not_reset_an_active_match_to_ready(): void
+    {
+        [$event, $group] = $this->publishedRanking(range(60, 56), 'recurve', true);
+        $bracket = app(IndividualEliminationBracketService::class)->create($event, $group, 8, false);
+        $quarterfinal = $bracket->matches()
+            ->where('match_type', 'main')
+            ->where('round_number', 1)
+            ->where('status', 'ready')
+            ->firstOrFail();
+
+        foreach (range(1, 3) as $_) {
+            $quarterfinal = app(RecurveSetMatchService::class)->recordSet(
+                $quarterfinal,
+                ['10', '10', '10'],
+                ['8', '8', '8'],
+                null,
+            );
+        }
+
+        $semifinal = $quarterfinal->nextMatch()->firstOrFail();
+        $semifinal->update(['status'=>'awaiting_judge']);
+
+        app(\App\Services\EliminationMatchProgressionService::class)->synchronizeBracket($bracket);
+
+        $this->assertSame('awaiting_judge', $semifinal->fresh()->status);
+    }
+
     public function test_bracket_engine_supports_128_and_is_ready_for_256(): void
     {
         [$event128, $group128] = $this->publishedRanking([40, 30, 20, 10], 'recurve', true);
@@ -317,7 +344,7 @@ class EventEliminationBracketTest extends TestCase
         $this->get(route('events.elimination', $waiting->bracket->event))
             ->assertOk()
             ->assertSee('加射：#1')
-            ->assertSee('等待主裁判判定');
+            ->assertSee('等待現場判定');
 
         $repeat = $service->adjudicate($waiting, 're_shoot', '雙方箭孔至靶心距離無法區分。', User::factory()->create()->id);
         $this->assertSame('awaiting_shoot_off', $repeat->status);
@@ -338,74 +365,64 @@ class EventEliminationBracketTest extends TestCase
             ->assertDontSee('加射：');
     }
 
-    public function test_chief_judge_closest_to_center_decision_completes_match(): void
+    public function test_duplicate_equal_shoot_off_submission_is_idempotent(): void
+    {
+        $match = $this->compoundMatchAwaitingShootOff();
+        $service = app(EliminationShootOffService::class);
+
+        $first = $service->record($match, '10', '10', null);
+        $duplicate = $service->record($first, '10', '10', null);
+
+        $this->assertSame('awaiting_judge', $duplicate->status);
+        $this->assertCount(1, $duplicate->shootOffs);
+        $this->assertSame('pending_judge', $duplicate->shootOffs->first()->status);
+    }
+
+    public function test_bound_scoring_device_can_select_closest_arrow_winner(): void
     {
         $match = $this->compoundMatchAwaitingShootOff();
         $service = app(EliminationShootOffService::class);
         $waiting = $service->record($match, '10', '10', null);
-        $judge = User::factory()->create();
+        $deviceToken = 'shoot-off-device-token';
+        $waiting->update(['device_token_hash'=>hash('sha256', $deviceToken), 'device_bound_at'=>now()]);
+        $cookie = 'elimination_device_'.$waiting->id;
 
-        $completed = $service->adjudicate($waiting, 'participant_two', '第二位選手箭孔較接近靶心。', $judge->id);
+        $this->withCookie($cookie, $deviceToken)
+            ->get(route('elimination-stations.show', $waiting->access_token))
+            ->assertOk()
+            ->assertSee('同分判定')
+            ->assertSee('無法判定，重新加射');
 
+        $this->withCookie($cookie, $deviceToken)
+            ->post(route('elimination-stations.shoot-offs.adjudicate', $waiting->access_token), [
+                'decision'=>'participant_two',
+            ])
+            ->assertSessionHas('success');
+
+        $completed = $waiting->fresh(['shootOffs']);
         $shootOff = $completed->shootOffs->first();
         $this->assertSame('completed', $completed->status);
         $this->assertSame($completed->participant_two_registration_id, $completed->winner_registration_id);
         $this->assertSame('closest_to_center', $shootOff->decision_type);
-        $this->assertSame($judge->id, $shootOff->judged_by);
+        $this->assertNull($shootOff->judged_by);
         $this->assertNotNull($shootOff->judged_at);
     }
 
-    public function test_chief_judge_can_open_pending_shoot_off_from_judging_workspace(): void
+    public function test_bound_scoring_device_can_request_another_shoot_off(): void
     {
         $match = $this->compoundMatchAwaitingShootOff();
         $waiting = app(EliminationShootOffService::class)->record($match, '10', '10', null);
-        $event = $waiting->bracket->event;
-        $judge = User::factory()->create();
-        EventStaff::create([
-            'event_id'=>$event->id,
-            'user_id'=>$judge->id,
-            'role'=>'chief_judge',
-            'status'=>'active',
-            'invited_by'=>$judge->id,
-        ]);
+        $deviceToken = 'repeat-shoot-off-device-token';
+        $waiting->update(['device_token_hash'=>hash('sha256', $deviceToken), 'device_bound_at'=>now()]);
 
-        $this->actingAs($judge)
-            ->get(route('organizer.events.judging.index', $event))
-            ->assertOk()
-            ->assertSee('待主裁判判定')
-            ->assertSee($waiting->participantOneEntry->athlete_name)
-            ->assertSee($waiting->participantTwoEntry->athlete_name)
-            ->assertSee('進入判定')
-            ->assertSee(route('organizer.events.elimination.matches.show', [$event, $waiting]), false);
+        $this->withCookie('elimination_device_'.$waiting->id, $deviceToken)
+            ->post(route('elimination-stations.shoot-offs.adjudicate', $waiting->access_token), [
+                'decision'=>'re_shoot',
+            ])
+            ->assertSessionHas('success');
 
-        $this->actingAs($judge)
-            ->get(route('organizer.events.elimination.matches.show', [$event, $waiting]))
-            ->assertOk()
-            ->assertSee('送出主裁判判定');
-    }
-
-    public function test_judging_workspace_recovers_pending_shoot_off_when_match_status_is_out_of_sync(): void
-    {
-        $match = $this->compoundMatchAwaitingShootOff();
-        $waiting = app(EliminationShootOffService::class)->record($match, '10', '10', null);
-        $waiting->update(['status'=>'awaiting_shoot_off']);
-        $event = $waiting->bracket->event;
-        $judge = User::factory()->create();
-        EventStaff::create([
-            'event_id'=>$event->id,
-            'user_id'=>$judge->id,
-            'role'=>'chief_judge',
-            'status'=>'active',
-            'invited_by'=>$judge->id,
-        ]);
-
-        $this->actingAs($judge)
-            ->get(route('organizer.events.judging.index', $event))
-            ->assertOk()
-            ->assertSee($waiting->participantOneEntry->athlete_name)
-            ->assertSee('進入判定');
-
-        $this->assertSame('awaiting_judge', $waiting->fresh()->status);
+        $this->assertSame('awaiting_shoot_off', $waiting->fresh()->status);
+        $this->assertSame('re_shoot', $waiting->shootOffs()->firstOrFail()->status);
     }
 
     public function test_public_elimination_page_is_hidden_until_bracket_is_explicitly_published(): void
@@ -477,6 +494,82 @@ class EventEliminationBracketTest extends TestCase
             ->assertDontSee('256 人制')
             ->assertDontSee('管理場次')
             ->assertDontSee('查看場次');
+    }
+
+    public function test_next_round_scoring_is_hidden_and_locked_until_current_round_finishes(): void
+    {
+        [$event, $group] = $this->publishedRanking(range(60, 56), 'recurve', true);
+        $owner = User::factory()->create();
+        EventStaff::create([
+            'event_id'=>$event->id,
+            'user_id'=>$owner->id,
+            'role'=>'owner',
+            'status'=>'active',
+            'invited_by'=>$owner->id,
+        ]);
+        $bracket = app(IndividualEliminationBracketService::class)->create($event, $group, 8, false, $owner->id);
+        $readySemifinal = $bracket->matches()
+            ->where('match_type', 'main')
+            ->where('round_number', 2)
+            ->whereNotNull('participant_one_registration_id')
+            ->whereNotNull('participant_two_registration_id')
+            ->firstOrFail();
+
+        $this->actingAs($owner)
+            ->get(route('organizer.events.elimination.index', ['event'=>$event, 'bracket'=>$bracket->uuid]))
+            ->assertOk()
+            ->assertDontSee($readySemifinal->device_pin);
+
+        $this->get(route('elimination-stations.show', $readySemifinal->access_token))
+            ->assertStatus(423)
+            ->assertSee('前一輪賽事尚未全部完成');
+    }
+
+    public function test_score_manager_can_force_correct_winner_and_resynchronize_advancement(): void
+    {
+        [$event, $group] = $this->publishedRanking([40, 30, 20, 10], 'recurve', true);
+        $manager = User::factory()->create();
+        EventStaff::create(['event_id'=>$event->id, 'user_id'=>$manager->id, 'role'=>'score_manager', 'status'=>'active', 'invited_by'=>$manager->id]);
+        $bracket = app(IndividualEliminationBracketService::class)->create($event, $group, 4, false);
+        $match = $bracket->matches()->where('round_number', 1)->where('position', 1)->firstOrFail();
+
+        foreach (range(1, 3) as $_) {
+            $match = app(RecurveSetMatchService::class)->recordSet($match, ['10','10','10'], ['8','8','8'], null);
+        }
+        $correctWinner = $match->participant_two_registration_id;
+
+        $this->actingAs($manager)
+            ->patch(route('organizer.events.elimination.matches.recovery', [$event, $match]), [
+                'action'=>'force_winner', 'winner'=>'participant_two', 'reason'=>'紙本記分卡核對後修正',
+            ])
+            ->assertRedirect()
+            ->assertSessionHas('success');
+
+        $this->assertSame($correctWinner, $match->fresh()->winner_registration_id);
+        $this->assertSame($correctWinner, $match->nextMatch()->firstOrFail()->participant_one_registration_id);
+        $this->assertDatabaseHas('event_audit_logs', [
+            'event_id'=>$event->id, 'user_id'=>$manager->id, 'action'=>'elimination.match_winner_forced', 'subject_id'=>$match->id,
+        ]);
+    }
+
+    public function test_force_correction_is_blocked_after_next_round_has_started(): void
+    {
+        [$event, $group] = $this->publishedRanking([40, 30, 20, 10], 'recurve', true);
+        $owner = User::factory()->create();
+        EventStaff::create(['event_id'=>$event->id, 'user_id'=>$owner->id, 'role'=>'owner', 'status'=>'active', 'invited_by'=>$owner->id]);
+        $bracket = app(IndividualEliminationBracketService::class)->create($event, $group, 4, false);
+        $matches = $bracket->matches()->where('round_number', 1)->get();
+        foreach ($matches as $match) {
+            foreach (range(1, 3) as $_) app(RecurveSetMatchService::class)->recordSet($match->fresh(), ['10','10','10'], ['8','8','8'], null);
+        }
+        $final = $bracket->matches()->where('round_number', 2)->firstOrFail();
+        app(RecurveSetMatchService::class)->recordSet($final, ['10','9','9'], ['9','9','9'], null);
+
+        $this->actingAs($owner)
+            ->patch(route('organizer.events.elimination.matches.recovery', [$event, $matches->first()]), [
+                'action'=>'force_winner', 'winner'=>'participant_two', 'reason'=>'嘗試修正前場結果',
+            ])
+            ->assertSessionHasErrors('recovery');
     }
 
     public function test_event_cannot_be_completed_while_elimination_matches_are_unresolved(): void

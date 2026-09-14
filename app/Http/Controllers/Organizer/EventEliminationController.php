@@ -9,8 +9,8 @@ use App\Models\EventEliminationMatch;
 use App\Models\EventRankingSnapshot;
 use App\Services\IndividualEliminationBracketService;
 use App\Services\TeamEliminationBracketService;
-use App\Services\EliminationShootOffService;
 use App\Services\EliminationMatchProgressionService;
+use App\Services\EliminationMatchRecoveryService;
 use App\Support\EventPlanCatalog;
 use Illuminate\Validation\ValidationException;
 use Illuminate\Http\RedirectResponse;
@@ -182,17 +182,24 @@ class EventEliminationController extends Controller
         return back()->with('success', '舊設備與連結已失效，請使用新的 QR Code 與 PIN。');
     }
 
-    public function adjudicateShootOff(Request $request, Event $event, EventEliminationMatch $match, EliminationShootOffService $service): RedirectResponse
+    public function recoverMatch(Request $request, Event $event, EventEliminationMatch $match, EliminationMatchRecoveryService $service): RedirectResponse
     {
-        $this->authorize('adjudicateShootOff', $event);
+        $this->authorize('manageScoreCorrections', $event);
         abort_unless($match->bracket()->where('event_id', $event->id)->exists(), 404);
         $data = $request->validate([
-            'decision'=>['required', 'in:participant_one,participant_two,re_shoot'],
-            'decision_note'=>['required', 'string', 'max:1000'],
+            'action'=>['required', 'in:force_winner,reopen_shoot_off,resynchronize'],
+            'winner'=>['nullable', 'in:participant_one,participant_two'],
+            'reason'=>['required', 'string', 'min:3', 'max:1000'],
         ]);
-        $updated = $service->adjudicate($match, $data['decision'], $data['decision_note'], $request->user()->id);
-        $message = $updated->status === 'completed' ? '主裁判判定完成，勝者已自動晉級。' : '已判定同距離，請進行下一次加射。';
-
-        return redirect()->route('organizer.events.elimination.matches.show', [$event, $match])->with('success', $message);
+        if ($data['action'] === 'force_winner') {
+            $request->validate(['winner'=>['required', 'in:participant_one,participant_two']]);
+            $service->forceWinner($match, $data['winner'], $data['reason'], $request->user()->id);
+        } elseif ($data['action'] === 'reopen_shoot_off') {
+            $service->reopenShootOff($match, $data['reason'], $request->user()->id);
+        } else {
+            $service->resynchronize($match, $data['reason'], $request->user()->id);
+        }
+        return back()->with('success', '對抗賽異常處理已完成，操作前後內容已寫入紀錄。');
     }
+
 }

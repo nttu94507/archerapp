@@ -89,6 +89,20 @@ class EliminationScoringStationController extends Controller
         return back()->with('success', '加射箭值已保存。');
     }
 
+    public function adjudicateShootOff(Request $request, string $token, EliminationShootOffService $service): RedirectResponse
+    {
+        $match = $this->authorizedMatch($request, $token);
+        $data = $request->validate([
+            'decision'=>['required', 'in:participant_one,participant_two,re_shoot'],
+        ]);
+        $note = $data['decision'] === 're_shoot'
+            ? '現場裁判判定無法區分，重新加射。'
+            : '依現場裁判判定箭孔較接近靶心。';
+        $updated = $service->adjudicate($match, $data['decision'], $note, null);
+
+        return back()->with('success', $updated->status === 'completed' ? '獲勝方已確認並自動晉級。' : '已開放重新加射。');
+    }
+
     private function scores(Request $request): array
     {
         $match=$request->route('token')?EventEliminationMatch::where('access_token',$request->route('token'))->with('bracket')->first():null;
@@ -106,6 +120,15 @@ class EliminationScoringStationController extends Controller
             $match->bracket->event->auditLogs()->where('action', 'event.completed')->exists(),
             410,
             '此賽事已正式完成，對抗賽計分設備已停用。'
+        );
+        abort_if(
+            $match->bracket->matches()
+                ->where('match_type', 'main')
+                ->where('round_number', '<', $match->round_number)
+                ->whereNotIn('status', ['completed', 'walkover'])
+                ->exists(),
+            423,
+            '前一輪賽事尚未全部完成，本場計分尚未開放。'
         );
 
         return $match;

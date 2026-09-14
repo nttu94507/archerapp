@@ -5,7 +5,6 @@ namespace App\Http\Controllers\Organizer;
 use App\Http\Controllers\Controller;
 use App\Models\Event;
 use App\Models\EventAuditLog;
-use App\Models\EventEliminationMatch;
 use App\Models\EventScoringTarget;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -22,41 +21,12 @@ class EventJudgingController extends Controller
             'scoringSessions.targets.reviewer',
             'scoringSessions.targets.confirmer',
             'scoringSessions.targets.assignments.registration.scoreEntries' => fn ($query) => $query->orderBy('end_number'),
-            'eliminationBrackets' => fn ($query) => $query->with([
-                'group',
-                'matches' => fn ($matches) => $matches
-                    ->where('status', 'awaiting_judge')
-                    ->with(['participantOneEntry', 'participantTwoEntry', 'shootOffs']),
-            ]),
         ]);
 
         $role = $this->role($request, $event);
-        $canConfirm = $request->user()->isAdmin() || in_array($role, ['owner', 'manager', 'chief_judge'], true);
-        $canAdjudicateShootOff = $request->user()->can('adjudicateShootOff', $event);
-        $pendingEliminationJudgements = collect();
+        $canConfirm = $request->user()->isAdmin() || in_array($role, ['owner', 'manager', 'score_manager'], true);
 
-        if ($canAdjudicateShootOff) {
-            $pendingEliminationJudgements = EventEliminationMatch::query()
-                ->whereHas('bracket', fn ($query) => $query->where('event_id', $event->id))
-                ->whereHas('shootOffs', fn ($query) => $query->where('status', 'pending_judge'))
-                ->with([
-                    'bracket.group',
-                    'participantOneEntry', 'participantTwoEntry',
-                    'participantOneTeam', 'participantTwoTeam',
-                    'shootOffs' => fn ($query) => $query->where('status', 'pending_judge'),
-                ])
-                ->orderBy('round_number')
-                ->orderBy('position')
-                ->get();
-
-            // Repair older/inconsistent rows: a pending judge record is the source
-            // of truth and the match must be adjudicatable from the workspace.
-            $pendingEliminationJudgements
-                ->where('status', '!=', 'awaiting_judge')
-                ->each(fn (EventEliminationMatch $match) => $match->update(['status'=>'awaiting_judge']));
-        }
-
-        return view('organizer.judging.index', compact('event', 'role', 'canConfirm', 'canAdjudicateShootOff', 'pendingEliminationJudgements'));
+        return view('organizer.judging.index', compact('event', 'role', 'canConfirm'));
     }
 
     public function update(Request $request, Event $event, EventScoringTarget $target): RedirectResponse
@@ -66,7 +36,7 @@ class EventJudgingController extends Controller
         abort_if($target->status === 'dns', 422, '全靶選手皆為 DNS，無需裁判核對。');
 
         $role = $this->role($request, $event);
-        $canConfirm = $request->user()->isAdmin() || in_array($role, ['owner', 'manager', 'chief_judge'], true);
+        $canConfirm = $request->user()->isAdmin() || in_array($role, ['owner', 'manager', 'score_manager'], true);
         $allowed = $canConfirm ? ['reviewed', 'confirmed', 'disputed'] : ['reviewed', 'disputed'];
         $validated = $request->validate([
             'judge_status'=>['required', 'in:'.implode(',', $allowed)],

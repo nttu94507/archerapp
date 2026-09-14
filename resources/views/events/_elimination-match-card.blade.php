@@ -55,7 +55,7 @@
         @endphp
         <div class="border-t bg-amber-50 px-3 py-2 text-xs font-medium text-amber-800">
             加射：#{{ $pendingShootOff->attempt_number }} {{ $teamMatch ? implode('・', $pendingShootOff->participant_one_arrows ?? []) : $pendingShootOff->participant_one_arrow }}–{{ $teamMatch ? implode('・', $pendingShootOff->participant_two_arrows ?? []) : $pendingShootOff->participant_two_arrow }}
-            {{ $match->status === 'awaiting_judge' ? '等待主裁判判定' : '同距離，等待重新加射' }}
+            {{ $match->status === 'awaiting_judge' ? '等待現場判定' : '同距離，等待重新加射' }}
         </div>
     @endif
 </article>

@@ -7,48 +7,18 @@
     <div>
         <a href="{{ route('organizer.events.show', $event) }}" class="inline-flex min-h-11 items-center text-sm font-medium text-indigo-600">← 返回賽事工作台</a>
         <h1 class="text-2xl font-bold">裁判工作台</h1>
-        <p class="mt-1 text-sm text-gray-500">裁判核對各靶成績並標記爭議；主裁判完成簽核後，主辦方才能正式發布該組成績。</p>
+        <p class="mt-1 text-sm text-gray-500">裁判核對各靶成績並標記爭議；賽事管理員或成績管理員完成確認後即可發布成績。</p>
     </div>
 
     @if(session('success'))<div class="rounded-xl bg-green-50 p-4 text-sm text-green-700">{{ session('success') }}</div>@endif
     @if($errors->any())<div class="rounded-xl bg-red-50 p-4 text-sm text-red-700">{{ $errors->first() }}</div>@endif
-
-    @if($canAdjudicateShootOff)
-        <section class="overflow-hidden rounded-2xl border border-amber-200 bg-white shadow-sm">
-            <div class="flex items-center justify-between gap-3 border-b border-amber-200 bg-amber-50 p-4 sm:p-5">
-                <div><h2 class="font-bold text-amber-950">待主裁判判定</h2><p class="mt-1 text-sm text-amber-800">加射同分的場次由主裁判依箭孔距離靶心遠近判定。</p></div>
-                <span class="rounded-full bg-amber-200 px-3 py-1 text-sm font-bold text-amber-900">{{ $pendingEliminationJudgements->count() }}</span>
-            </div>
-            @forelse($pendingEliminationJudgements as $match)
-                @php
-                    $shootOff = $match->shootOffs->where('status', 'pending_judge')->last();
-                    $teamMatch = in_array($match->bracket->category, ['team', 'mixed_team'], true);
-                    $participantOneName = $teamMatch ? $match->participantOneTeam?->name : $match->participantOneEntry?->athlete_name;
-                    $participantTwoName = $teamMatch ? $match->participantTwoTeam?->name : $match->participantTwoEntry?->athlete_name;
-                @endphp
-                <article class="grid gap-4 border-b border-amber-100 p-4 last:border-b-0 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center sm:p-5">
-                    <div>
-                        <p class="text-xs font-medium text-gray-500">{{ $match->bracket->group->name }}・{{ $match->match_type === 'bronze' ? '季軍賽' : $match->label }} #{{ $match->position }}・第 {{ $shootOff?->attempt_number }} 次加射</p>
-                        <div class="mt-3 grid grid-cols-[minmax(0,1fr)_3rem_minmax(0,1fr)] items-center gap-2 text-center">
-                            <div class="rounded-xl border bg-gray-50 p-3"><p class="truncate font-semibold">{{ $participantOneName ?? '選手一' }}</p><p class="mt-1 text-2xl font-black text-amber-700">{{ $teamMatch ? implode('・', $shootOff?->participant_one_arrows ?? []) : $shootOff?->participant_one_arrow }}</p></div>
-                            <span class="text-sm font-bold text-gray-400">VS</span>
-                            <div class="rounded-xl border bg-gray-50 p-3"><p class="truncate font-semibold">{{ $participantTwoName ?? '選手二' }}</p><p class="mt-1 text-2xl font-black text-amber-700">{{ $teamMatch ? implode('・', $shootOff?->participant_two_arrows ?? []) : $shootOff?->participant_two_arrow }}</p></div>
-                        </div>
-                    </div>
-                    <a href="{{ route('organizer.events.elimination.matches.show', [$event, $match]) }}" class="inline-flex min-h-12 items-center justify-center rounded-xl bg-gray-900 px-5 text-sm font-semibold text-white">進入判定</a>
-                </article>
-            @empty
-                <p class="p-6 text-center text-sm text-gray-500">目前沒有等待主裁判判定的加射場次。</p>
-            @endforelse
-        </section>
-    @endif
 
     <div class="grid grid-cols-3 gap-3">
         @php
             $targets = $event->scoringSessions->flatMap->targets;
         @endphp
         <div class="rounded-2xl border bg-white p-4"><p class="text-xs text-gray-500">全部靶位</p><p class="mt-1 text-2xl font-bold">{{ $targets->count() }}</p></div>
-        <div class="rounded-2xl border bg-white p-4"><p class="text-xs text-gray-500">待主裁判簽核</p><p class="mt-1 text-2xl font-bold text-amber-700">{{ $targets->where('status', '!=', 'dns')->where('judge_status', '!=', 'confirmed')->count() }}</p></div>
+        <div class="rounded-2xl border bg-white p-4"><p class="text-xs text-gray-500">待成績確認</p><p class="mt-1 text-2xl font-bold text-amber-700">{{ $targets->where('status', '!=', 'dns')->where('judge_status', '!=', 'confirmed')->count() }}</p></div>
         <div class="rounded-2xl border bg-white p-4"><p class="text-xs text-gray-500">爭議靶位</p><p class="mt-1 text-2xl font-bold text-red-700">{{ $targets->where('judge_status', 'disputed')->count() }}</p></div>
     </div>
 
@@ -62,7 +32,7 @@
                     <article class="rounded-xl border p-4">
                         <div class="flex items-start justify-between gap-3">
                             <div><h3 class="font-semibold">靶號 {{ $target->target_number }}</h3><p class="mt-1 text-xs text-gray-500">計分 {{ $target->last_completed_end }} / {{ $session->totalEnds() }} 趟</p></div>
-                            <span class="rounded-full px-2.5 py-1 text-xs font-medium {{ $target->status === 'dns' ? 'bg-amber-100 text-amber-700' : ($target->judge_status === 'confirmed' ? 'bg-green-100 text-green-700' : ($target->judge_status === 'disputed' ? 'bg-red-100 text-red-700' : ($target->judge_status === 'reviewed' ? 'bg-indigo-100 text-indigo-700' : 'bg-gray-100 text-gray-600'))) }}">{{ $target->status === 'dns' ? '全靶 DNS・無需核對' : (['pending'=>'待核對','reviewed'=>'裁判已核對','confirmed'=>'主裁判已簽核','disputed'=>'成績爭議'][$target->judge_status] ?? $target->judge_status) }}</span>
+                            <span class="rounded-full px-2.5 py-1 text-xs font-medium {{ $target->status === 'dns' ? 'bg-amber-100 text-amber-700' : ($target->judge_status === 'confirmed' ? 'bg-green-100 text-green-700' : ($target->judge_status === 'disputed' ? 'bg-red-100 text-red-700' : ($target->judge_status === 'reviewed' ? 'bg-indigo-100 text-indigo-700' : 'bg-gray-100 text-gray-600'))) }}">{{ $target->status === 'dns' ? '全靶 DNS・無需核對' : (['pending'=>'待核對','reviewed'=>'裁判已核對','confirmed'=>'成績已確認','disputed'=>'成績爭議'][$target->judge_status] ?? $target->judge_status) }}</span>
                         </div>
                         @php
                             $twoRounds = (int) $session->total_arrows === 72
@@ -137,7 +107,7 @@
                             <div class="grid {{ $canConfirm ? 'grid-cols-3' : 'grid-cols-2' }} gap-2">
                                 <button name="judge_status" value="reviewed" class="min-h-11 rounded-xl border border-indigo-200 px-3 text-xs font-medium text-indigo-700">裁判核對完成</button>
                                 <button name="judge_status" value="disputed" class="min-h-11 rounded-xl border border-red-200 px-3 text-xs font-medium text-red-700">標記爭議</button>
-                                @if($canConfirm)<button name="judge_status" value="confirmed" class="min-h-11 rounded-xl bg-green-600 px-3 text-xs font-medium text-white">主裁判簽核</button>@endif
+                                @if($canConfirm)<button name="judge_status" value="confirmed" class="min-h-11 rounded-xl bg-green-600 px-3 text-xs font-medium text-white">確認成績</button>@endif
                             </div>
                         </form>@endif
                     </article>

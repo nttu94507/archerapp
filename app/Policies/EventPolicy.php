@@ -14,7 +14,7 @@ class EventPolicy
 
     public function viewManagement(User $user, Event $event): bool
     {
-        return $this->hasRole($user, $event, ['owner', 'manager', 'staff', 'score_manager', 'judge', 'chief_judge', 'volunteer', 'viewer']);
+        return $this->hasRole($user, $event, ['owner', 'manager', 'staff', 'score_manager', 'judge', 'volunteer', 'viewer']);
     }
 
     public function update(User $user, Event $event): bool
@@ -39,7 +39,7 @@ class EventPolicy
 
     public function viewResults(User $user, Event $event): bool
     {
-        return $this->canOperate($user) && $this->hasRole($user, $event, ['owner', 'manager', 'score_manager', 'chief_judge']);
+        return $this->canOperate($user) && $this->hasRole($user, $event, ['owner', 'manager', 'score_manager']);
     }
 
     public function publishResults(User $user, Event $event): bool
@@ -50,12 +50,12 @@ class EventPolicy
 
     public function manageScoreCorrections(User $user, Event $event): bool
     {
-        return $this->canOperate($user) && $this->hasRole($user, $event, ['owner', 'manager', 'score_manager', 'chief_judge']);
+        return $this->canOperate($user) && $this->hasRole($user, $event, ['owner', 'manager', 'score_manager']);
     }
 
     public function approveResults(User $user, Event $event): bool
     {
-        return $this->canOperate($user) && $this->hasRole($user, $event, ['owner', 'score_manager', 'chief_judge']);
+        return $this->canOperate($user) && $this->hasRole($user, $event, ['owner', 'manager', 'score_manager']);
     }
 
     public function manageStaff(User $user, Event $event): bool
@@ -70,17 +70,12 @@ class EventPolicy
 
     public function manageJudging(User $user, Event $event): bool
     {
-        return $this->canOperate($user) && ! $event->isOfficiallyCompleted() && $this->hasRole($user, $event, ['owner', 'manager', 'judge', 'chief_judge']);
+        return $this->canOperate($user) && ! $event->isOfficiallyCompleted() && $this->hasRole($user, $event, ['owner', 'manager', 'score_manager', 'judge']);
     }
 
     public function manageShootOff(User $user, Event $event): bool
     {
-        return $this->canOperate($user) && ! $event->isOfficiallyCompleted() && $this->hasRole($user, $event, ['owner', 'manager', 'staff', 'score_manager', 'chief_judge']);
-    }
-
-    public function adjudicateShootOff(User $user, Event $event): bool
-    {
-        return $this->canOperate($user) && ! $event->isOfficiallyCompleted() && $this->hasRole($user, $event, ['chief_judge']);
+        return $this->canOperate($user) && ! $event->isOfficiallyCompleted() && $this->hasRole($user, $event, ['owner', 'manager', 'staff', 'score_manager']);
     }
 
     private function canOperate(User $user): bool

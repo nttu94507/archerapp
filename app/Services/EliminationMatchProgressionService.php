@@ -69,7 +69,7 @@ class EliminationMatchProgressionService
     {
         if(!$destination||!$slot||!$teamId)return;$word=$slot===1?'one':'two';
         $destination->update(["participant_{$word}_team_id"=>$teamId,"participant_{$word}_seed"=>$seed]);$destination->refresh();
-        if($destination->participant_one_team_id&&$destination->participant_two_team_id)$destination->update(['status'=>'ready']);
+        if($destination->participant_one_team_id&&$destination->participant_two_team_id&&$destination->status==='pending')$destination->update(['status'=>'ready']);
     }
 
     private function placeParticipant(?EventEliminationMatch $destination, ?int $slot, ?EventRankingSnapshotEntry $entry): void
@@ -82,7 +82,7 @@ class EliminationMatchProgressionService
             "participant_{$word}_seed"=>$entry->seed_position,
         ]);
         $destination->refresh();
-        if ($destination->participant_one_registration_id && $destination->participant_two_registration_id) {
+        if ($destination->participant_one_registration_id && $destination->participant_two_registration_id && $destination->status === 'pending') {
             $destination->update(['status'=>'ready']);
         }
     }

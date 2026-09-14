@@ -160,7 +160,7 @@ Route::prefix('organizer')->middleware('auth')->name('organizer.')->group(functi
     Route::get('events/{event}/elimination/matches/{match}/qrcode', [OrganizerEliminationController::class, 'qrCode'])->name('events.elimination.matches.qrcode');
     Route::delete('events/{event}/elimination/matches/{match}/device', [OrganizerEliminationController::class, 'releaseDevice'])->name('events.elimination.matches.device.destroy');
     Route::get('events/{event}/elimination/matches/{match}', [OrganizerEliminationController::class, 'showMatch'])->name('events.elimination.matches.show');
-    Route::post('events/{event}/elimination/matches/{match}/shoot-offs/adjudicate', [OrganizerEliminationController::class, 'adjudicateShootOff'])->name('events.elimination.matches.shoot-offs.adjudicate');
+    Route::patch('events/{event}/elimination/matches/{match}/recovery', [OrganizerEliminationController::class, 'recoverMatch'])->name('events.elimination.matches.recovery');
     Route::get('events/{event}/scoring', [OrganizerScoringController::class, 'index'])->name('events.scoring.index');
     Route::post('events/{event}/scoring', [OrganizerScoringController::class, 'store'])->name('events.scoring.store');
     Route::delete('events/{event}/scoring/targets/{target}/device', [OrganizerScoringController::class, 'releaseDevice'])->name('events.scoring.targets.device.destroy');
@@ -189,6 +189,7 @@ Route::post('/elimination-stations/{token}/claim', [EliminationScoringStationCon
 Route::post('/elimination-stations/{token}/sets', [EliminationScoringStationController::class, 'storeSet'])->name('elimination-stations.sets.store');
 Route::post('/elimination-stations/{token}/ends', [EliminationScoringStationController::class, 'storeEnd'])->name('elimination-stations.ends.store');
 Route::post('/elimination-stations/{token}/shoot-offs', [EliminationScoringStationController::class, 'storeShootOff'])->name('elimination-stations.shoot-offs.store');
+Route::post('/elimination-stations/{token}/shoot-offs/adjudicate', [EliminationScoringStationController::class, 'adjudicateShootOff'])->name('elimination-stations.shoot-offs.adjudicate');
 
 Route::middleware('auth')->group(function () {
     Route::get('/badge-claims/{token}', [EventBadgeClaimController::class, 'show'])->name('badge-claims.show');
