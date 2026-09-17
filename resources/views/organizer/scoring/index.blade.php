@@ -112,17 +112,16 @@
                                 <button type="button" data-copy="{{ $stationUrl }}" class="copy-station min-h-11 rounded-xl border px-3 text-sm">複製連結</button>
                             </div>
                             <p class="mt-2 text-xs text-gray-400">最後同步：{{ $target->last_synced_at?->diffForHumans() ?? '尚未同步' }}</p>
-                            @php
-                                $targetStarted = $target->last_completed_end > 0 || ! in_array($target->status, ['ready', 'dns'], true);
-                                $canChangeTarget = ! $targetStarted || auth()->user()->can('manageScoreCorrections', $event);
-                            @endphp
-                            @if($canChangeTarget)
+                            @if(
+                                ! ($target->last_completed_end > 0 || ! in_array($target->status, ['ready', 'dns'], true))
+                                || auth()->user()->can('manageScoreCorrections', $event)
+                            )
                                 <details class="mt-3 rounded-xl border px-3">
                                     <summary class="flex min-h-11 cursor-pointer items-center text-sm font-medium">調整靶號</summary>
                                     <form method="POST" action="{{ route('organizer.events.scoring.targets.target-number', [$event, $target]) }}" class="grid gap-2 border-t py-3" onsubmit="return confirm('修改後舊設備連結會失效；若輸入現有靶號，兩靶將交換。確定繼續？')">
                                         @csrf @method('PATCH')
                                         <input type="number" name="target_number" min="1" max="999" required value="{{ $target->target_number }}" class="min-h-11 rounded-lg border-gray-300" aria-label="新靶號">
-                                        @if($targetStarted)<textarea name="reason" required minlength="3" maxlength="500" rows="2" class="rounded-lg border-gray-300 text-sm" placeholder="修改原因（必填）"></textarea>@endif
+                                        @if($target->last_completed_end > 0 || ! in_array($target->status, ['ready', 'dns'], true))<textarea name="reason" required minlength="3" maxlength="500" rows="2" class="rounded-lg border-gray-300 text-sm" placeholder="修改原因（必填）"></textarea>@endif
                                         <button class="min-h-11 rounded-lg bg-indigo-600 text-sm font-semibold text-white">儲存靶號</button>
                                     </form>
                                 </details>
