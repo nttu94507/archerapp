@@ -5,6 +5,9 @@
     @endphp
     @foreach([[1,$match->participant_one_seed,$teamMatch?$match->participantOneTeam:$match->participantOneEntry],[2,$match->participant_two_seed,$teamMatch?$match->participantTwoTeam:$match->participantTwoEntry]] as [$slot,$seed,$entry])
     @php
+        $targetNumber = $slot === 1
+            ? ($match->participant_one_target_number ?? $match->target_number)
+            : ($match->participant_two_target_number ?? $match->target_number);
         $roundTotals = ($bracket->scoring_mode === 'set' ? $match->sets : $match->ends)
             ->take(5)
             ->map(function ($round) use ($slot, $bracket): array {
@@ -27,13 +30,13 @@
                 : ($slot === 1 ? $latestShootOff->participant_one_arrow : $latestShootOff->participant_two_arrow))
             : null;
     @endphp
-    <div class="grid min-h-14 grid-cols-[2rem_minmax(0,1fr)_auto] items-center gap-2 border-t px-3 py-2">
-        <span class="text-xs font-bold text-gray-400">{{ $seed ?? '—' }}</span>
+    <div class="grid min-h-14 grid-cols-[3rem_minmax(0,1fr)_auto] items-center gap-2 border-t px-3 py-2">
+        <span class="truncate text-center text-xs font-bold text-gray-500" title="{{ $targetNumber ? '靶號 '.$targetNumber : '靶號未設定' }}">{{ $targetNumber ?? '—' }}</span>
         <div class="min-w-0">
             @php
                 $entryName = $teamMatch ? $entry?->name : $entry?->athlete_name;
             @endphp
-            <p class="truncate text-sm font-semibold">{{ $entryName ?? ($match->round_number === 1 ? '輪空' : '等待前一輪勝者') }}</p>
+            <p class="truncate text-sm font-semibold">{{ $entryName ?? ($match->round_number === 1 ? '輪空' : '等待前一輪勝者') }} @if($entry && $seed)<span class="text-xs font-medium text-gray-400">#{{ $seed }}</span>@endif</p>
             @if($entry && ($roundTotals->isNotEmpty() || $shootOffArrow !== null))
                 <div class="mt-1 flex flex-wrap gap-1" aria-label="{{ $entryName }}各輪分數">
                     @foreach($roundTotals as $roundIndex => $roundResult)
@@ -48,7 +51,6 @@
         @if($entry)<strong class="text-lg text-indigo-700">{{ $bracket->scoring_mode === 'set' ? ($slot === 1 ? $match->participant_one_set_points : $match->participant_two_set_points) : ($slot === 1 ? $match->participant_one_total : $match->participant_two_total) }}</strong>@endif
     </div>
     @endforeach
-    @if($bracket->scoring_mode === 'set' && $match->sets->isNotEmpty())<div class="border-t bg-gray-50 px-3 py-2 text-xs text-gray-500">@foreach($match->sets as $set)<span class="mr-2">第{{ $set->set_number }}局 {{ $set->participant_one_total }}–{{ $set->participant_two_total }}</span>@endforeach</div>@elseif($bracket->scoring_mode === 'cumulative' && $match->ends->isNotEmpty())<div class="border-t bg-gray-50 px-3 py-2 text-xs text-gray-500">已完成 {{ $match->ends->count() }} / {{ $teamMatch ? 4 : 5 }} 趟</div>@endif
     @if(in_array($match->status, ['awaiting_shoot_off', 'awaiting_judge'], true) && $match->shootOffs->isNotEmpty())
         @php
             $pendingShootOff = $match->shootOffs->last();
