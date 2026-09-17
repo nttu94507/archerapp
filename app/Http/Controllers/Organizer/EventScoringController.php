@@ -21,9 +21,13 @@ use BaconQrCode\Writer;
 
 class EventScoringController extends Controller
 {
-    public function index(Event $event): View
+    public function index(Event $event): View|RedirectResponse
     {
         $this->authorize('manageScores', $event);
+        if ($event->competition_format === 'elimination_only') {
+            return redirect()->route('organizer.events.elimination.index', $event)
+                ->withErrors(['scoring'=>'純對抗賽不需要資格賽排靶，請直接建立或管理對抗表。']);
+        }
         $requiresCheckIn = $event->requiresCheckIn();
         $event->load(['groups' => fn ($query) => $query->withCount([
             'registrations as active_registrations_count' => fn ($registration) => $registration->whereIn('status', ['registered', 'checked_in']),
@@ -53,6 +57,7 @@ class EventScoringController extends Controller
     public function store(Request $request, Event $event): RedirectResponse
     {
         $this->authorize('manageScores', $event);
+        abort_if($event->competition_format === 'elimination_only', 422, '純對抗賽不需要資格賽排靶。');
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:120'],
             'athletes_per_target' => ['required', 'integer', 'between:2,4'],

@@ -477,6 +477,23 @@ class EventController extends Controller
             return ['title'=>'發布賽事並開放報名', 'description'=>'資料確認完成後發布，選手即可從公開頁選擇組別報名。', 'label'=>'發布賽事', 'method'=>'POST', 'url'=>route('organizer.events.submit', $event)];
         }
 
+        if ($event->competition_format === 'elimination_only') {
+            if ($event->active_registrations_count === 0 && $request->user()->can('manageRegistrations', $event)) {
+                return ['title'=>'等待選手報名', 'description'=>'', 'label'=>'查看賽事頁', 'url'=>route('events.show', $event)];
+            }
+            if ($completionCheck['ready'] && $request->user()->can('update', $event)) {
+                return ['title'=>'所有對抗賽均已完成', 'description'=>'正式結案後會停用所有對抗計分設備。', 'label'=>'完成整場賽事', 'method'=>'POST', 'url'=>route('organizer.events.complete', $event)];
+            }
+            if ($request->user()->can('viewResults', $event)) {
+                return [
+                    'title'=>$event->eliminationBrackets()->exists() ? '繼續進行對抗賽' : '確認名單並隨機抽籤',
+                    'description'=>$event->eliminationBrackets()->exists() ? '查看目前對戰進度與計分設備。' : '建立對抗表時會鎖定隨機籤序並停止報名。',
+                    'label'=>'前往對抗賽管理',
+                    'url'=>route('organizer.events.elimination.index', $event),
+                ];
+            }
+        }
+
         $hasScoring = $event->scoringSessions()->exists();
         if (! $hasScoring) {
             if ($event->active_registrations_count === 0 && $request->user()->can('manageRegistrations', $event)) {
@@ -484,9 +501,6 @@ class EventController extends Controller
                     return ['title'=>'等待選手報名', 'description'=>'', 'label'=>'查看賽事頁', 'url'=>route('events.show', $event)];
                 }
                 return ['title'=>'先讓選手完成報名', 'description'=>'目前尚無有效報名；分享賽事或進入名單頁確認報名狀況。', 'label'=>'查看報名名單', 'url'=>route('organizer.events.registrations.index', $event)];
-            }
-            if ($event->competition_format === 'elimination_only' && $request->user()->can('viewResults', $event)) {
-                return ['title'=>'建立隨機對抗表', 'description'=>'確認報名名單後即可隨機抽籤；建立籤表時會同步停止報名。', 'label'=>'前往對抗賽管理', 'url'=>route('organizer.events.elimination.index', $event)];
             }
             $hasUnreported = $event->registrations()->where('status', 'registered')->whereNull('checked_in_at')->exists();
             if ($event->requiresCheckIn() && $hasUnreported && $request->user()->can('manageRegistrations', $event)) {
@@ -507,6 +521,16 @@ class EventController extends Controller
         $rankingsPublished = (clone $rankingRegistrations)->exists()
             && (clone $rankingRegistrations)->whereNull('result_published_at')->doesntExist();
         $hasElimination = $event->eliminationBrackets()->exists();
+
+        if ($event->competition_format === 'qualification_elimination' && $rankingsPublished && ! $hasElimination
+            && $request->user()->can('viewResults', $event)) {
+            return [
+                'title'=>'排名賽已完成，建立對抗表',
+                'description'=>'請依正式排名種子建立對抗表，完成所有對戰後才能結案。',
+                'label'=>'前往對抗賽管理',
+                'url'=>route('organizer.events.elimination.index', $event),
+            ];
+        }
 
         if ($rankingsPublished && $hasElimination && ! $completionCheck['ready'] && $request->user()->can('viewResults', $event)) {
             return [

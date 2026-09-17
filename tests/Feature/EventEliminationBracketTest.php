@@ -14,6 +14,7 @@ use App\Services\RecurveSetMatchService;
 use App\Services\CompoundCumulativeMatchService;
 use App\Services\EliminationShootOffService;
 use App\Services\DirectEliminationDrawService;
+use App\Services\EventCompletionService;
 use App\Support\EventPlanCatalog;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Validation\ValidationException;
@@ -22,6 +23,29 @@ use Tests\TestCase;
 class EventEliminationBracketTest extends TestCase
 {
     use RefreshDatabase;
+
+    public function test_qualification_only_event_hides_and_rejects_elimination_creation(): void
+    {
+        $event = Event::factory()->create([
+            'competition_format'=>'qualification',
+            'plan_code'=>EventPlanCatalog::EVENT_PASS,
+            'plan_features_snapshot'=>EventPlanCatalog::features(EventPlanCatalog::EVENT_PASS),
+            'plan_limits_snapshot'=>EventPlanCatalog::limits(EventPlanCatalog::EVENT_PASS),
+        ]);
+        $group = EventGroup::factory()->create(['event_id'=>$event->id]);
+        $owner = User::factory()->create();
+        EventStaff::create(['event_id'=>$event->id, 'user_id'=>$owner->id, 'role'=>'owner', 'status'=>'active']);
+
+        $this->actingAs($owner)->get(route('organizer.events.show', $event))
+            ->assertOk()
+            ->assertDontSee('對抗賽管理');
+
+        $this->actingAs($owner)->post(route('organizer.events.elimination.store', $event), [
+            'event_group_id'=>$group->id,
+            'bracket_size'=>4,
+            'category'=>'individual',
+        ])->assertSessionHasErrors('competition_format');
+    }
 
     public function test_direct_elimination_draw_uses_active_registrations_and_locks_registration(): void
     {
@@ -33,6 +57,8 @@ class EventEliminationBracketTest extends TestCase
             'reg_end'=>now()->addWeek(),
         ]);
         $group = EventGroup::factory()->create(['event_id'=>$event->id, 'name'=>'公開組', 'bow_type'=>'recurve']);
+        $owner = User::factory()->create();
+        EventStaff::create(['event_id'=>$event->id, 'user_id'=>$owner->id, 'role'=>'owner', 'status'=>'active']);
         foreach (range(1, 4) as $position) {
             $user = User::factory()->create();
             EventRegistration::create([
@@ -43,6 +69,7 @@ class EventEliminationBracketTest extends TestCase
 
         $snapshot = app(DirectEliminationDrawService::class)->draw($event, $group);
         $bracket = app(IndividualEliminationBracketService::class)->create($event, $group, 4, true);
+        $completion = app(EventCompletionService::class)->inspect($event->fresh());
 
         $this->assertSame('random_draw', $snapshot->ranking_rule['method']);
         $this->assertSame([1, 2, 3, 4], $snapshot->entries->pluck('seed_position')->sort()->values()->all());
@@ -50,6 +77,14 @@ class EventEliminationBracketTest extends TestCase
         $this->assertSame('set', $bracket->scoring_mode);
         $this->assertTrue($event->fresh()->reg_end->lessThanOrEqualTo(now()));
         $this->assertDatabaseHas('event_audit_logs', ['event_id'=>$event->id, 'action'=>'elimination.random_draw_locked']);
+        $this->assertFalse(collect($completion['blockers'])->contains(fn ($blocker) => str_contains($blocker, '排名成績')));
+        $this->actingAs($owner)->get(route('organizer.events.show', $event))
+            ->assertOk()
+            ->assertDontSee('靶位與計分')
+            ->assertDontSee('成績核對與發布')
+            ->assertSee('對抗賽管理');
+        $this->actingAs($owner)->get(route('organizer.events.scoring.index', $event))
+            ->assertRedirect(route('organizer.events.elimination.index', $event));
     }
 
     public function test_paid_event_builds_standard_seeded_individual_bracket_and_bronze_match(): void

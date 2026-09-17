@@ -86,6 +86,9 @@ class EventEliminationController extends Controller
         DirectEliminationDrawService $directDraw,
     ): RedirectResponse {
         $this->authorize('manageScoreCorrections', $event);
+        if ($event->competition_format === 'qualification' && ! $event->eliminationBrackets()->exists()) {
+            throw ValidationException::withMessages(['competition_format'=>'此賽事設定為只有資格賽，不能建立對抗表。']);
+        }
         $data = $request->validate([
             'event_group_id'=>['required', 'integer'],
             'bracket_size'=>['required', 'integer', 'in:4,8,16,32,64,128'],

@@ -4,12 +4,13 @@
 @php
     $hasScoring = $event->scoringSessions()->exists();
     $hasElimination = $event->eliminationBrackets()->exists();
+    $isEliminationOnly = $event->competition_format === 'elimination_only';
     $rankingRegistrations = $event->registrations()->whereIn('status', ['registered', 'checked_in', 'no_show']);
     $publishedRankings = (clone $rankingRegistrations)->exists() && (clone $rankingRegistrations)->whereNull('result_published_at')->doesntExist();
-    $showEliminationStage = $event->hasPlanFeature('individual_elimination') || $hasElimination;
+    $showEliminationStage = $event->competition_format !== 'qualification' || $hasElimination;
     $statusLabel = $officiallyCompleted ? '已結束' : ($event->cancelled_at ? '已取消' : match ($event->status) {
         'draft', 'pending' => '草稿', 'rejected' => '已下架', 'archived' => '已封存',
-        default => $completionCheck['ready'] ? '可完成賽事' : ($hasElimination && $publishedRankings ? '對抗賽進行中' : ($hasScoring ? '排名賽進行中' : '報名中')),
+        default => $completionCheck['ready'] ? '可完成賽事' : ($hasElimination ? '對抗賽進行中' : ($hasScoring ? '排名賽進行中' : '報名中')),
     });
     $stageClass = fn (bool $done, bool $active) => $done ? 'bg-emerald-600 text-white border-emerald-600' : ($active ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-gray-400 border-gray-200');
 @endphp
@@ -28,8 +29,10 @@
             <section class="rounded-2xl border bg-white p-5 shadow-sm">
                 <div class="flex flex-wrap items-center justify-between gap-3"><div><p class="text-xs text-gray-400">目前狀態</p><h2 class="mt-1 text-xl font-bold {{ $officiallyCompleted ? 'text-emerald-700' : '' }}">{{ $statusLabel }}</h2>@if($event->cancelled_at && $event->review_note)<p class="mt-1 text-sm text-gray-500">{{ $event->review_note }}</p>@endif</div>@if($event->isPublished() && !$officiallyCompleted)<span class="rounded-full px-3 py-1 text-xs font-medium {{ $event->visibility === 'unlisted' ? 'bg-slate-100 text-slate-600' : 'bg-emerald-100 text-emerald-700' }}">{{ $event->visibility === 'unlisted' ? '非公開' : '公開' }}</span>@endif</div>
                 @php
-                    $stages = [['建立', true, !$event->isPublished()], ['報名', $hasScoring || $publishedRankings, $event->isPublished() && !$hasScoring], ['排名', $publishedRankings, $hasScoring && !$publishedRankings]];
-                    if ($showEliminationStage) $stages[] = ['對抗', $hasElimination && $completionCheck['ready'], $hasElimination && $publishedRankings && !$completionCheck['ready']];
+                    $stages = $isEliminationOnly
+                        ? [['建立', true, !$event->isPublished()], ['報名', $hasElimination, $event->isPublished() && !$hasElimination], ['對抗', $hasElimination && $completionCheck['ready'], $hasElimination && !$completionCheck['ready']]]
+                        : [['建立', true, !$event->isPublished()], ['報名', $hasScoring || $publishedRankings, $event->isPublished() && !$hasScoring], ['排名', $publishedRankings, $hasScoring && !$publishedRankings]];
+                    if (!$isEliminationOnly && $showEliminationStage) $stages[] = ['對抗', $hasElimination && $completionCheck['ready'], $hasElimination && $publishedRankings && !$completionCheck['ready']];
                     $stages[] = ['完成', $officiallyCompleted, $completionCheck['ready'] && !$officiallyCompleted];
                 @endphp
                 <div class="mt-6 flex items-start">@foreach($stages as [$label, $done, $active])<div class="relative flex flex-1 flex-col items-center text-center">@if(!$loop->first)<span class="absolute right-1/2 top-4 h-0.5 w-full {{ $done || $active ? 'bg-indigo-300' : 'bg-gray-200' }}"></span>@endif<span class="relative z-10 flex h-8 w-8 items-center justify-center rounded-full border text-xs font-bold {{ $stageClass($done, $active) }}">{{ $done ? '✓' : $loop->iteration }}</span><span class="mt-2 text-xs font-medium {{ $active ? 'text-indigo-700' : ($done ? 'text-emerald-700' : 'text-gray-400') }}">{{ $label }}</span></div>@endforeach</div>
@@ -42,11 +45,11 @@
         <div x-show="tab==='execute'" x-cloak class="overflow-hidden rounded-2xl border bg-white px-4 shadow-sm sm:px-5"><div class="divide-y">
             @if($event->plan_code !== \App\Support\EventPlanCatalog::FREE)@can('manageRegistrations',$event)<a href="{{ route('organizer.events.registrations.index',$event) }}" class="flex min-h-16 items-center justify-between gap-3"><span class="font-semibold">{{ config('product.mvp_mode', true) ? '選手名單' : '報名與繳費' }}</span><span class="flex items-center gap-3 text-sm text-gray-500">{{ $event->active_registrations_count }} 人 @if(!config('product.mvp_mode', true) && $event->pending_payments_count)<b class="text-amber-600">待繳 {{ $event->pending_payments_count }}</b>@endif <b>›</b></span></a>@endcan @endif
             @if($event->requiresCheckIn())@can('manageRegistrations',$event)<a href="{{ route('organizer.events.check-in.index',$event) }}" class="flex min-h-16 items-center justify-between"><span class="font-semibold">現場報到</span><span class="text-sm text-gray-500">{{ $statusCounts['checked_in'] ?? 0 }} 人　›</span></a>@endcan @endif
-            @can('manageScores',$event)<a href="{{ route('organizer.events.scoring.index',$event) }}" class="flex min-h-16 items-center justify-between"><span class="font-semibold">靶位與計分</span><span class="text-gray-400">›</span></a>@endcan
-            @can('manageJudging',$event)<a href="{{ route('organizer.events.judging.index',$event) }}" class="flex min-h-16 items-center justify-between"><span class="font-semibold">裁判工作台</span><span class="text-gray-400">›</span></a>@endcan
+            @if(!$isEliminationOnly)@can('manageScores',$event)<a href="{{ route('organizer.events.scoring.index',$event) }}" class="flex min-h-16 items-center justify-between"><span class="font-semibold">靶位與計分</span><span class="text-gray-400">›</span></a>@endcan @endif
+            @if(!$isEliminationOnly)@can('manageJudging',$event)<a href="{{ route('organizer.events.judging.index',$event) }}" class="flex min-h-16 items-center justify-between"><span class="font-semibold">裁判工作台</span><span class="text-gray-400">›</span></a>@endcan @endif
             @if(!config('product.mvp_mode', true) && $event->groups->contains('is_team', true))@can('viewManagement',$event)<a href="{{ route('organizer.events.teams.overview',$event) }}" class="flex min-h-16 items-center justify-between"><span class="font-semibold">團體與混雙名單</span><span class="text-sm text-gray-500">{{ $event->groups->where('is_team', true)->count() }} 個組別　›</span></a>@endcan @endif
-            @can('viewResults',$event)<a href="{{ route('organizer.events.results.index',$event) }}" class="flex min-h-16 items-center justify-between"><span class="font-semibold">成績核對與發布</span><span class="text-sm text-gray-500">已核准 {{ $event->verified_results_count }}　›</span></a>@endcan
-            @can('viewResults',$event)@if($event->hasPlanFeature('individual_elimination') || $event->canUpgradeToEventPass())<a href="{{ $event->hasPlanFeature('individual_elimination') ? route('organizer.events.elimination.index',$event) : route('store.index', ['event'=>$event->uuid]) }}" class="flex min-h-16 items-center justify-between"><span class="font-semibold">對抗賽管理</span><span class="text-sm text-gray-500">@unless($event->hasPlanFeature('individual_elimination'))升級　@endunless›</span></a>@endif @endcan
+            @if(!$isEliminationOnly)@can('viewResults',$event)<a href="{{ route('organizer.events.results.index',$event) }}" class="flex min-h-16 items-center justify-between"><span class="font-semibold">成績核對與發布</span><span class="text-sm text-gray-500">已核准 {{ $event->verified_results_count }}　›</span></a>@endcan @endif
+            @can('viewResults',$event)@if($showEliminationStage && ($event->hasPlanFeature('individual_elimination') || $event->canUpgradeToEventPass()))<a href="{{ $event->hasPlanFeature('individual_elimination') ? route('organizer.events.elimination.index',$event) : route('store.index', ['event'=>$event->uuid]) }}" class="flex min-h-16 items-center justify-between"><span class="font-semibold">對抗賽管理</span><span class="text-sm text-gray-500">@unless($event->hasPlanFeature('individual_elimination'))升級　@endunless›</span></a>@endif @endcan
         </div></div>
 
         <div x-show="tab==='manage'" x-cloak class="space-y-5">

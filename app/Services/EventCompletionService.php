@@ -21,7 +21,7 @@ class EventCompletionService
 
         if ((clone $registrations)->doesntExist()) {
             $blockers[] = '賽事沒有可結案的參賽選手。';
-        } else {
+        } elseif ($event->competition_format !== 'elimination_only') {
             $unpublished = (clone $registrations)->whereNull('result_published_at')->count();
             if ($unpublished > 0) $blockers[] = '仍有 '.$unpublished.' 位選手的排名成績尚未正式發布。';
         }
@@ -33,6 +33,12 @@ class EventCompletionService
         if ($unfinishedTargets > 0) $blockers[] = '仍有 '.$unfinishedTargets.' 個排名賽靶位尚未完成。';
 
         $brackets = $event->eliminationBrackets()->with(['group', 'matches'])->get();
+        if ($event->competition_format === 'elimination_only' && $brackets->isEmpty()) {
+            $blockers[] = '尚未建立對抗表。';
+        }
+        if ($event->competition_format === 'qualification_elimination' && $brackets->isEmpty()) {
+            $blockers[] = '資格賽已完成後，仍需建立並完成對抗表。';
+        }
         foreach ($brackets as $bracket) {
             $main = $bracket->matches->where('match_type', 'main');
             $final = $main->sortByDesc('round_number')->first();
