@@ -13,7 +13,6 @@
                 <p class="text-xs uppercase tracking-widest text-indigo-600 font-semibold">{{ $eventFinished ? 'Result' : 'Live' }}</p>
                 <h1 class="text-2xl font-bold text-gray-900">{{ $event->name }} {{ $liveLabel }}</h1>
                 <p class="text-sm text-gray-600">{{ $event->organizer }} · {{ $event->mode === 'indoor' ? '室內賽' : '室外賽' }}</p>
-                <p class="text-sm text-gray-500">{{ $event->start_date }} ~ {{ $event->end_date }}</p>
             </div>
             <div class="flex flex-wrap gap-3">
                 <a href="{{ route('events.show', $event) }}" class="inline-flex items-center rounded-xl border border-gray-200 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">回到賽事頁</a>
