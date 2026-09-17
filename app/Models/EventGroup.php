@@ -14,6 +14,10 @@ class EventGroup extends Model
     protected static function booted(): void
     {
         static::saved(function (EventGroup $group): void {
+            if ($group->event()->value('competition_format') === 'elimination_only') {
+                $group->phases()->where('type', 'qualification')->whereNull('locked_at')->delete();
+                return;
+            }
             $phase = $group->phases()
                 ->where('type', 'qualification')
                 ->where('sequence', 1)

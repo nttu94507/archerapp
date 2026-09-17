@@ -18,10 +18,11 @@ class OrganizerQualificationTest extends TestCase
         $user=User::factory()->create();
         $this->actingAs($user)->get(route('organizer.events.create'))
             ->assertOk()
-            ->assertSee('室外 70m／36 箭')
-            ->assertDontSee('室外 70m／72 箭')
-            ->assertSee('室內 18m／30 箭')
-            ->assertDontSee('室內 18m／60 箭');
+            ->assertSee('建立賽事')
+            ->assertSee('只有排名賽')
+            ->assertSee('排名賽後可建立對抗賽')
+            ->assertSee('只有對抗賽')
+            ->assertSee('組別設定');
         $this->actingAs($user)->post(route('organizer.events.store'), [
             'name'=>'會員自由賽事',
             'start_date'=>now()->addMonth()->toDateString(),

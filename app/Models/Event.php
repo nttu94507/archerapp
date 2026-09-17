@@ -33,7 +33,7 @@ class Event extends Model
 
     //
     protected $fillable = [
-        'name', 'start_date','end_date', 'mode', 'verified', 'level',
+        'name', 'start_date','end_date', 'mode', 'competition_format', 'verified', 'level',
         'organizer', 'reg_start', 'reg_end',
         'venue', 'map_link', 'lat', 'lng', 'status', 'published_at',
         'visibility', 'check_in_enabled',

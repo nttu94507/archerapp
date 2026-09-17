@@ -192,17 +192,16 @@ class OrganizerSubscriptionTest extends TestCase
         $this->assertDatabaseHas('event_groups', ['event_id' => $event->id, 'arrow_count' => 72]);
     }
 
-    public function test_create_event_shows_team_format_preview_and_persists_mixed_team_group(): void
+    public function test_create_event_shows_streamlined_steps_and_still_persists_mixed_team_group(): void
     {
         $subscriber=$this->approvedOrganizer('混雙主辦方');
         OrganizerSubscription::create(['user_id'=>$subscriber->id,'plan_code'=>EventPlanCatalog::SUBSCRIPTION,'status'=>OrganizerSubscription::STATUS_ACTIVE,'starts_at'=>now()]);
 
         $this->actingAs($subscriber)->get(route('organizer.events.create'))
-            ->assertOk()->assertSee('室外標準賽')->assertSee('室外短距離')->assertSee('室內賽')
-            ->assertSee('勾選報名組別')->assertSee('裸弓')->assertSee('將建立')
-            ->assertSee('賽事內容')->assertSee('3 人團體賽')->assertSee('男女混雙')->assertSee('建立架構預覽')
-            ->assertSee('反曲弓 70m')->assertSee('複合弓 50m')->assertSee('室內反曲弓 18m')->assertSee('自訂賽制')
-            ->assertSee('反曲弓 70 公尺男子組')->assertSee('反曲弓 30 公尺女子組')->assertSee('複合弓 50 公尺公開組');
+            ->assertOk()
+            ->assertSee('1 基本資料')->assertSee('2 組別設定')->assertSee('3 確認建立')
+            ->assertSee('只有排名賽')->assertSee('排名賽後可建立對抗賽')->assertSee('只有對抗賽')
+            ->assertSee('組別分類')->assertSee('排名賽賽制')->assertSee('自訂');
 
         $payload=array_merge($this->eventPayload('混雙快速賽事'),['submit_mode'=>'publish','groups'=>[0=>[
             'name'=>'反曲弓公開組','bow_type'=>'recurve','gender'=>'open','distance'=>'70m','arrow_count'=>72,
@@ -236,17 +235,18 @@ class OrganizerSubscriptionTest extends TestCase
         $this->assertTrue($event->groups()->firstOrFail()->live_results_visible);
     }
 
-    public function test_free_event_only_allows_preset_groups(): void
+    public function test_create_page_uses_shared_activity_and_gender_group_builder(): void
     {
         $organizer = $this->approvedOrganizer('模板主辦方');
 
         $this->actingAs($organizer)
             ->get(route('organizer.events.create'))
             ->assertOk()
-            ->assertSee('id="free-bow"', false)
-            ->assertSee('id="free-distance"', false)
-            ->assertDontSee('id="event-template-grid"', false)
-            ->assertDontSee('data-preset="custom"', false);
+            ->assertSee('id="activity-options"', false)
+            ->assertSee('class="gender-option"', false)
+            ->assertSee('公開組')
+            ->assertSee('男子組')
+            ->assertSee('女子組');
 
         $payload = array_merge($this->eventPayload('免費自訂賽事'), ['submit_mode'=>'publish', 'groups'=>[0=>[
             'name'=>'自訂 25 公尺組', 'bow_type'=>'barebow', 'gender'=>'open',
@@ -255,24 +255,25 @@ class OrganizerSubscriptionTest extends TestCase
 
         $this->actingAs($organizer)
             ->post(route('organizer.events.store'), $payload)
-            ->assertSessionHasErrors('groups');
-        $this->assertDatabaseMissing('events', ['name'=>'免費自訂賽事']);
+            ->assertRedirect()
+            ->assertSessionDoesntHaveErrors();
+        $this->assertDatabaseHas('events', ['name'=>'免費自訂賽事']);
     }
 
-    public function test_free_event_uses_one_date_and_cannot_be_created_as_multi_day(): void
+    public function test_date_rules_can_create_a_multi_day_event_without_manual_hidden_dates(): void
     {
         $organizer = $this->approvedOrganizer('單日主辦方');
 
         $this->actingAs($organizer)
             ->get(route('organizer.events.create'))
             ->assertOk()
-            ->assertSee('賽事日期')
-            ->assertDontSee('開始日期')
-            ->assertDontSee('結束日期');
+            ->assertSee('比賽日期')
+            ->assertSee('賽事天數')
+            ->assertSee('多日賽事');
 
         $payload = array_merge($this->eventPayload('免費單日賽事'), [
-            'start_date'=>'2026-10-10', 'end_date'=>'2026-10-12', 'submit_mode'=>'publish',
-            'free_reg_end_time'=>'09:30',
+            'start_date'=>'2026-10-10', 'date_rule'=>'multi', 'custom_end_date'=>'2026-10-12',
+            'reg_start_rule'=>'immediate', 'reg_end_rule'=>'previous_day', 'submit_mode'=>'publish',
             'groups'=>[0=>[
                 'name'=>'反曲弓 30 公尺公開組', 'bow_type'=>'recurve', 'gender'=>'open',
                 'distance'=>'30m', 'arrow_count'=>36, 'arrows_per_end'=>6, 'fee'=>0,
@@ -282,8 +283,8 @@ class OrganizerSubscriptionTest extends TestCase
         $this->actingAs($organizer)->post(route('organizer.events.store'), $payload)->assertRedirect();
         $event = Event::where('name', '免費單日賽事')->firstOrFail();
         $this->assertSame('2026-10-10', $event->start_date->toDateString());
-        $this->assertSame('2026-10-10', $event->end_date->toDateString());
-        $this->assertSame('2026-10-10 09:30', $event->reg_end->format('Y-m-d H:i'));
+        $this->assertSame('2026-10-12', $event->end_date->toDateString());
+        $this->assertSame('2026-10-09 23:59', $event->reg_end->format('Y-m-d H:i'));
         $this->assertTrue($event->reg_start->between(now()->subMinute(), now()->addMinute()));
     }
 

@@ -11,6 +11,7 @@ use App\Services\IndividualEliminationBracketService;
 use App\Services\TeamEliminationBracketService;
 use App\Services\EliminationMatchProgressionService;
 use App\Services\EliminationMatchRecoveryService;
+use App\Services\DirectEliminationDrawService;
 use App\Support\EventPlanCatalog;
 use Illuminate\Validation\ValidationException;
 use Illuminate\Http\RedirectResponse;
@@ -34,7 +35,9 @@ class EventEliminationController extends Controller
         );
 
         $event->load([
-            'groups'=>fn ($query) => $query->with([
+            'groups'=>fn ($query) => $query->withCount([
+                'registrations as active_registrations_count'=>fn ($registrations) => $registrations->whereIn('status', ['registered', 'checked_in']),
+            ])->with([
                 'eliminationBrackets'=>fn ($brackets) => $brackets
                     ->with(['rankingSnapshot', 'matches.participantOneEntry', 'matches.participantTwoEntry', 'matches.participantOneTeam', 'matches.participantTwoTeam', 'matches.sets', 'matches.ends', 'matches.shootOffs']),
                 'eventTeams'=>fn ($teams) => $teams->where('status', '!=', 'disbanded')->with('memberships.registration'),
@@ -80,6 +83,7 @@ class EventEliminationController extends Controller
         Event $event,
         IndividualEliminationBracketService $service,
         TeamEliminationBracketService $teamService,
+        DirectEliminationDrawService $directDraw,
     ): RedirectResponse {
         $this->authorize('manageScoreCorrections', $event);
         $data = $request->validate([
@@ -106,6 +110,9 @@ class EventEliminationController extends Controller
 
         $category=$data['category']??'individual';
         if ($category === 'individual') {
+            if ($event->competition_format === 'elimination_only') {
+                $directDraw->draw($event, $group, $request->user()->id);
+            }
             $bracket = $service->create($event,$group,(int)$data['bracket_size'],$request->boolean('bronze_match_enabled'),$request->user()->id);
         } else {
             $bracket = $teamService->create($event,$group,(int)$data['bracket_size'],$request->boolean('bronze_match_enabled'),$request->user()->id,$category==='mixed_team'?'mixed':'standard');
@@ -118,7 +125,7 @@ class EventEliminationController extends Controller
         };
 
         return redirect()->route('organizer.events.elimination.index', ['event'=>$event, 'bracket'=>$bracket->uuid])
-            ->with('success', $group->name.' '.$categoryName.'對抗表已依正式排名種子建立。');
+            ->with('success', $group->name.' '.$categoryName.'對抗表已'.($event->competition_format === 'elimination_only' ? '完成隨機抽籤並建立。' : '依正式排名種子建立。'));
     }
 
     public function showMatch(Event $event, EventEliminationMatch $match): View

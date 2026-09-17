@@ -317,6 +317,22 @@ class EventController extends Controller
         $canChoosePublicVisibility = $creating
             ? EventPlanCatalog::features($plan)['public_visibility']
             : $event instanceof Event && ! $event->isFreePlan();
+        if ($creating && $request->filled('start_date') && $request->has('date_rule')) {
+            $startDate = \Carbon\Carbon::parse($request->string('start_date')->toString());
+            $endDate = $request->string('date_rule')->toString() === 'multi'
+                ? $request->string('custom_end_date')->toString()
+                : $startDate->toDateString();
+            $regStart = $request->string('reg_start_rule', 'immediate')->toString() === 'scheduled'
+                ? $request->string('scheduled_reg_start')->toString()
+                : now()->format('Y-m-d H:i:s');
+            $regEndRule = $request->string('reg_end_rule', 'previous_day')->toString();
+            $regEnd = match ($regEndRule) {
+                'same_day' => $startDate->copy()->endOfDay()->format('Y-m-d H:i:s'),
+                'custom' => $request->string('custom_reg_end')->toString(),
+                default => ($startDate->isToday() ? $startDate->copy()->endOfDay() : $startDate->copy()->subDay()->endOfDay())->format('Y-m-d H:i:s'),
+            };
+            $request->merge(['end_date'=>$endDate, 'reg_start'=>$regStart, 'reg_end'=>$regEnd]);
+        }
         if ($creating && $maxArrows === 36 && $request->filled('start_date') && $request->filled('free_reg_end_time')) {
             $deadlineTime = $request->string('free_reg_end_time', '23:59')->toString();
             $request->merge([
@@ -340,6 +356,7 @@ class EventController extends Controller
         $rules = [
             'name' => ['required', 'string', 'max:120'], 'start_date' => ['required', 'date'],
             'end_date' => ['required', 'date', 'after_or_equal:start_date'], 'mode' => ['required', 'in:indoor,outdoor'],
+            'competition_format'=>['nullable', 'in:qualification,qualification_elimination,elimination_only'],
             'level' => ['nullable', 'string', 'max:50'], 'organizer' => ['required', 'string', 'max:120'],
             'reg_start' => ['nullable', 'date', 'required_with:reg_end'], 'reg_end' => ['nullable', 'date', 'required_with:reg_start', 'after_or_equal:reg_start'],
             'venue' => ['nullable', 'string', 'max:255'], 'map_link' => ['nullable', 'url'],
@@ -355,6 +372,12 @@ class EventController extends Controller
             'check_in_enabled' => ['nullable', 'boolean'],
             'free_reg_end_time' => ['nullable', 'date_format:H:i'],
             'quick_date_defaults' => ['nullable', 'boolean'],
+            'date_rule'=>['nullable', 'in:single,multi'],
+            'custom_end_date'=>['nullable', 'date'],
+            'reg_start_rule'=>['nullable', 'in:immediate,scheduled'],
+            'scheduled_reg_start'=>['nullable', 'date'],
+            'reg_end_rule'=>['nullable', 'in:previous_day,same_day,custom'],
+            'custom_reg_end'=>['nullable', 'date'],
         ];
 
         if ($creating) {
@@ -396,17 +419,18 @@ class EventController extends Controller
         ]);
         unset($validated['free_reg_end_time']);
         unset($validated['quick_date_defaults']);
+        unset($validated['date_rule'], $validated['custom_end_date'], $validated['reg_start_rule'], $validated['scheduled_reg_start'], $validated['reg_end_rule'], $validated['custom_reg_end']);
+        $validated['competition_format'] ??= 'qualification';
         $validated['visibility'] = $canChoosePublicVisibility
             ? ($validated['visibility'] ?? 'unlisted')
             : 'unlisted';
-        if ($creating && ! $hasAdvancedPlan) {
-            $validated['end_date'] = $validated['start_date'];
-        }
         if ($creating) {
             $validated['groups'] = collect($validated['groups'] ?? [])->map(function (array $group) use ($validated, $hasAdvancedPlan, $plan): array {
                 $group['arrows_per_end'] = $validated['mode'] === 'indoor' ? 3 : 6;
                 $group['fee'] = $plan === EventPlanCatalog::MVP ? 0 : ($hasAdvancedPlan ? ($group['fee'] ?? 0) : 0);
-                $group['quota'] = in_array($plan, [EventPlanCatalog::MVP, EventPlanCatalog::TRIAL], true) ? min((int) ($group['quota'] ?? 32), 32) : ($hasAdvancedPlan ? ($group['quota'] ?? null) : 16);
+                $group['quota'] = in_array($plan, [EventPlanCatalog::MVP, EventPlanCatalog::TRIAL], true)
+                    ? (isset($group['quota']) && $group['quota'] !== '' ? min((int) $group['quota'], 32) : null)
+                    : ($hasAdvancedPlan ? ($group['quota'] ?? null) : 16);
                 $group['live_results_visible'] = ! $hasAdvancedPlan;
                 $group['standard_team_enabled'] = ! empty($group['standard_team_enabled']);
                 $group['mixed_team_enabled'] = ! empty($group['mixed_team_enabled']);
@@ -422,26 +446,6 @@ class EventController extends Controller
         if ($creating && collect($validated['groups'] ?? [])->contains(fn ($group) => ! empty($group['is_team']))
             && (! $hasAdvancedPlan || $plan === EventPlanCatalog::MVP)) {
             throw \Illuminate\Validation\ValidationException::withMessages(['groups'=>'團體賽為訂閱或單場升級功能。']);
-        }
-        if ($creating && ! $hasAdvancedPlan) {
-            $allowedTemplates = $validated['mode'] === 'indoor'
-                ? [
-                    ['bow_type'=>'recurve', 'gender'=>'open', 'distance'=>'18m', 'arrow_count'=>30],
-                    ['bow_type'=>'compound', 'gender'=>'open', 'distance'=>'18m', 'arrow_count'=>30],
-                ]
-                : [
-                    ['bow_type'=>'recurve', 'gender'=>'open', 'distance'=>'70m', 'arrow_count'=>36],
-                    ['bow_type'=>'compound', 'gender'=>'open', 'distance'=>'50m', 'arrow_count'=>36],
-                    ['bow_type'=>'recurve', 'gender'=>'open', 'distance'=>'30m', 'arrow_count'=>36],
-                ];
-            $usesOnlyTemplates = collect($validated['groups'] ?? [])->every(function (array $group) use ($allowedTemplates): bool {
-                return collect($allowedTemplates)->contains(fn (array $template) => collect($template)->every(
-                    fn (mixed $value, string $key) => (string) ($group[$key] ?? '') === (string) $value
-                ));
-            });
-            if (! $usesOnlyTemplates) {
-                throw \Illuminate\Validation\ValidationException::withMessages(['groups'=>'免費版只能使用快速賽制模板；自訂組別需升級方案。']);
-            }
         }
         $canUseCheckIn = $creating
             ? EventPlanCatalog::features($plan)['check_in']
@@ -480,6 +484,9 @@ class EventController extends Controller
                     return ['title'=>'等待選手報名', 'description'=>'', 'label'=>'查看賽事頁', 'url'=>route('events.show', $event)];
                 }
                 return ['title'=>'先讓選手完成報名', 'description'=>'目前尚無有效報名；分享賽事或進入名單頁確認報名狀況。', 'label'=>'查看報名名單', 'url'=>route('organizer.events.registrations.index', $event)];
+            }
+            if ($event->competition_format === 'elimination_only' && $request->user()->can('viewResults', $event)) {
+                return ['title'=>'建立隨機對抗表', 'description'=>'確認報名名單後即可隨機抽籤；建立籤表時會同步停止報名。', 'label'=>'前往對抗賽管理', 'url'=>route('organizer.events.elimination.index', $event)];
             }
             $hasUnreported = $event->registrations()->where('status', 'registered')->whereNull('checked_in_at')->exists();
             if ($event->requiresCheckIn() && $hasUnreported && $request->user()->can('manageRegistrations', $event)) {

@@ -22,9 +22,9 @@
     @can('manageScoreCorrections', $event)
     @if($event->hasPlanFeature('individual_elimination'))
     <section class="rounded-2xl border bg-white p-4 shadow-sm sm:p-5">
-        <div><h2 class="font-semibold">建立對抗表</h2><p class="mt-1 text-sm text-gray-500">建立後會鎖定本次籤表；如有同分待判定，系統會先阻止生成。</p></div>
+        <div><h2 class="font-semibold">建立對抗表</h2><p class="mt-1 text-sm text-gray-500">{{ $event->competition_format === 'elimination_only' ? '建立時會從有效報名名單隨機抽籤、鎖定籤序並停止報名。' : '建立後會鎖定本次籤表；如有同分待判定，系統會先阻止生成。' }}</p></div>
         <form method="POST" action="{{ route('organizer.events.elimination.store', $event) }}" class="mt-4 grid gap-4 md:grid-cols-[10rem_minmax(0,1fr)_12rem_auto] md:items-end">@csrf
-            <label class="text-sm font-medium">類型<select id="elimination-category" name="category" class="mt-1 min-h-12 w-full rounded-xl border-gray-300"><option value="individual">個人對抗</option>@unless(config('product.mvp_mode', true))<option value="team">3人團體對抗</option><option value="mixed_team">男女混雙對抗</option>@endunless</select></label>
+            <label class="text-sm font-medium">類型<select id="elimination-category" name="category" class="mt-1 min-h-12 w-full rounded-xl border-gray-300"><option value="individual">個人對抗</option>@if(! config('product.mvp_mode', true) && $event->competition_format !== 'elimination_only')<option value="team">3人團體對抗</option><option value="mixed_team">男女混雙對抗</option>@endif</select></label>
             <label class="text-sm font-medium">組別
                 <select id="elimination-group" name="event_group_id" required class="mt-1 min-h-12 w-full rounded-xl border-gray-300 text-base">
                     <option value="">請選擇</option>
@@ -35,7 +35,12 @@
                         @php
                             $counts = $teamCounts->get($group->id);
                         @endphp
-                        <option value="{{ $group->id }}" data-individual="{{ $snapshot ? $snapshot->entries->where('is_eligible', true)->count() : 0 }}" data-team-total="{{ $counts['standard']['total'] }}" data-team-eligible="{{ $counts['standard']['eligible'] }}" data-mixed-total="{{ $counts['mixed']['total'] }}" data-mixed-eligible="{{ $counts['mixed']['eligible'] }}" @selected(old('event_group_id') == $group->id)>{{ $group->name }}（個人 {{ $snapshot ? $snapshot->entries->where('is_eligible', true)->count() : 0 }}@unless(config('product.mvp_mode', true))・團體 {{ $counts['standard']['eligible'] }}/{{ $counts['standard']['total'] }}・混雙 {{ $counts['mixed']['eligible'] }}/{{ $counts['mixed']['total'] }}@endunless）</option>
+                        @php
+                            $individualCount = $snapshot
+                                ? $snapshot->entries->where('is_eligible', true)->count()
+                                : ($event->competition_format === 'elimination_only' ? $group->active_registrations_count : 0);
+                        @endphp
+                        <option value="{{ $group->id }}" data-individual="{{ $individualCount }}" data-team-total="{{ $counts['standard']['total'] }}" data-team-eligible="{{ $counts['standard']['eligible'] }}" data-mixed-total="{{ $counts['mixed']['total'] }}" data-mixed-eligible="{{ $counts['mixed']['eligible'] }}" @selected(old('event_group_id') == $group->id)>{{ $group->name }}（個人 {{ $individualCount }}@if(! config('product.mvp_mode', true) && $event->competition_format !== 'elimination_only')・團體 {{ $counts['standard']['eligible'] }}/{{ $counts['standard']['total'] }}・混雙 {{ $counts['mixed']['eligible'] }}/{{ $counts['mixed']['total'] }}@endif）</option>
                     @endforeach
                 </select>
                 <p id="elimination-seed-summary" class="mt-1 text-xs font-semibold text-indigo-700"></p>
@@ -70,7 +75,7 @@
             @include('events._elimination-bracket-tree', ['bracket'=>$bracket, 'statusNames'=>$statusNames])
         </section>
     @else
-        <section class="rounded-2xl border border-dashed bg-white p-8 text-center"><h2 class="font-semibold">尚未建立對抗表</h2><p class="mt-1 text-sm text-gray-500">先完成排名賽成績發布，再依鎖定的種子快照建立個人對抗表。</p></section>
+        <section class="rounded-2xl border border-dashed bg-white p-8 text-center"><h2 class="font-semibold">尚未建立對抗表</h2><p class="mt-1 text-sm text-gray-500">{{ $event->competition_format === 'elimination_only' ? '確認報名名單後，即可在上方選擇籤表規模並隨機抽籤。' : '先完成排名賽成績發布，再依鎖定的種子快照建立個人對抗表。' }}</p></section>
     @endif
 
     @can('manageScores', $event)

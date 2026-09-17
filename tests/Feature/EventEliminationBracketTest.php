@@ -13,6 +13,7 @@ use App\Services\QualificationRankingSnapshotService;
 use App\Services\RecurveSetMatchService;
 use App\Services\CompoundCumulativeMatchService;
 use App\Services\EliminationShootOffService;
+use App\Services\DirectEliminationDrawService;
 use App\Support\EventPlanCatalog;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Validation\ValidationException;
@@ -21,6 +22,35 @@ use Tests\TestCase;
 class EventEliminationBracketTest extends TestCase
 {
     use RefreshDatabase;
+
+    public function test_direct_elimination_draw_uses_active_registrations_and_locks_registration(): void
+    {
+        $event = Event::factory()->create([
+            'competition_format'=>'elimination_only',
+            'plan_code'=>EventPlanCatalog::EVENT_PASS,
+            'plan_features_snapshot'=>EventPlanCatalog::features(EventPlanCatalog::EVENT_PASS),
+            'plan_limits_snapshot'=>EventPlanCatalog::limits(EventPlanCatalog::EVENT_PASS),
+            'reg_end'=>now()->addWeek(),
+        ]);
+        $group = EventGroup::factory()->create(['event_id'=>$event->id, 'name'=>'公開組', 'bow_type'=>'recurve']);
+        foreach (range(1, 4) as $position) {
+            $user = User::factory()->create();
+            EventRegistration::create([
+                'event_id'=>$event->id, 'event_group_id'=>$group->id, 'user_id'=>$user->id,
+                'name'=>'選手 '.$position, 'email'=>$user->email, 'status'=>'registered',
+            ]);
+        }
+
+        $snapshot = app(DirectEliminationDrawService::class)->draw($event, $group);
+        $bracket = app(IndividualEliminationBracketService::class)->create($event, $group, 4, true);
+
+        $this->assertSame('random_draw', $snapshot->ranking_rule['method']);
+        $this->assertSame([1, 2, 3, 4], $snapshot->entries->pluck('seed_position')->sort()->values()->all());
+        $this->assertSame($snapshot->id, $bracket->event_ranking_snapshot_id);
+        $this->assertSame('set', $bracket->scoring_mode);
+        $this->assertTrue($event->fresh()->reg_end->lessThanOrEqualTo(now()));
+        $this->assertDatabaseHas('event_audit_logs', ['event_id'=>$event->id, 'action'=>'elimination.random_draw_locked']);
+    }
 
     public function test_paid_event_builds_standard_seeded_individual_bracket_and_bronze_match(): void
     {
