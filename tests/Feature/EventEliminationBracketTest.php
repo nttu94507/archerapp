@@ -220,6 +220,11 @@ class EventEliminationBracketTest extends TestCase
         $this->assertNull($match->winner_registration_id);
         $this->assertNull($match->completed_at);
         $this->assertCount(5, $match->sets);
+
+        $completed = app(EliminationShootOffService::class)->record($match, '10', '9', null);
+        $this->assertSame('completed', $completed->status);
+        $this->assertSame(6, $completed->participant_one_set_points);
+        $this->assertSame(5, $completed->participant_two_set_points);
     }
 
     public function test_semifinal_loser_is_placed_into_bronze_match(): void
@@ -327,6 +332,8 @@ class EventEliminationBracketTest extends TestCase
         $this->assertSame('score', $completed->shootOffs->first()->decision_type);
         $this->assertSame('resolved', $completed->shootOffs->first()->status);
         $this->assertSame($winnerId, $completed->nextMatch->participant_one_registration_id);
+        $this->assertSame(135, $completed->participant_one_total);
+        $this->assertSame(135, $completed->participant_two_total);
     }
 
     public function test_equal_shoot_off_requires_judge_and_can_order_another_shoot_off(): void

@@ -139,10 +139,15 @@ class EliminationShootOffService
     {
         $teamMatch=in_array($match->bracket->category,['team','mixed_team'],true);$one=$teamMatch?$match->participant_one_team_id:$match->participant_one_registration_id;$two=$teamMatch?$match->participant_two_team_id:$match->participant_two_registration_id;
         $loserId = $winnerId === $one ? $two : $one;
-        $match->update([
+        $updates = [
             'status'=>'completed', 'winner_registration_id'=>$teamMatch?null:$winnerId,
             'loser_registration_id'=>$teamMatch?null:$loserId, 'winner_team_id'=>$teamMatch?$winnerId:null,'loser_team_id'=>$teamMatch?$loserId:null,'completed_at'=>now(),
-        ]);
+        ];
+        if ($match->bracket->scoring_mode === 'set') {
+            $pointField = $winnerId === $one ? 'participant_one_set_points' : 'participant_two_set_points';
+            $updates[$pointField] = ((int) $match->{$pointField}) + 1;
+        }
+        $match->update($updates);
         $this->progression->advance($match->fresh(), $winnerId);
     }
 
