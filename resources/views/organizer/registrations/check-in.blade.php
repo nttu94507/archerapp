@@ -105,8 +105,7 @@
             const response = await fetch(endpoint, {method: 'POST', headers: {'Accept': 'application/json', 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrf}, body: JSON.stringify({uuid})});
             const data = await response.json();
             if (!response.ok) throw new Error(data.message || '報到失敗');
-            const extra = data.payment_warning ? '；注意：尚有報名未完成繳費' : '';
-            showResult(data.already_checked_in ? 'warning' : 'success', data.message, data.groups.join('、') + extra);
+            showResult(data.already_checked_in ? 'warning' : 'success', data.message, data.groups.join('、'));
             count.textContent = data.checked_in_count;
             if (!data.already_checked_in) addRecent(data);
             if (navigator.vibrate) navigator.vibrate(data.already_checked_in ? [80, 60, 80] : 120);

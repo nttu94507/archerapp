@@ -226,9 +226,11 @@ class EventManagementWorkflowTest extends TestCase
         $this->actingAs($owner)
             ->get(route('organizer.events.registrations.index', [$event, 'event_group_id'=>$group->id, 'q'=>'測試選手']))
             ->assertOk()
-            ->assertSee('搜尋此組選手')
+            ->assertSee('搜尋選手')
             ->assertSee('測試選手')
-            ->assertSee('標記為繳費完成');
+            ->assertDontSee('標記為繳費完成')
+            ->assertDontSee('待繳費')
+            ->assertDontSee('對帳');
 
         $this->actingAs($owner)->patch(route('organizer.events.registrations.payment', $event), [
             'registration_ids'=>[$registration->id], 'payment_status'=>'paid', 'payment_amount'=>500,
