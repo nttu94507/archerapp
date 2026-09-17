@@ -105,6 +105,18 @@
                 <div class="space-y-6 p-4 sm:p-5">
                             <div>
                                 <div class="mb-3 flex flex-wrap items-center justify-between gap-2"><div><h4 class="font-semibold text-gray-900">{{ $categoryNames[$selectedBracket->category] ?? $selectedBracket->name }}</h4><p class="mt-0.5 text-xs text-gray-500">{{ $selectedBracket->bracket_size }} {{ $selectedBracket->category === 'individual' ? '人制' : '隊制' }}・{{ $deviceMatches->count() }} 場可綁定設備</p></div></div>
+                                <details class="mb-4 rounded-xl border bg-white px-3">
+                                    <summary class="flex min-h-12 cursor-pointer items-center justify-between text-sm font-semibold text-indigo-800"><span>快速配置本輪靶號</span><span>一次儲存　⌄</span></summary>
+                                    <form method="POST" action="{{ route('organizer.events.elimination.round-targets', [$event, $selectedBracket]) }}" class="border-t py-3" data-round-target-form onsubmit="return confirm('確定套用本輪全部靶號？所有計分設備都需重新掃描。')">@csrf @method('PATCH')<input type="hidden" name="round_number" value="{{ $currentRound }}">
+                                        <div class="mb-3 grid grid-cols-[1fr_auto_auto] gap-2"><input data-start-target type="number" min="1" value="1" class="min-h-10 rounded-lg border-gray-300" placeholder="起始靶號"><button type="button" data-layout="shared" class="rounded-lg border px-3 text-xs font-semibold">一靶兩人</button><button type="button" data-layout="separate" class="rounded-lg border px-3 text-xs font-semibold">一人一靶</button></div>
+                                        <div class="space-y-2">@foreach($deviceMatches as $layoutMatch)@php
+                                            $layoutTeam = in_array($selectedBracket->category, ['team','mixed_team'], true);
+                                            $layoutOne = $layoutTeam ? $layoutMatch->participantOneTeam?->name : $layoutMatch->participantOneEntry?->athlete_name;
+                                            $layoutTwo = $layoutTeam ? $layoutMatch->participantTwoTeam?->name : $layoutMatch->participantTwoEntry?->athlete_name;
+                                        @endphp<div class="grid grid-cols-[minmax(0,1fr)_5rem_5rem] items-center gap-2 rounded-lg bg-gray-50 p-2 text-xs"><span class="truncate font-medium">{{ $layoutOne }} vs {{ $layoutTwo }}</span><input data-round-one name="matches[{{ $layoutMatch->id }}][participant_one_target_number]" required value="{{ $layoutMatch->participant_one_target_number ?? $layoutMatch->target_number }}" class="min-h-10 rounded-lg border-gray-300 text-center" placeholder="甲靶"><input data-round-two name="matches[{{ $layoutMatch->id }}][participant_two_target_number]" required value="{{ $layoutMatch->participant_two_target_number ?? $layoutMatch->target_number }}" class="min-h-10 rounded-lg border-gray-300 text-center" placeholder="乙靶"></div>@endforeach</div>
+                                        <textarea name="reason" maxlength="500" rows="2" class="mt-3 w-full rounded-lg border-gray-300 text-sm" placeholder="若本輪已有計分紀錄，請填寫修改原因"></textarea><button class="mt-2 min-h-11 w-full rounded-lg bg-indigo-600 text-sm font-semibold text-white">儲存本輪配置</button>
+                                    </form>
+                                </details>
                                 <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
                                     @foreach($deviceMatches as $match)
                                         @php
@@ -146,6 +158,16 @@
             const one = form.querySelector('[data-target-one]');
             const two = form.querySelector('[data-target-two]');
             [one.value, two.value] = [two.value, one.value];
+        }));
+        document.querySelectorAll('[data-layout]').forEach((button) => button.addEventListener('click', () => {
+            const form = button.closest('[data-round-target-form]');
+            let target = Number(form.querySelector('[data-start-target]').value || 1);
+            form.querySelectorAll('[data-round-one]').forEach((one, index) => {
+                const two = form.querySelectorAll('[data-round-two]')[index];
+                one.value = target;
+                if (button.dataset.layout === 'shared') two.value = target++;
+                else { two.value = target + 1; target += 2; }
+            });
         }));
         const category = document.getElementById('elimination-category');
         const group = document.getElementById('elimination-group');

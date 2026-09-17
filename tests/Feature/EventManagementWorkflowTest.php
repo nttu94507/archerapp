@@ -56,6 +56,18 @@ class EventManagementWorkflowTest extends TestCase
         $this->assertSame($one->id, $secondAssignment->fresh()->event_scoring_target_id);
         $this->assertSame('A', $secondAssignment->fresh()->position);
         $this->assertDatabaseHas('event_audit_logs', ['event_id'=>$event->id, 'action'=>'scoring.assignment_position_changed', 'subject_id'=>$firstAssignment->id]);
+
+        $this->actingAs($owner)->patch(route('organizer.events.scoring.assignments.batch', [$event, $session]), [
+            'assignments'=>[
+                $firstAssignment->id=>['target_number'=>2, 'position'=>'B'],
+                $secondAssignment->id=>['target_number'=>1, 'position'=>'A'],
+            ],
+        ])->assertSessionHas('success');
+        $this->assertSame(2, $firstAssignment->fresh()->target->target_number);
+        $this->assertSame('B', $firstAssignment->fresh()->position);
+        $this->assertSame(1, $secondAssignment->fresh()->target->target_number);
+        $this->assertSame('A', $secondAssignment->fresh()->position);
+        $this->assertDatabaseHas('event_audit_logs', ['event_id'=>$event->id, 'action'=>'scoring.assignments_batch_changed', 'subject_id'=>$session->id]);
     }
 
     public function test_approved_organizer_can_publish_event_without_platform_review(): void

@@ -370,6 +370,76 @@ class EventScoringController extends Controller
         return back()->with('success', '選手靶位已更新；若目標位置原本有人，兩位選手已交換位置。');
     }
 
+    public function updateAssignmentPositions(Request $request, Event $event, EventScoringSession $session): RedirectResponse
+    {
+        $this->authorize('manageScores', $event);
+        abort_unless($session->event_id === $event->id, 404);
+        $data = $request->validate([
+            'assignments'=>['required', 'array', 'min:1'],
+            'assignments.*.target_number'=>['required', 'integer', 'between:1,999'],
+            'assignments.*.position'=>['required', 'in:A,B,C,D'],
+            'reason'=>['nullable', 'string', 'max:500'],
+        ]);
+
+        DB::transaction(function () use ($request, $event, $session, $data): void {
+            $assignments = EventScoringAssignment::query()
+                ->whereHas('target', fn ($query) => $query->where('event_scoring_session_id', $session->id))
+                ->with('target')->lockForUpdate()->get();
+            $submittedIds = collect(array_keys($data['assignments']))->map(fn ($id) => (int) $id)->sort()->values();
+            abort_unless($submittedIds->all() === $assignments->pluck('id')->sort()->values()->all(), 422, '靶位資料已變更，請重新整理後再調整。');
+
+            $desired = $assignments->mapWithKeys(fn ($assignment) => [$assignment->id=>[
+                'target_number'=>(int) $data['assignments'][$assignment->id]['target_number'],
+                'position'=>$data['assignments'][$assignment->id]['position'],
+            ]]);
+            if ($desired->map(fn ($item) => $item['target_number'].$item['position'])->duplicates()->isNotEmpty()) {
+                throw \Illuminate\Validation\ValidationException::withMessages(['assignments'=>'同一個靶位位置不能安排兩位選手。']);
+            }
+            $changed = $assignments->filter(fn ($assignment) =>
+                $assignment->target->target_number !== $desired[$assignment->id]['target_number']
+                || $assignment->position !== $desired[$assignment->id]['position']
+            );
+            if ($changed->isEmpty()) return;
+
+            $started = $changed->contains(fn ($assignment) => $assignment->target->last_completed_end > 0 || ! in_array($assignment->target->status, ['ready', 'dns'], true));
+            if ($started) {
+                abort_unless($request->user()->can('manageScoreCorrections', $event), 403);
+                if (mb_strlen(trim((string) ($data['reason'] ?? ''))) < 3) {
+                    throw \Illuminate\Validation\ValidationException::withMessages(['reason'=>'計分開始後批次調整靶位，請填寫至少 3 個字的原因。']);
+                }
+            }
+
+            $targets = EventScoringTarget::where('event_scoring_session_id', $session->id)->lockForUpdate()->get()->keyBy('target_number');
+            foreach ($desired->pluck('target_number')->unique() as $number) {
+                if (! $targets->has($number)) {
+                    $targets->put($number, EventScoringTarget::create([
+                        'event_scoring_session_id'=>$session->id, 'target_number'=>$number,
+                        'access_token'=>(string) Str::uuid(), 'device_pin'=>(string) random_int(100000, 999999), 'status'=>'ready',
+                    ]));
+                }
+            }
+            $before = $assignments->mapWithKeys(fn ($assignment) => [
+                $assignment->id=>$assignment->target->target_number.$assignment->position,
+            ])->all();
+            foreach ($assignments->groupBy('event_scoring_target_id') as $items) {
+                foreach ($items->values() as $index => $assignment) $assignment->update(['position'=>['W','X','Y','Z'][$index]]);
+            }
+            foreach ($assignments as $assignment) {
+                $destination = $targets[$desired[$assignment->id]['target_number']];
+                $assignment->update(['event_scoring_target_id'=>$destination->id, 'position'=>$desired[$assignment->id]['position']]);
+            }
+            $affectedTargetIds = $assignments->pluck('event_scoring_target_id')->merge($targets->pluck('id'))->unique();
+            EventScoringTarget::whereIn('id', $affectedTargetIds)->get()->each(fn ($target) => $target->update($this->freshDeviceAttributes()));
+            EventAuditLog::create([
+                'event_id'=>$event->id, 'user_id'=>$request->user()->id,
+                'action'=>'scoring.assignments_batch_changed', 'subject_type'=>EventScoringSession::class, 'subject_id'=>$session->id,
+                'metadata'=>['before'=>$before, 'after'=>$desired->all(), 'reason'=>$data['reason'] ?? null, 'forced'=>$started],
+            ]);
+        });
+
+        return back()->with('success', '本場次靶位配置已一次更新，受影響設備需重新掃描。');
+    }
+
     private function freshDeviceAttributes(): array
     {
         return [

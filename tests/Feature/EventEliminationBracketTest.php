@@ -69,6 +69,19 @@ class EventEliminationBracketTest extends TestCase
             'participant_one_target_number'=>'A-1',
             'participant_two_target_number'=>'A-3',
         ])->assertSessionHasErrors('participant_one_target_number');
+
+        $this->actingAs($owner)->patch(route('organizer.events.elimination.round-targets', [$event, $bracket]), [
+            'round_number'=>1,
+            'matches'=>[
+                $matches[0]->id=>['participant_one_target_number'=>'B-1', 'participant_two_target_number'=>'B-1'],
+                $matches[1]->id=>['participant_one_target_number'=>'B-2', 'participant_two_target_number'=>'B-3'],
+            ],
+        ])->assertSessionHas('success');
+        $this->assertSame('B-1', $matches[0]->fresh()->target_number);
+        $this->assertNull($matches[1]->fresh()->target_number);
+        $this->assertSame('B-2', $matches[1]->fresh()->participant_one_target_number);
+        $this->assertSame('B-3', $matches[1]->fresh()->participant_two_target_number);
+        $this->assertDatabaseHas('event_audit_logs', ['event_id'=>$event->id, 'action'=>'elimination.round_targets_changed', 'subject_id'=>$bracket->id]);
     }
 
     public function test_direct_elimination_draw_uses_active_registrations_and_locks_registration(): void

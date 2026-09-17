@@ -7,6 +7,7 @@ use App\Models\Event;
 use App\Models\EventAuditLog;
 use App\Models\EventGroup;
 use App\Models\EventEliminationMatch;
+use App\Models\EventEliminationBracket;
 use App\Models\EventRankingSnapshot;
 use App\Services\IndividualEliminationBracketService;
 use App\Services\TeamEliminationBracketService;
@@ -253,6 +254,60 @@ class EventEliminationController extends Controller
         });
 
         return back()->with('success', '對抗賽靶號已更新，舊設備已解除，請重新掃描 QR Code。');
+    }
+
+    public function updateRoundTargetNumbers(Request $request, Event $event, EventEliminationBracket $bracket): RedirectResponse
+    {
+        $this->authorize('manageScoreCorrections', $event);
+        abort_unless($bracket->event_id === $event->id, 404);
+        $data = $request->validate([
+            'round_number'=>['required', 'integer', 'min:1'],
+            'matches'=>['required', 'array', 'min:1'],
+            'matches.*.participant_one_target_number'=>['required', 'string', 'max:20', 'regex:/^[\pL\pN\-]+$/u'],
+            'matches.*.participant_two_target_number'=>['required', 'string', 'max:20', 'regex:/^[\pL\pN\-]+$/u'],
+            'reason'=>['nullable', 'string', 'max:500'],
+        ]);
+
+        DB::transaction(function () use ($request, $event, $bracket, $data): void {
+            $matches = EventEliminationMatch::query()->where('event_elimination_bracket_id', $bracket->id)
+                ->where('round_number', $data['round_number'])->whereIn('id', array_keys($data['matches']))
+                ->lockForUpdate()->get();
+            abort_unless($matches->count() === count($data['matches']), 422, '對戰資料已變更，請重新整理後再設定。');
+            $numbersByMatch = $matches->mapWithKeys(function ($match) use ($data): array {
+                $row = $data['matches'][$match->id];
+                return [$match->id=>[
+                    'one'=>mb_strtoupper(trim($row['participant_one_target_number'])),
+                    'two'=>mb_strtoupper(trim($row['participant_two_target_number'])),
+                ]];
+            });
+            $usedByMatches = $numbersByMatch->map(fn ($row) => collect([$row['one'], $row['two']])->unique()->all())->flatten();
+            if ($usedByMatches->duplicates()->isNotEmpty()) {
+                throw ValidationException::withMessages(['matches'=>'不同對戰不能使用相同靶號；同一場雙方可以共用。']);
+            }
+            $started = $matches->contains(fn ($match) => $match->sets()->exists() || $match->ends()->exists() || $match->shootOffs()->exists()
+                || in_array($match->status, ['in_progress', 'awaiting_shoot_off', 'awaiting_judge', 'completed'], true));
+            if ($started && mb_strlen(trim((string) ($data['reason'] ?? ''))) < 3) {
+                throw ValidationException::withMessages(['reason'=>'本輪已有計分紀錄，請填寫至少 3 個字的修改原因。']);
+            }
+            $before = [];
+            foreach ($matches as $match) {
+                $before[$match->id] = [$match->participant_one_target_number ?? $match->target_number, $match->participant_two_target_number ?? $match->target_number];
+                $numbers = $numbersByMatch[$match->id];
+                $match->update([
+                    'target_number'=>$numbers['one'] === $numbers['two'] ? $numbers['one'] : null,
+                    'participant_one_target_number'=>$numbers['one'], 'participant_two_target_number'=>$numbers['two'],
+                    'access_token'=>(string) Str::uuid(), 'device_pin'=>(string) random_int(100000, 999999),
+                    'device_token_hash'=>null, 'device_bound_at'=>null, 'device_last_seen_at'=>null, 'device_user_agent'=>null,
+                ]);
+            }
+            EventAuditLog::create([
+                'event_id'=>$event->id, 'user_id'=>$request->user()->id,
+                'action'=>'elimination.round_targets_changed', 'subject_type'=>EventEliminationBracket::class, 'subject_id'=>$bracket->id,
+                'metadata'=>['round'=>$data['round_number'], 'before'=>$before, 'after'=>$numbersByMatch->all(), 'reason'=>$data['reason'] ?? null, 'forced'=>$started],
+            ]);
+        });
+
+        return back()->with('success', '本輪全部靶號已一次更新，計分設備需重新掃描。');
     }
 
     public function recoverMatch(Request $request, Event $event, EventEliminationMatch $match, EliminationMatchRecoveryService $service): RedirectResponse
