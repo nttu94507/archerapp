@@ -29,9 +29,25 @@
         </div>
         <div class="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
             @foreach($event->groups as $group)
-                <div class="flex items-center justify-between rounded-xl bg-gray-50 px-4 py-3 text-sm">
-                    <span class="font-medium">{{ $group->name }}</span>
-                    <span class="{{ $group->active_registrations_count > 0 ? 'text-gray-600' : 'text-amber-600' }}">{{ $group->active_registrations_count > 0 ? ($requiresCheckIn ? '已報到 '.$group->checked_in_registrations_count.' / '.$group->active_registrations_count.' 人' : '已報名 '.$group->active_registrations_count.' 人') : '無選手，將略過' }}</span>
+                <div class="flex flex-col gap-3 rounded-xl bg-gray-50 px-4 py-3 text-sm sm:flex-row sm:items-center sm:justify-between">
+                    <div class="min-w-0">
+                        <span class="font-medium">{{ $group->name }}</span>
+                        <span class="ml-2 {{ $group->active_registrations_count > 0 ? 'text-gray-600' : 'text-amber-600' }}">{{ $group->active_registrations_count > 0 ? ($requiresCheckIn ? '已報到 '.$group->checked_in_registrations_count.' / '.$group->active_registrations_count.' 人' : '已報名 '.$group->active_registrations_count.' 人') : '無選手，將略過' }}</span>
+                    </div>
+                    <div class="flex shrink-0 flex-wrap gap-2">
+                        @if($group->live_results_visible)
+                            <a href="{{ route('events.live', ['event'=>$event, 'group'=>$group->id]) }}" class="inline-flex min-h-10 items-center rounded-lg border bg-white px-3 text-xs font-semibold text-indigo-600">查看戰況</a>
+                        @endif
+                        @can('publishResults', $event)
+                            @if(!$event->isFreePlan())
+                                <form method="POST" action="{{ route('organizer.events.results.live-visibility', [$event, $group]) }}">
+                                    @csrf @method('PATCH')
+                                    <input type="hidden" name="visible" value="{{ $group->live_results_visible ? 0 : 1 }}">
+                                    <button class="min-h-10 rounded-lg border px-3 text-xs font-semibold {{ $group->live_results_visible ? 'border-gray-300 bg-white text-gray-600' : 'border-indigo-200 bg-indigo-600 text-white' }}" onclick="return confirm('{{ $group->live_results_visible ? '確定停止公開此組排名賽戰況？' : '公開後所有人都能查看此組即時分數與排名，確定公開？' }}')">{{ $group->live_results_visible ? '停止公開' : '公開戰況' }}</button>
+                                </form>
+                            @endif
+                        @endcan
+                    </div>
                 </div>
             @endforeach
         </div>

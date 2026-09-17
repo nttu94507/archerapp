@@ -120,8 +120,11 @@ class EventPlanEntitlementTest extends TestCase
         $this->assertTrue($group->fresh()->live_results_visible);
         $this->actingAs($owner)->get(route('organizer.events.results.index', $event))
             ->assertOk()
-            ->assertSee('查看公開戰況')
             ->assertDontSee('停止公開戰況');
+        $this->actingAs($owner)->get(route('organizer.events.scoring.index', $event))
+            ->assertOk()
+            ->assertSee('查看戰況')
+            ->assertDontSee('停止公開');
     }
 
     public function test_free_event_hides_check_in_and_assigns_registered_archers_without_dns(): void
