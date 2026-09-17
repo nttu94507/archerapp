@@ -26,7 +26,8 @@ class EventEliminationMatch extends Model
         'participant_two_set_points', 'current_set', 'participant_one_total',
         'participant_two_total', 'current_end', 'next_match_id', 'next_slot',
         'loser_next_match_id', 'loser_next_slot', 'winner_registration_id',
-        'loser_registration_id', 'winner_team_id', 'loser_team_id', 'target_number', 'scheduled_at', 'completed_at',
+        'loser_registration_id', 'winner_team_id', 'loser_team_id', 'target_number',
+        'participant_one_target_number', 'participant_two_target_number', 'scheduled_at', 'completed_at',
     ];
 
     protected $casts = ['scheduled_at'=>'datetime', 'completed_at'=>'datetime', 'device_bound_at'=>'datetime', 'device_last_seen_at'=>'datetime'];

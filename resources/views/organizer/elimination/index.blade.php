@@ -118,7 +118,14 @@
                                                 <div class="space-y-2"><div class="flex min-h-11 items-center gap-2 rounded-xl border px-3"><span class="text-xs font-bold text-gray-400">{{ $match->participant_one_seed }}</span><strong class="truncate">{{ $participantOneName }}</strong></div><div class="flex min-h-11 items-center gap-2 rounded-xl border px-3"><span class="text-xs font-bold text-gray-400">{{ $match->participant_two_seed }}</span><strong class="truncate">{{ $participantTwoName }}</strong></div><div><p class="text-xs text-gray-500">設備 PIN</p><p class="font-mono text-xl font-bold tracking-[.2em]">{{ $match->device_pin }}</p></div></div>
                                                 <img src="{{ route('organizer.events.elimination.matches.qrcode', [$event, $match]) }}" class="h-24 w-24 self-start rounded-lg border bg-white p-1" alt="{{ $group->name }} {{ $participantOneName }} 對 {{ $participantTwoName }} 計分 QR Code">
                                             </div>
-                                            <div class="border-t p-3"><a href="{{ route('elimination-stations.show', $match->access_token) }}" class="inline-flex min-h-11 w-full items-center justify-center rounded-xl bg-indigo-600 px-3 text-sm font-semibold text-white">開啟計分網址</a>@if($match->device_token_hash)<form method="POST" action="{{ route('organizer.events.elimination.matches.device.destroy', [$event, $match]) }}" class="mt-2">@csrf @method('DELETE')<button class="min-h-11 w-full rounded-xl border border-red-200 text-sm text-red-600" onclick="return confirm('解除後舊設備與網址會立即失效，確定？')">解除設備</button></form>@endif</div>
+                                            @php
+                                                $oneTargetNumber = $match->participant_one_target_number ?? $match->target_number;
+                                                $twoTargetNumber = $match->participant_two_target_number ?? $match->target_number;
+                                                $targetSummary = $oneTargetNumber && $twoTargetNumber
+                                                    ? ($oneTargetNumber === $twoTargetNumber ? $oneTargetNumber : $oneTargetNumber.' / '.$twoTargetNumber)
+                                                    : '未設定';
+                                            @endphp
+                                            <div class="border-t p-3"><a href="{{ route('elimination-stations.show', $match->access_token) }}" class="inline-flex min-h-11 w-full items-center justify-center rounded-xl bg-indigo-600 px-3 text-sm font-semibold text-white">開啟計分網址</a><details class="mt-2 rounded-xl border px-3"><summary class="flex min-h-11 cursor-pointer items-center text-sm font-medium">靶號 {{ $targetSummary }}・調整</summary><form method="POST" action="{{ route('organizer.events.elimination.matches.target-number', [$event, $match]) }}" class="grid grid-cols-2 gap-2 border-t py-3" onsubmit="return confirm('修改後舊設備與計分連結會失效，確定繼續？')">@csrf @method('PATCH')<label class="text-xs text-gray-500">{{ $participantOneName }}<input data-target-one name="participant_one_target_number" required maxlength="20" value="{{ $oneTargetNumber }}" class="mt-1 min-h-11 w-full rounded-lg border-gray-300" placeholder="例如 3"></label><label class="text-xs text-gray-500">{{ $participantTwoName }}<input data-target-two name="participant_two_target_number" required maxlength="20" value="{{ $twoTargetNumber }}" class="mt-1 min-h-11 w-full rounded-lg border-gray-300" placeholder="例如 4"></label><button type="button" data-swap-targets class="col-span-2 min-h-10 rounded-lg border text-xs font-semibold">交換雙方靶號</button><textarea name="reason" maxlength="500" rows="2" class="col-span-2 rounded-lg border-gray-300 text-sm" placeholder="已開始計分時必填修改原因"></textarea><button class="col-span-2 min-h-11 rounded-lg bg-indigo-600 text-sm font-semibold text-white">儲存靶號</button></form></details>@if($match->device_token_hash)<form method="POST" action="{{ route('organizer.events.elimination.matches.device.destroy', [$event, $match]) }}" class="mt-2">@csrf @method('DELETE')<button class="min-h-11 w-full rounded-xl border border-red-200 text-sm text-red-600" onclick="return confirm('解除後舊設備與網址會立即失效，確定？')">解除設備</button></form>@endif</div>
                                         </article>
                                     @endforeach
                                 </div>
@@ -134,6 +141,12 @@
 </div>
 <script>
     (() => {
+        document.querySelectorAll('[data-swap-targets]').forEach((button) => button.addEventListener('click', () => {
+            const form = button.closest('form');
+            const one = form.querySelector('[data-target-one]');
+            const two = form.querySelector('[data-target-two]');
+            [one.value, two.value] = [two.value, one.value];
+        }));
         const category = document.getElementById('elimination-category');
         const group = document.getElementById('elimination-group');
         const summary = document.getElementById('elimination-seed-summary');

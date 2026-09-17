@@ -9,6 +9,7 @@ use App\Models\EventGroup;
 use App\Models\EventRegistration;
 use App\Models\EventScoringSession;
 use App\Models\EventScoringTarget;
+use App\Models\EventScoringAssignment;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -256,6 +257,125 @@ class EventScoringController extends Controller
         });
 
         return back()->with('success', '靶號 '.$target->target_number.' 的舊連結與設備已失效，請使用畫面上的新連結開啟替代設備。');
+    }
+
+    public function updateTargetNumber(Request $request, Event $event, EventScoringTarget $target): RedirectResponse
+    {
+        $this->authorize('manageScores', $event);
+        abort_unless($target->session()->where('event_id', $event->id)->exists(), 404);
+        $data = $request->validate([
+            'target_number'=>['required', 'integer', 'between:1,999'],
+            'reason'=>['nullable', 'string', 'max:500'],
+        ]);
+
+        DB::transaction(function () use ($request, $event, $target, $data): void {
+            $locked = EventScoringTarget::whereKey($target->id)->lockForUpdate()->firstOrFail();
+            $newNumber = (int) $data['target_number'];
+            $oldNumber = (int) $locked->target_number;
+            if ($newNumber === $oldNumber) return;
+
+            $started = $locked->last_completed_end > 0 || ! in_array($locked->status, ['ready', 'dns'], true);
+            if ($started) {
+                abort_unless($request->user()->can('manageScoreCorrections', $event), 403);
+                if (mb_strlen(trim((string) ($data['reason'] ?? ''))) < 3) {
+                    throw \Illuminate\Validation\ValidationException::withMessages(['reason'=>'計分開始後調整靶號，請填寫至少 3 個字的原因。']);
+                }
+            }
+
+            $swap = EventScoringTarget::query()
+                ->where('event_scoring_session_id', $locked->event_scoring_session_id)
+                ->where('target_number', $newNumber)
+                ->whereKeyNot($locked->id)
+                ->lockForUpdate()
+                ->first();
+            if ($swap) $swap->update(['target_number'=>0]);
+            $locked->update(array_merge(['target_number'=>$newNumber], $this->freshDeviceAttributes()));
+            if ($swap) $swap->update(array_merge(['target_number'=>$oldNumber], $this->freshDeviceAttributes()));
+
+            EventAuditLog::create([
+                'event_id'=>$event->id, 'user_id'=>$request->user()->id,
+                'action'=>'scoring.target_number_changed', 'subject_type'=>EventScoringTarget::class,
+                'subject_id'=>$locked->id,
+                'metadata'=>['before'=>$oldNumber, 'after'=>$newNumber, 'swapped_target_id'=>$swap?->id, 'reason'=>$data['reason'] ?? null, 'forced'=>$started],
+            ]);
+        });
+
+        return back()->with('success', '排名賽靶號已更新；如有交換靶位，兩台設備都需重新掃描。');
+    }
+
+    public function updateAssignmentPosition(Request $request, Event $event, EventScoringTarget $target, EventScoringAssignment $assignment): RedirectResponse
+    {
+        $this->authorize('manageScores', $event);
+        abort_unless($target->session()->where('event_id', $event->id)->exists() && $assignment->event_scoring_target_id === $target->id, 404);
+        $data = $request->validate([
+            'target_number'=>['required', 'integer', 'between:1,999'],
+            'position'=>['required', 'in:A,B,C,D'],
+            'reason'=>['nullable', 'string', 'max:500'],
+        ]);
+
+        DB::transaction(function () use ($request, $event, $target, $assignment, $data): void {
+            $source = EventScoringTarget::whereKey($target->id)->lockForUpdate()->firstOrFail();
+            $moving = EventScoringAssignment::whereKey($assignment->id)->lockForUpdate()->firstOrFail();
+            $destination = EventScoringTarget::query()
+                ->where('event_scoring_session_id', $source->event_scoring_session_id)
+                ->where('target_number', (int) $data['target_number'])
+                ->lockForUpdate()
+                ->first();
+            if (! $destination) {
+                $destination = EventScoringTarget::create([
+                    'event_scoring_session_id'=>$source->event_scoring_session_id,
+                    'target_number'=>(int) $data['target_number'],
+                    'access_token'=>(string) Str::uuid(), 'device_pin'=>(string) random_int(100000, 999999),
+                    'status'=>'ready',
+                ]);
+            }
+            $newPosition = $data['position'];
+            if ($destination->id === $source->id && $moving->position === $newPosition) return;
+
+            $started = collect([$source, $destination])->contains(fn ($item) => $item->last_completed_end > 0 || ! in_array($item->status, ['ready', 'dns'], true));
+            if ($started) {
+                abort_unless($request->user()->can('manageScoreCorrections', $event), 403);
+                if (mb_strlen(trim((string) ($data['reason'] ?? ''))) < 3) {
+                    throw \Illuminate\Validation\ValidationException::withMessages(['reason'=>'計分開始後調整選手靶位，請填寫至少 3 個字的原因。']);
+                }
+            }
+
+            $oldPosition = $moving->position;
+            $occupant = EventScoringAssignment::query()
+                ->where('event_scoring_target_id', $destination->id)
+                ->where('position', $newPosition)
+                ->whereKeyNot($moving->id)
+                ->lockForUpdate()
+                ->first();
+            if ($occupant) $occupant->update(['position'=>'Z']);
+            $moving->update(['event_scoring_target_id'=>$destination->id, 'position'=>$newPosition]);
+            if ($occupant) $occupant->update(['event_scoring_target_id'=>$source->id, 'position'=>$oldPosition]);
+
+            $source->update($this->freshDeviceAttributes());
+            if ($destination->id !== $source->id) $destination->update($this->freshDeviceAttributes());
+            EventAuditLog::create([
+                'event_id'=>$event->id, 'user_id'=>$request->user()->id,
+                'action'=>'scoring.assignment_position_changed', 'subject_type'=>EventScoringAssignment::class,
+                'subject_id'=>$moving->id,
+                'metadata'=>[
+                    'registration_id'=>$moving->event_registration_id,
+                    'before'=>$source->target_number.$oldPosition,
+                    'after'=>$destination->target_number.$newPosition,
+                    'swapped_assignment_id'=>$occupant?->id,
+                    'reason'=>$data['reason'] ?? null, 'forced'=>$started,
+                ],
+            ]);
+        });
+
+        return back()->with('success', '選手靶位已更新；若目標位置原本有人，兩位選手已交換位置。');
+    }
+
+    private function freshDeviceAttributes(): array
+    {
+        return [
+            'access_token'=>(string) Str::uuid(), 'device_pin'=>(string) random_int(100000, 999999),
+            'device_token_hash'=>null, 'device_bound_at'=>null, 'device_last_seen_at'=>null, 'device_user_agent'=>null,
+        ];
     }
 
     public function qrCode(Event $event, EventScoringTarget $target)

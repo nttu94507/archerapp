@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Organizer;
 
 use App\Http\Controllers\Controller;
 use App\Models\Event;
+use App\Models\EventAuditLog;
 use App\Models\EventGroup;
 use App\Models\EventEliminationMatch;
 use App\Models\EventRankingSnapshot;
@@ -190,6 +191,68 @@ class EventEliminationController extends Controller
             ]);
         });
         return back()->with('success', '舊設備與連結已失效，請使用新的 QR Code 與 PIN。');
+    }
+
+    public function updateTargetNumber(Request $request, Event $event, EventEliminationMatch $match): RedirectResponse
+    {
+        $this->authorize('manageScoreCorrections', $event);
+        abort_unless($match->bracket()->where('event_id', $event->id)->exists(), 404);
+        $data = $request->validate([
+            'participant_one_target_number'=>['required', 'string', 'max:20', 'regex:/^[\pL\pN\-]+$/u'],
+            'participant_two_target_number'=>['required', 'string', 'max:20', 'regex:/^[\pL\pN\-]+$/u'],
+            'reason'=>['nullable', 'string', 'max:500'],
+        ], [
+            'participant_one_target_number.regex'=>'選手一靶號只能使用文字、數字與連字號。',
+            'participant_two_target_number.regex'=>'選手二靶號只能使用文字、數字與連字號。',
+        ]);
+
+        DB::transaction(function () use ($request, $event, $match, $data): void {
+            $locked = EventEliminationMatch::whereKey($match->id)->lockForUpdate()->firstOrFail();
+            $one = mb_strtoupper(trim($data['participant_one_target_number']));
+            $two = mb_strtoupper(trim($data['participant_two_target_number']));
+            $before = [
+                'participant_one'=>$locked->participant_one_target_number ?? $locked->target_number,
+                'participant_two'=>$locked->participant_two_target_number ?? $locked->target_number,
+            ];
+            if ($one === $before['participant_one'] && $two === $before['participant_two']) return;
+
+            $started = $locked->sets()->exists() || $locked->ends()->exists() || $locked->shootOffs()->exists()
+                || in_array($locked->status, ['in_progress', 'awaiting_shoot_off', 'awaiting_judge', 'completed'], true);
+            if ($started && mb_strlen(trim((string) ($data['reason'] ?? ''))) < 3) {
+                throw ValidationException::withMessages(['reason'=>'計分開始後調整靶號，請填寫至少 3 個字的原因。']);
+            }
+            $usedNumbers = collect([$one, $two])->unique()->values();
+            $duplicate = EventEliminationMatch::query()
+                ->whereHas('bracket', fn ($query) => $query->where('event_id', $event->id))
+                ->where('round_number', $locked->round_number)
+                ->whereKeyNot($locked->id)
+                ->whereNotIn('status', ['completed', 'walkover'])
+                ->where(function ($query) use ($usedNumbers): void {
+                    $query->whereIn('participant_one_target_number', $usedNumbers)
+                        ->orWhereIn('participant_two_target_number', $usedNumbers)
+                        ->orWhereIn('target_number', $usedNumbers);
+                })
+                ->exists();
+            if ($duplicate) {
+                throw ValidationException::withMessages(['participant_one_target_number'=>'同一輪進行中的其他場次已使用其中一個靶號。']);
+            }
+
+            $locked->update([
+                'target_number'=>$one === $two ? $one : null,
+                'participant_one_target_number'=>$one,
+                'participant_two_target_number'=>$two,
+                'access_token'=>(string) Str::uuid(), 'device_pin'=>(string) random_int(100000, 999999),
+                'device_token_hash'=>null, 'device_bound_at'=>null, 'device_last_seen_at'=>null, 'device_user_agent'=>null,
+            ]);
+            EventAuditLog::create([
+                'event_id'=>$event->id, 'user_id'=>$request->user()->id,
+                'action'=>'elimination.match_target_number_changed', 'subject_type'=>EventEliminationMatch::class,
+                'subject_id'=>$locked->id,
+                'metadata'=>['before'=>$before, 'after'=>['participant_one'=>$one, 'participant_two'=>$two], 'reason'=>$data['reason'] ?? null, 'forced'=>$started],
+            ]);
+        });
+
+        return back()->with('success', '對抗賽靶號已更新，舊設備已解除，請重新掃描 QR Code。');
     }
 
     public function recoverMatch(Request $request, Event $event, EventEliminationMatch $match, EliminationMatchRecoveryService $service): RedirectResponse

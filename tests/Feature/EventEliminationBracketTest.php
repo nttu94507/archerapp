@@ -47,6 +47,30 @@ class EventEliminationBracketTest extends TestCase
         ])->assertSessionHasErrors('competition_format');
     }
 
+    public function test_elimination_match_target_number_can_change_and_rejects_round_duplicates(): void
+    {
+        [$event, $group] = $this->publishedRanking([40, 30, 20, 10], 'recurve', true);
+        $event->update(['competition_format'=>'qualification_elimination']);
+        $owner = User::factory()->create();
+        EventStaff::create(['event_id'=>$event->id, 'user_id'=>$owner->id, 'role'=>'owner', 'status'=>'active']);
+        $bracket = app(IndividualEliminationBracketService::class)->create($event, $group, 4, false);
+        $matches = $bracket->matches()->where('round_number', 1)->orderBy('position')->get();
+
+        $this->actingAs($owner)->patch(route('organizer.events.elimination.matches.target-number', [$event, $matches[0]]), [
+            'participant_one_target_number'=>'A-1',
+            'participant_two_target_number'=>'A-2',
+        ])->assertSessionHas('success');
+        $this->assertNull($matches[0]->fresh()->target_number);
+        $this->assertSame('A-1', $matches[0]->fresh()->participant_one_target_number);
+        $this->assertSame('A-2', $matches[0]->fresh()->participant_two_target_number);
+        $this->assertDatabaseHas('event_audit_logs', ['event_id'=>$event->id, 'action'=>'elimination.match_target_number_changed', 'subject_id'=>$matches[0]->id]);
+
+        $this->actingAs($owner)->patch(route('organizer.events.elimination.matches.target-number', [$event, $matches[1]]), [
+            'participant_one_target_number'=>'A-1',
+            'participant_two_target_number'=>'A-3',
+        ])->assertSessionHasErrors('participant_one_target_number');
+    }
+
     public function test_direct_elimination_draw_uses_active_registrations_and_locks_registration(): void
     {
         $event = Event::factory()->create([

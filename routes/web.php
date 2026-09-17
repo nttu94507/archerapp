@@ -159,11 +159,14 @@ Route::prefix('organizer')->middleware('auth')->name('organizer.')->group(functi
     Route::patch('events/{event}/elimination/{bracket}/visibility', [OrganizerEliminationController::class, 'updateVisibility'])->name('events.elimination.visibility');
     Route::get('events/{event}/elimination/matches/{match}/qrcode', [OrganizerEliminationController::class, 'qrCode'])->name('events.elimination.matches.qrcode');
     Route::delete('events/{event}/elimination/matches/{match}/device', [OrganizerEliminationController::class, 'releaseDevice'])->name('events.elimination.matches.device.destroy');
+    Route::patch('events/{event}/elimination/matches/{match}/target-number', [OrganizerEliminationController::class, 'updateTargetNumber'])->name('events.elimination.matches.target-number');
     Route::get('events/{event}/elimination/matches/{match}', [OrganizerEliminationController::class, 'showMatch'])->name('events.elimination.matches.show');
     Route::patch('events/{event}/elimination/matches/{match}/recovery', [OrganizerEliminationController::class, 'recoverMatch'])->name('events.elimination.matches.recovery');
     Route::get('events/{event}/scoring', [OrganizerScoringController::class, 'index'])->name('events.scoring.index');
     Route::post('events/{event}/scoring', [OrganizerScoringController::class, 'store'])->name('events.scoring.store');
     Route::delete('events/{event}/scoring/targets/{target}/device', [OrganizerScoringController::class, 'releaseDevice'])->name('events.scoring.targets.device.destroy');
+    Route::patch('events/{event}/scoring/targets/{target}/target-number', [OrganizerScoringController::class, 'updateTargetNumber'])->name('events.scoring.targets.target-number');
+    Route::patch('events/{event}/scoring/targets/{target}/assignments/{assignment}/position', [OrganizerScoringController::class, 'updateAssignmentPosition'])->name('events.scoring.assignments.position');
     Route::get('events/{event}/scoring/targets/{target}/qrcode', [OrganizerScoringController::class, 'qrCode'])->name('events.scoring.targets.qrcode');
     Route::get('events/{event}/judging', [OrganizerJudgingController::class, 'index'])->name('events.judging.index');
     Route::patch('events/{event}/judging/targets/{target}', [OrganizerJudgingController::class, 'update'])->name('events.judging.targets.update');

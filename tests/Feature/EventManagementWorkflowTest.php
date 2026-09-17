@@ -19,6 +19,45 @@ class EventManagementWorkflowTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_ranking_targets_can_change_or_swap_numbers_with_audit_log(): void
+    {
+        $event = Event::factory()->create();
+        $group = EventGroup::factory()->create(['event_id'=>$event->id]);
+        $owner = User::factory()->create();
+        EventStaff::create(['event_id'=>$event->id, 'user_id'=>$owner->id, 'role'=>'owner', 'status'=>'active']);
+        $session = EventScoringSession::create([
+            'event_id'=>$event->id, 'event_group_id'=>$group->id,
+            'event_phase_id'=>$group->qualificationPhase()->firstOrFail()->id,
+            'name'=>'排名賽', 'total_arrows'=>36, 'arrows_per_end'=>6,
+            'athletes_per_target'=>4, 'status'=>'ready', 'created_by'=>$owner->id,
+        ]);
+        $one = $session->targets()->create(['target_number'=>1, 'access_token'=>(string) \Illuminate\Support\Str::uuid(), 'device_pin'=>'111111', 'status'=>'ready']);
+        $two = $session->targets()->create(['target_number'=>2, 'access_token'=>(string) \Illuminate\Support\Str::uuid(), 'device_pin'=>'222222', 'status'=>'ready']);
+        $firstRegistration = EventRegistration::create(['event_id'=>$event->id, 'event_group_id'=>$group->id, 'name'=>'甲選手', 'email'=>'one@example.test', 'status'=>'registered']);
+        $secondRegistration = EventRegistration::create(['event_id'=>$event->id, 'event_group_id'=>$group->id, 'name'=>'乙選手', 'email'=>'two@example.test', 'status'=>'registered']);
+        $firstAssignment = $one->assignments()->create(['event_registration_id'=>$firstRegistration->id, 'position'=>'A']);
+        $secondAssignment = $two->assignments()->create(['event_registration_id'=>$secondRegistration->id, 'position'=>'B']);
+
+        $this->actingAs($owner)->patch(route('organizer.events.scoring.targets.target-number', [$event, $one]), [
+            'target_number'=>2,
+        ])->assertSessionHas('success');
+
+        $this->assertSame(2, $one->fresh()->target_number);
+        $this->assertSame(1, $two->fresh()->target_number);
+        $this->assertNotSame('111111', $one->fresh()->device_pin);
+        $this->assertDatabaseHas('event_audit_logs', ['event_id'=>$event->id, 'action'=>'scoring.target_number_changed', 'subject_id'=>$one->id]);
+
+        $this->actingAs($owner)->patch(route('organizer.events.scoring.assignments.position', [$event, $firstAssignment->fresh()->target, $firstAssignment]), [
+            'target_number'=>1,
+            'position'=>'B',
+        ])->assertSessionHas('success');
+        $this->assertSame($secondAssignment->event_scoring_target_id, $firstAssignment->fresh()->event_scoring_target_id);
+        $this->assertSame('B', $firstAssignment->fresh()->position);
+        $this->assertSame($one->id, $secondAssignment->fresh()->event_scoring_target_id);
+        $this->assertSame('A', $secondAssignment->fresh()->position);
+        $this->assertDatabaseHas('event_audit_logs', ['event_id'=>$event->id, 'action'=>'scoring.assignment_position_changed', 'subject_id'=>$firstAssignment->id]);
+    }
+
     public function test_approved_organizer_can_publish_event_without_platform_review(): void
     {
         $owner = User::factory()->create();

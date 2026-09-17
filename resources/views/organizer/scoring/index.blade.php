@@ -89,7 +89,7 @@
                         @php($stationUrl=route('scoring-stations.show',$target->access_token))
                         <article class="rounded-xl border p-4">
                             <div class="flex items-start justify-between gap-2"><div><h3 class="font-semibold">靶號 {{ str_pad($target->target_number,2,'0',STR_PAD_LEFT) }}</h3><p class="mt-1 text-xs text-gray-500">完成 {{ $target->last_completed_end }} / {{ $session->totalEnds() }} 趟</p></div><span class="rounded-full bg-gray-100 px-2 py-1 text-xs">{{ ['ready'=>'待開始','scoring'=>'計分中','round_break'=>'上半局完成','completed'=>'完成','dns'=>'全靶 DNS'][$target->status] ?? $target->status }}</span></div>
-                            <div class="mt-3 space-y-1">@foreach($target->assignments as $assignment)<p class="text-sm"><span class="inline-block w-8 font-mono font-semibold">{{ $target->target_number.$assignment->position }}</span>{{ $assignment->registration?->name }} @if($assignment->registration?->status === 'no_show')<span class="ml-1 text-xs font-semibold text-amber-700">DNS</span>@endif</p>@endforeach</div>
+                            <div class="mt-3 space-y-1">@foreach($target->assignments as $assignment)<details class="rounded-lg border px-2"><summary class="flex min-h-10 cursor-pointer items-center text-sm"><span class="inline-block w-10 font-mono font-semibold">{{ $target->target_number.$assignment->position }}</span><span class="truncate">{{ $assignment->registration?->name }}</span>@if($assignment->registration?->status === 'no_show')<span class="ml-1 text-xs font-semibold text-amber-700">DNS</span>@endif</summary><form method="POST" action="{{ route('organizer.events.scoring.assignments.position', [$event, $target, $assignment]) }}" class="grid grid-cols-2 gap-2 border-t py-2" onsubmit="return confirm('目標位置若已有選手，系統會交換兩人的位置。確定調整？')">@csrf @method('PATCH')<label class="text-xs text-gray-500">靶號<input type="number" name="target_number" min="1" max="999" required value="{{ $target->target_number }}" class="mt-1 min-h-10 w-full rounded-lg border-gray-300"></label><label class="text-xs text-gray-500">位置<select name="position" class="mt-1 min-h-10 w-full rounded-lg border-gray-300">@foreach(['A','B','C','D'] as $position)<option value="{{ $position }}" @selected($assignment->position === $position)>{{ $position }}</option>@endforeach</select></label><textarea name="reason" maxlength="500" rows="2" class="col-span-2 rounded-lg border-gray-300 text-xs" placeholder="已開始計分時必填原因"></textarea><button class="col-span-2 min-h-10 rounded-lg bg-indigo-600 text-xs font-semibold text-white">移動／交換選手</button></form></details>@endforeach</div>
                             <div class="mt-4 grid grid-cols-[6rem_1fr] items-center gap-3 rounded-xl bg-gray-50 p-3">
                                 <img src="{{ route('organizer.events.scoring.targets.qrcode', [$event, $target]) }}" alt="靶號 {{ $target->target_number }} 計分 QR Code" class="h-24 w-24 rounded-lg bg-white p-1">
                                 <div class="min-w-0">
@@ -103,6 +103,21 @@
                                 <button type="button" data-copy="{{ $stationUrl }}" class="copy-station min-h-11 rounded-xl border px-3 text-sm">複製連結</button>
                             </div>
                             <p class="mt-2 text-xs text-gray-400">最後同步：{{ $target->last_synced_at?->diffForHumans() ?? '尚未同步' }}</p>
+                            @php
+                                $targetStarted = $target->last_completed_end > 0 || ! in_array($target->status, ['ready', 'dns'], true);
+                                $canChangeTarget = ! $targetStarted || auth()->user()->can('manageScoreCorrections', $event);
+                            @endphp
+                            @if($canChangeTarget)
+                                <details class="mt-3 rounded-xl border px-3">
+                                    <summary class="flex min-h-11 cursor-pointer items-center text-sm font-medium">調整靶號</summary>
+                                    <form method="POST" action="{{ route('organizer.events.scoring.targets.target-number', [$event, $target]) }}" class="grid gap-2 border-t py-3" onsubmit="return confirm('修改後舊設備連結會失效；若輸入現有靶號，兩靶將交換。確定繼續？')">
+                                        @csrf @method('PATCH')
+                                        <input type="number" name="target_number" min="1" max="999" required value="{{ $target->target_number }}" class="min-h-11 rounded-lg border-gray-300" aria-label="新靶號">
+                                        @if($targetStarted)<textarea name="reason" required minlength="3" maxlength="500" rows="2" class="rounded-lg border-gray-300 text-sm" placeholder="修改原因（必填）"></textarea>@endif
+                                        <button class="min-h-11 rounded-lg bg-indigo-600 text-sm font-semibold text-white">儲存靶號</button>
+                                    </form>
+                                </details>
+                            @endif
                             <div class="mt-3 flex items-center justify-between gap-3 border-t pt-3">
                                 <div class="min-w-0">
                                     <p class="text-xs font-medium {{ $target->device_bound_at ? 'text-emerald-700' : 'text-gray-500' }}">{{ $target->device_bound_at ? '設備已綁定' : '等待設備綁定' }}</p>

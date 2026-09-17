@@ -20,9 +20,9 @@
     @if($errors->any())<div class="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">{{ $errors->first() }}</div>@endif
 
     <section class="grid grid-cols-[minmax(0,1fr)_4rem_minmax(0,1fr)] overflow-hidden rounded-2xl border bg-white shadow-sm">
-        <div class="p-4 text-center"><span class="text-xs font-bold text-gray-400">種子 {{ $match->participant_one_seed }}</span><h2 class="mt-1 truncate font-bold sm:text-lg">{{ $participantOneName }}</h2><p class="mt-3 text-4xl font-black text-indigo-700">{{ $match->participant_one_total }}</p></div>
+        <div class="p-4 text-center"><span class="text-xs font-bold text-gray-400">{{ ($match->participant_one_target_number ?? $match->target_number) ? '靶號 '.($match->participant_one_target_number ?? $match->target_number).'・' : '' }}種子 {{ $match->participant_one_seed }}</span><h2 class="mt-1 truncate font-bold sm:text-lg">{{ $participantOneName }}</h2><p class="mt-3 text-4xl font-black text-indigo-700">{{ $match->participant_one_total }}</p></div>
         <div class="flex items-center justify-center border-x bg-gray-50 text-xs font-bold text-gray-400">累計</div>
-        <div class="p-4 text-center"><span class="text-xs font-bold text-gray-400">種子 {{ $match->participant_two_seed }}</span><h2 class="mt-1 truncate font-bold sm:text-lg">{{ $participantTwoName }}</h2><p class="mt-3 text-4xl font-black text-indigo-700">{{ $match->participant_two_total }}</p></div>
+        <div class="p-4 text-center"><span class="text-xs font-bold text-gray-400">{{ ($match->participant_two_target_number ?? $match->target_number) ? '靶號 '.($match->participant_two_target_number ?? $match->target_number).'・' : '' }}種子 {{ $match->participant_two_seed }}</span><h2 class="mt-1 truncate font-bold sm:text-lg">{{ $participantTwoName }}</h2><p class="mt-3 text-4xl font-black text-indigo-700">{{ $match->participant_two_total }}</p></div>
     </section>
 
     @if($match->ends->isNotEmpty())
