@@ -140,7 +140,7 @@ class FillDemoEventScores extends Command
             ['完成選手', $athletesCompleted],
             [$overwrite ? '寫入／覆寫趟數' : '補入缺少趟數', $entriesWritten],
         ]);
-        $this->line('下一步：進入裁判工作台核對，再到成績管理確認與發布。');
+        $this->line('下一步：進入成績管理核對並發布。');
 
         return self::SUCCESS;
     }
